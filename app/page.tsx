@@ -75,50 +75,26 @@ export default function HomePage() {
         const claimsMatches = [...content.matchAll(/"claim"\s*:\s*"([^"]*)"/g)];
         
         return (
-          <div style={{
-            fontFamily: 'system-ui, -apple-system, sans-serif',
-            lineHeight: '1.6',
-            padding: '1.5rem',
-            background: 'linear-gradient(135deg, #F8F6F0 0%, #F4E4BC 100%)',
-            borderRadius: '0.75rem',
-            border: '1px solid #D4A574'
-          }}>
+          <div className="research-card">
             {summaryMatch && (
-              <div style={{
-                fontWeight: 'bold',
-                fontSize: '1.1rem',
-                marginBottom: '1.5rem',
-                color: '#8B5A3C'
-              }}>
+              <div className="font-bold text-lg mb-6 text-slate-800 relative z-10">
                 {summaryMatch}
               </div>
             )}
             
             {claimsMatches.length > 0 && (
-              <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
+              <ul className="list-none p-0 m-0 relative z-10">
                 {claimsMatches.map((match, idx) => (
-                  <li key={idx} style={{
-                    display: 'flex',
-                    alignItems: 'flex-start',
-                    gap: '0.75rem',
-                    marginBottom: '1rem'
-                  }}>
-                    <div style={{
-                      width: '6px',
-                      height: '6px',
-                      borderRadius: '50%',
-                      background: '#8B5A3C',
-                      marginTop: '0.5rem',
-                      flexShrink: 0
-                    }} />
-                    <span style={{ color: '#2D2D2D' }}>{match[1]}</span>
+                  <li key={idx} className="flex items-start gap-3 mb-4">
+                    <div className="insight-bullet-modern mt-2" />
+                    <span className="text-slate-800">{match[1]}</span>
                   </li>
                 ))}
               </ul>
             )}
             
             {!summaryMatch && claimsMatches.length === 0 && (
-              <div style={{ color: '#6B7280', fontStyle: 'italic' }}>
+              <div className="text-slate-500 italic relative z-10">
                 Research in progress...
               </div>
             )}
@@ -145,47 +121,22 @@ export default function HomePage() {
     const globalSources = data.sources ? deduplicateSources(data.sources) : [];
 
     return (
-      <div style={{
-        fontFamily: 'system-ui, -apple-system, sans-serif',
-        lineHeight: '1.6',
-        padding: '1.5rem',
-        background: 'linear-gradient(135deg, #F8F6F0 0%, #F4E4BC 100%)',
-        borderRadius: '0.75rem',
-        border: '1px solid #D4A574'
-      }}>
+      <div className="research-card">
         {/* Summary */}
         {data.summary && (
-          <div style={{
-            fontWeight: 'bold',
-            fontSize: '1.1rem',
-            marginBottom: '1.5rem',
-            color: '#8B5A3C'
-          }}>
+          <div className="font-bold text-lg mb-6 text-slate-800 relative z-10">
             {data.summary}
           </div>
         )}
         
         {/* Points */}
         {data.points && Array.isArray(data.points) && (
-          <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
+          <ul className="list-none p-0 m-0 relative z-10">
             {data.points.map((point: any, idx: number) => (
-              <li key={idx} style={{
-                display: 'flex',
-                alignItems: 'flex-start',
-                gap: '0.75rem',
-                marginBottom: '1rem',
-                animation: `fadeInUp 0.5s ease-out ${idx * 0.1}s both`
-              }}>
-                <div style={{
-                  width: '6px',
-                  height: '6px',
-                  borderRadius: '50%',
-                  background: '#8B5A3C',
-                  marginTop: '0.5rem',
-                  flexShrink: 0
-                }} />
-                <div style={{ flex: 1 }}>
-                  <span style={{ color: '#2D2D2D' }}>{point.claim}</span>
+              <li key={idx} className="flex items-start gap-3 mb-4 animate-fade-in-up" style={{ animationDelay: `${idx * 0.1}s` }}>
+                <div className="insight-bullet-modern mt-2" />
+                <div className="flex-1">
+                  <span className="text-slate-800">{point.claim}</span>
                   {point.source && (
                     <>
                       {' '}
@@ -193,11 +144,7 @@ export default function HomePage() {
                         href={point.source.url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        style={{
-                          color: '#8B5A3C',
-                          textDecoration: 'underline',
-                          fontSize: '0.9rem'
-                        }}
+                        className="link-modern text-sm"
                       >
                         {point.source.title}
                       </a>
@@ -211,30 +158,18 @@ export default function HomePage() {
         
         {/* Global Sources */}
         {globalSources.length > 0 && (
-          <div style={{
-            marginTop: '1.5rem',
-            paddingTop: '1rem',
-            borderTop: '1px solid #D4A574'
-          }}>
-            <div style={{
-              fontWeight: '600',
-              color: '#2D2D2D',
-              marginBottom: '0.75rem'
-            }}>
+          <div className="mt-6 pt-4 border-t border-slate-200/50 relative z-10">
+            <div className="font-semibold text-slate-800 mb-3">
               Sources:
             </div>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1rem' }}>
+            <div className="flex flex-wrap gap-4">
               {globalSources.map((source: any, idx: number) => (
                 <a
                   key={idx}
                   href={source.url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  style={{
-                    color: '#8B5A3C',
-                    textDecoration: 'underline',
-                    fontSize: '0.9rem'
-                  }}
+                  className="link-modern text-sm"
                 >
                   {source.title}
                 </a>
@@ -245,12 +180,7 @@ export default function HomePage() {
         
         {/* Fallback if no structured data */}
         {!data.summary && (!data.points || data.points.length === 0) && globalSources.length === 0 && (
-          <div style={{
-            color: '#6B7280',
-            fontStyle: 'italic',
-            textAlign: 'center',
-            padding: '1rem'
-          }}>
+          <div className="text-slate-500 italic text-center p-4 relative z-10">
             Research data structure not recognized
           </div>
         )}
@@ -398,60 +328,43 @@ export default function HomePage() {
 
   // Theme colors
   const theme = {
-    primary: '#8B5A3C',
-    secondary: '#D4A574', 
-    accent: '#F4E4BC',
-    neutral: '#F8F6F0',
-    text: '#2D2D2D',
-    textLight: '#6B7280',
-    border: '#E5E7EB',
+    primary: '#3B82F6',
+    secondary: '#93C5FD', 
+    accent: '#DBEAFE',
+    neutral: '#F0F9FF',
+    text: '#1E293B',
+    textLight: '#64748B',
+    border: '#93C5FD',
     white: '#FFFFFF'
   };
 
   return (
-    <div style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #faf9f7 0%, #f3f1ed 100%)' }}>
+    <div className="min-h-screen gradient-blue">
       {/* Header */}
-      <div style={{ textAlign: 'center', padding: '2rem 1rem', borderBottom: `1px solid ${theme.border}` }}>
-        <h1 style={{ fontSize: '2.5rem', fontWeight: 'bold', marginBottom: '0.5rem', color: theme.text }}>
+      <div className="text-center py-12 px-6 border-b border-white/30">
+        <h1 className="text-5xl font-bold mb-4 text-gradient animate-fade-in">
           Outreach.ai
         </h1>
-        <p style={{ fontSize: '1.1rem', color: theme.textLight, maxWidth: '600px', margin: '0 auto' }}>
+        <p className="text-xl text-slate-600 max-w-3xl mx-auto leading-relaxed animate-fade-in" style={{ animationDelay: '0.1s' }}>
           AI-powered company research and personalized outreach automation
         </p>
       </div>
 
       {/* Two Column Layout */}
-      <div style={{ display: 'flex', minHeight: 'calc(100vh - 140px)' }}>
-        {/* Left Sidebar - Fixed */}
-        <div style={{
-          width: '400px',
-          minWidth: '400px',
-          background: theme.white,
-          borderRight: `1px solid ${theme.border}`,
-          padding: '2rem',
-          position: 'sticky',
-          top: '0',
-          height: 'fit-content',
-          maxHeight: '100vh',
-          overflowY: 'auto'
-        }}>
-          <div style={{
-            background: `linear-gradient(135deg, ${theme.neutral} 0%, ${theme.accent} 100%)`,
-            borderRadius: '1rem',
-            padding: '2rem',
-            border: `1px solid ${theme.border}`,
-            boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
-          }}>
-            <h2 style={{ fontSize: '1.5rem', fontWeight: '700', color: theme.text, marginBottom: '1.5rem' }}>
+      <div className="flex min-h-[calc(100vh-200px)] max-lg:flex-col">
+        {/* Left Sidebar */}
+        <div className="w-96 min-w-96 max-lg:w-full max-lg:min-w-full glass-morphism border-r border-white/30 p-8 sticky top-0 h-fit max-h-screen overflow-y-auto animate-slide-in">
+          <div className="relative overflow-hidden rounded-2xl border border-blue-200/50 p-8 shadow-soft gradient-blue-light animate-scale-in" style={{ animationDelay: '0.2s' }}>
+            <h2 className="text-2xl font-bold text-slate-800 mb-8 text-gradient">
               Job Application Details
             </h2>
             
             <form onSubmit={(e) => { 
               e.preventDefault(); 
               if (canRun && !loading) void runChain(); 
-            }}>
-              <div style={{ marginBottom: '1.5rem' }}>
-                <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', color: theme.text, marginBottom: '0.5rem' }}>
+            }} className="space-y-6">
+              <div className="space-y-2">
+                <label className="block text-sm font-semibold text-slate-800">
                   Company
                 </label>
                 <input
@@ -459,24 +372,12 @@ export default function HomePage() {
                   value={company}
                   onChange={(e) => setCompany(e.target.value)}
                   placeholder="Company name or URL"
-                  style={{
-                    width: '100%',
-                    padding: '0.75rem',
-                    border: `2px solid ${theme.border}`,
-                    borderRadius: '0.5rem',
-                    background: theme.white,
-                    color: theme.text,
-                    fontSize: '0.95rem',
-                    transition: 'all 0.2s',
-                    boxSizing: 'border-box'
-                  }}
-                  onFocus={(e) => e.target.style.borderColor = theme.primary}
-                  onBlur={(e) => e.target.style.borderColor = theme.border}
+                  className="w-full rounded-xl border-2 border-slate-200/60 bg-white/80 px-4 py-3 text-slate-800 placeholder-slate-400 transition-all duration-300 ease-out backdrop-blur-sm focus:border-slate-400/80 focus:bg-white focus:shadow-soft focus:outline-none hover:border-slate-300/80 hover:bg-white/90"
                 />
               </div>
               
-              <div style={{ marginBottom: '1.5rem' }}>
-                <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', color: theme.text, marginBottom: '0.5rem' }}>
+              <div className="space-y-2">
+                <label className="block text-sm font-semibold text-slate-800">
                   Role
                 </label>
                 <input
@@ -484,24 +385,12 @@ export default function HomePage() {
                   value={role}
                   onChange={(e) => setRole(e.target.value)}
                   placeholder="Target role"
-                  style={{
-                    width: '100%',
-                    padding: '0.75rem',
-                    border: `2px solid ${theme.border}`,
-                    borderRadius: '0.5rem',
-                    background: theme.white,
-                    color: theme.text,
-                    fontSize: '0.95rem',
-                    transition: 'all 0.2s',
-                    boxSizing: 'border-box'
-                  }}
-                  onFocus={(e) => e.target.style.borderColor = theme.primary}
-                  onBlur={(e) => e.target.style.borderColor = theme.border}
+                  className="w-full rounded-xl border-2 border-slate-200/60 bg-white/80 px-4 py-3 text-slate-800 placeholder-slate-400 transition-all duration-300 ease-out backdrop-blur-sm focus:border-slate-400/80 focus:bg-white focus:shadow-soft focus:outline-none hover:border-slate-300/80 hover:bg-white/90"
                 />
               </div>
               
-              <div style={{ marginBottom: '2rem' }}>
-                <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', color: theme.text, marginBottom: '0.5rem' }}>
+              <div className="space-y-2">
+                <label className="block text-sm font-semibold text-slate-800">
                   Key Highlights
                 </label>
                 <input
@@ -509,45 +398,17 @@ export default function HomePage() {
                   value={highlights}
                   onChange={(e) => setHighlights(e.target.value)}
                   placeholder="Your key skills and experience"
-                  style={{
-                    width: '100%',
-                    padding: '0.75rem',
-                    border: `2px solid ${theme.border}`,
-                    borderRadius: '0.5rem',
-                    background: theme.white,
-                    color: theme.text,
-                    fontSize: '0.95rem',
-                    transition: 'all 0.2s',
-                    boxSizing: 'border-box'
-                  }}
-                  onFocus={(e) => e.target.style.borderColor = theme.primary}
-                  onBlur={(e) => e.target.style.borderColor = theme.border}
+                  className="w-full rounded-xl border-2 border-slate-200/60 bg-white/80 px-4 py-3 text-slate-800 placeholder-slate-400 transition-all duration-300 ease-out backdrop-blur-sm focus:border-slate-400/80 focus:bg-white focus:shadow-soft focus:outline-none hover:border-slate-300/80 hover:bg-white/90"
                 />
               </div>
               
               <button
                 type="submit"
                 disabled={loading || !canRun}
-                style={{
-                  width: '100%',
-                  padding: '0.875rem 1.5rem',
-                  background: loading || !canRun ? '#9CA3AF' : `linear-gradient(135deg, ${theme.primary} 0%, ${theme.secondary} 100%)`,
-                  color: theme.white,
-                  fontWeight: '600',
-                  borderRadius: '0.5rem',
-                  border: 'none',
-                  cursor: loading || !canRun ? 'not-allowed' : 'pointer',
-                  fontSize: '0.95rem',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '0.5rem',
-                  transition: 'all 0.2s',
-                  boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)'
-                }}
+                className="relative overflow-hidden rounded-xl px-6 py-3 font-medium transition-all duration-300 ease-out w-full bg-blue-600 text-white font-semibold shadow-glow disabled:opacity-50 disabled:cursor-not-allowed hover:bg-blue-700 hover:-translate-y-0.5 hover:shadow-elevated focus:outline-none focus:ring-2 focus:ring-blue-400/50 focus:ring-offset-2 focus:ring-offset-white"
               >
                 {loading && (
-                  <svg style={{ width: '1rem', height: '1rem', animation: 'spin 1s linear infinite' }} fill="none" viewBox="0 0 24 24">
+                  <svg className="w-5 h-5 animate-spin mr-3" fill="none" viewBox="0 0 24 24">
                     <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" opacity="0.25"></circle>
                     <path fill="currentColor" opacity="0.75" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                   </svg>
@@ -562,46 +423,29 @@ export default function HomePage() {
         </div>
 
         {/* Right Content Area */}
-        <div style={{ flex: 1, padding: '2rem', maxWidth: 'calc(100vw - 400px)', overflowX: 'hidden' }}>
+        <div className="flex-1 p-8 max-lg:p-6 max-w-[calc(100vw-400px)] max-lg:max-w-full overflow-x-hidden animate-fade-in" style={{ animationDelay: '0.3s' }}>
 
           {/* Status Indicator */}
           {(loading || Object.keys(status).length > 0) && (
-            <div style={{
-              background: `linear-gradient(135deg, ${theme.accent} 0%, ${theme.neutral} 100%)`,
-              borderRadius: '1rem',
-              padding: '1.5rem',
-              marginBottom: '1.5rem',
-              border: `1px solid ${theme.border}`,
-              boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
-              animation: 'fadeInUp 0.5s ease-out'
-            }}>
-              <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '1.5rem', fontSize: '0.875rem' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                  <div style={{
-                    width: '0.75rem',
-                    height: '0.75rem',
-                    borderRadius: '50%',
-                    background: status.research === 'completed' ? theme.primary : status.research ? theme.secondary : '#D1D5DB'
-                  }} />
-                  <span style={{ color: theme.text }}>Research: <strong>{status.research || "pending"}</strong></span>
+            <div className="card-modern gradient-cream-light mb-8 animate-fade-in-up">
+              <div className="flex flex-wrap items-center gap-8 text-sm">
+                <div className="flex items-center gap-3">
+                  <div className={`status-indicator ${
+                    status.research === 'completed' ? 'completed' : status.research ? 'active' : 'pending'
+                  }`} />
+                  <span className="text-slate-800 font-medium">Research: <strong>{status.research || "pending"}</strong></span>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                  <div style={{
-                    width: '0.75rem',
-                    height: '0.75rem',
-                    borderRadius: '50%',
-                    background: status.verify === 'completed' ? theme.primary : status.verify ? theme.secondary : '#D1D5DB'
-                  }} />
-                  <span style={{ color: theme.text }}>Verify: <strong>{status.verify || "pending"}</strong></span>
+                <div className="flex items-center gap-3">
+                  <div className={`status-indicator ${
+                    status.verify === 'completed' ? 'completed' : status.verify ? 'active' : 'pending'
+                  }`} />
+                  <span className="text-slate-800 font-medium">Verify: <strong>{status.verify || "pending"}</strong></span>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                  <div style={{
-                    width: '0.75rem',
-                    height: '0.75rem',
-                    borderRadius: '50%',
-                    background: status.messaging === 'completed' ? theme.primary : status.messaging ? theme.secondary : '#D1D5DB'
-                  }} />
-                  <span style={{ color: theme.text }}>Messaging: <strong>{status.messaging || "pending"}</strong></span>
+                <div className="flex items-center gap-3">
+                  <div className={`status-indicator ${
+                    status.messaging === 'completed' ? 'completed' : status.messaging ? 'active' : 'pending'
+                  }`} />
+                  <span className="text-slate-800 font-medium">Messaging: <strong>{status.messaging || "pending"}</strong></span>
                 </div>
               </div>
             </div>
@@ -609,56 +453,17 @@ export default function HomePage() {
 
           {/* Primary Contact Email - High Visibility */}
           {primaryEmail && (
-            <div style={{
-              background: 'linear-gradient(135deg, #FEF3C7 0%, #FDE68A 100%)',
-              border: '2px solid #F59E0B',
-              borderRadius: '1rem',
-              padding: '1.5rem',
-              marginBottom: '1.5rem',
-              boxShadow: '0 4px 12px rgba(245, 158, 11, 0.2)',
-              animation: 'fadeInUp 0.5s ease-out'
-            }}>
-              <div style={{
-                fontSize: '1.125rem',
-                fontWeight: '700',
-                color: '#92400E',
-                marginBottom: '1rem',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.5rem'
-              }}>
+            <div className="contact-highlight mb-8 animate-fade-in-up" style={{ animationDelay: '0.1s' }}>
+              <div className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2 relative z-10">
                 📧 Primary Contact Email
               </div>
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '1rem',
-                background: 'rgba(255, 255, 255, 0.8)',
-                padding: '1rem',
-                borderRadius: '0.75rem',
-                border: '1px solid #FCD34D'
-              }}>
-                <div style={{
-                  fontSize: '1.125rem',
-                  fontWeight: '600',
-                  color: '#78350F',
-                  flex: 1
-                }}>
+              <div className="flex items-center gap-4 glass-morphism p-4 rounded-xl relative z-10">
+                <div className="text-lg font-semibold text-slate-700 flex-1">
                   {primaryEmail}
                 </div>
                 <button
                   onClick={() => copyToClipboard(primaryEmail)}
-                  style={{
-                    padding: '0.5rem 0.75rem',
-                    background: 'linear-gradient(135deg, #FEF3C7 0%, #FDE68A 100%)',
-                    color: '#92400E',
-                    border: '1px solid #F59E0B',
-                    borderRadius: '0.5rem',
-                    cursor: 'pointer',
-                    fontSize: '0.75rem',
-                    fontWeight: '500',
-                    transition: 'all 0.2s'
-                  }}
+                  className="button-modern px-4 py-2 bg-white/80 hover:bg-white text-slate-700 border border-slate-200 text-xs font-medium"
                   title="Copy to clipboard"
                 >
                   📋 Copy
@@ -669,16 +474,8 @@ export default function HomePage() {
 
           {/* Error Display */}
           {error && (
-            <div style={{
-              background: 'linear-gradient(135deg, #FEF2F2 0%, #FECACA 100%)',
-              border: '1px solid #F87171',
-              borderRadius: '1rem',
-              padding: '1.5rem',
-              marginBottom: '1.5rem',
-              boxShadow: '0 2px 8px rgba(248, 113, 113, 0.2)',
-              animation: 'fadeInUp 0.5s ease-out'
-            }}>
-              <div style={{ color: '#991B1B', fontWeight: '600' }}>
+            <div className="card-modern mb-8 border-red-200 animate-fade-in-up" style={{ background: 'linear-gradient(135deg, #FEF2F2 0%, #FECACA 100%)' }}>
+              <div className="text-red-800 font-semibold">
                 <strong>⚠️ Error:</strong> {error}
               </div>
             </div>
@@ -690,11 +487,11 @@ export default function HomePage() {
             {/* 1. Research Card - Shows First */}
             {(intermediate.research || verifiedPoints.length > 0 || contact) && (
               <div style={{
-                background: `linear-gradient(135deg, ${theme.neutral} 0%, ${theme.white} 100%)`,
+                background: 'linear-gradient(135deg, #F0F9FF 0%, #DBEAFE 100%)',
                 borderRadius: '1rem',
                 padding: '2rem',
-                border: `1px solid ${theme.border}`,
-                boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)',
+                border: '1px solid #93C5FD',
+                boxShadow: '0 4px 12px rgba(59, 130, 246, 0.1)',
                 animation: 'fadeInUp 0.5s ease-out'
               }}>
                 <h3 style={{
@@ -825,23 +622,23 @@ export default function HomePage() {
             {/* 2. Cold Email Card - Shows Second */}
             {(email || (loading && status.messaging)) && (
               <div style={{
-                background: `linear-gradient(135deg, #F0F9FF 0%, #E0F2FE 100%)`,
+                background: 'linear-gradient(135deg, #F0F9FF 0%, #DBEAFE 100%)',
                 borderRadius: '1rem',
                 padding: '2rem',
-                border: '1px solid #7DD3FC',
-                boxShadow: '0 4px 12px rgba(125, 211, 252, 0.2)',
+                border: '1px solid #93C5FD',
+                boxShadow: '0 4px 12px rgba(59, 130, 246, 0.2)',
                 animation: 'fadeInUp 0.5s ease-out 0.2s both'
               }}>
                 <h3 style={{
                   fontSize: '1.5rem',
                   fontWeight: '700',
-                  color: '#0C4A6E',
+                  color: '#1E40AF',
                   marginBottom: '1.5rem',
                   display: 'flex',
                   alignItems: 'center',
                   gap: '0.75rem'
                 }}>
-                  <div style={{ width: '1rem', height: '1rem', borderRadius: '50%', background: '#0EA5E9' }} />
+                  <div style={{ width: '1rem', height: '1rem', borderRadius: '50%', background: '#3B82F6' }} />
                   Cold Email
                 </h3>
                 
@@ -875,10 +672,10 @@ export default function HomePage() {
                         width: '100%',
                         minHeight: '200px',
                         padding: '1.5rem',
-                        border: '2px solid #7DD3FC',
+                        border: '2px solid #93C5FD',
                         borderRadius: '0.75rem',
                         background: 'rgba(255, 255, 255, 0.8)',
-                        color: '#0C4A6E',
+                        color: '#1E40AF',
                         fontFamily: 'inherit',
                         fontSize: '0.95rem',
                         lineHeight: '1.6',
@@ -895,9 +692,9 @@ export default function HomePage() {
                     padding: '1.5rem', 
                     borderRadius: '0.75rem',
                     background: 'rgba(255, 255, 255, 0.6)',
-                    border: '1px solid #7DD3FC'
+                    border: '1px solid #93C5FD'
                   }}>
-                    <div style={{ fontStyle: 'italic', textAlign: 'center', color: '#0C4A6E' }}>
+                    <div style={{ fontStyle: 'italic', textAlign: 'center', color: '#1E40AF' }}>
                       ✍️ Generating personalized email...
                     </div>
                   </div>
@@ -908,23 +705,23 @@ export default function HomePage() {
             {/* 3. LinkedIn Message Card - Shows Third */}
             {(linkedin || (loading && status.messaging && email)) && (
               <div style={{
-                background: 'linear-gradient(135deg, #F5F3FF 0%, #EDE9FE 100%)',
+                background: 'linear-gradient(135deg, #F0F9FF 0%, #DBEAFE 100%)',
                 borderRadius: '1rem',
                 padding: '2rem',
-                border: '1px solid #C4B5FD',
-                boxShadow: '0 4px 12px rgba(196, 181, 253, 0.2)',
+                border: '1px solid #93C5FD',
+                boxShadow: '0 4px 12px rgba(59, 130, 246, 0.2)',
                 animation: 'fadeInUp 0.5s ease-out 0.4s both'
               }}>
                 <h3 style={{
                   fontSize: '1.5rem',
                   fontWeight: '700',
-                  color: '#5B21B6',
+                  color: '#1E40AF',
                   marginBottom: '1.5rem',
                   display: 'flex',
                   alignItems: 'center',
                   gap: '0.75rem'
                 }}>
-                  <div style={{ width: '1rem', height: '1rem', borderRadius: '50%', background: '#8B5CF6' }} />
+                  <div style={{ width: '1rem', height: '1rem', borderRadius: '50%', background: '#3B82F6' }} />
                   LinkedIn Message
                 </h3>
                 
