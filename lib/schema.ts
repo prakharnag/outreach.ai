@@ -1,23 +1,16 @@
-import { pgTable, uuid, text, timestamp } from 'drizzle-orm/pg-core'
+import { pgTable, serial, text, timestamp, jsonb } from "drizzle-orm/pg-core";
 
-export const emailHistory = pgTable('email_history', {
-  id: uuid('id').defaultRandom().primaryKey(),
-  userId: uuid('user_id').notNull(),
-  companyName: text('company_name').notNull(),
-  role: text('role').notNull(),
-  subjectLine: text('subject_line').notNull(),
-  content: text('content').notNull(),
-  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
-})
+export const runs = pgTable("runs", {
+  id: serial("id").primaryKey(),
+  created_at: timestamp("created_at").defaultNow().notNull(),
+  company: text("company").notNull(),
+  role: text("role").notNull(),
+  research_json: jsonb("research_json"),
+  verified_json: jsonb("verified_json"),
+  linkedin: text("linkedin"),
+  email: text("email"),
+});
 
-export const linkedinHistory = pgTable('linkedin_history', {
-  id: uuid('id').defaultRandom().primaryKey(),
-  userId: uuid('user_id').notNull(),
-  companyName: text('company_name').notNull(),
-  role: text('role').notNull(),
-  content: text('content').notNull(),
-  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
-})
+export type Run = typeof runs.$inferSelect;
 
-export type EmailHistory = typeof emailHistory.$inferSelect
-export type LinkedinHistory = typeof linkedinHistory.$inferSelect
+

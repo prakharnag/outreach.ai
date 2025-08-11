@@ -18,7 +18,25 @@ import {
 } from "lucide-react"
 import { cn } from "../lib/utils"
 import { getEmailHistory, getLinkedInHistory } from "../lib/history"
-import type { EmailHistory, LinkedinHistory } from "../lib/schema"
+
+type EmailHistory = {
+  id: string
+  user_id: string
+  company_name: string
+  role: string
+  subject_line: string
+  content: string
+  created_at: string
+}
+
+type LinkedinHistory = {
+  id: string
+  user_id: string
+  company_name: string
+  role: string
+  content: string
+  created_at: string
+}
 
 interface NavigationSidebarProps {
   onRunAgents: (data: { company: string; role: string; highlights: string }) => void

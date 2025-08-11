@@ -17,17 +17,25 @@ export type MessagingAgentOutput = {
 };
 
 export async function messagingAgent(input: MessagingAgentInput): Promise<MessagingAgentOutput> {
-  const system = `You craft concise outreach. Return ONLY JSON: {linkedin:string,email:string}.
+  const system = `You are a master of warm, high-conversion outreach. Return ONLY valid JSON: {linkedin:string,email:string}.
 Rules:
-- Cold Email: 90-100 words, professional, value-driven, personalized via research + highlights. Start with direct respectful greeting, one-line intro (who you are + relevant experience), 2–3 lines connecting skills to company needs with specifics, end with one clear ask ("Happy to chat if this aligns"). First line must be 'Subject: ...'.
-- LinkedIn: exactly 44 words by default, casual-professional, connection-oriented, same personalization.
+- Cold Email (90–100 words): natural, human, and value-driven. Personalize with company-specific insights. 
+  Structure:
+    1. Start with "Subject: ..." (compelling but not click-baity)
+    2. Direct, respectful greeting by name if possible.
+    3. One-line intro: who you are + 1 relevant credential/achievement.
+    4. 2–3 short sentences connecting your skills to their current needs or recent initiatives (from provided research).
+    5. End with one clear, low-pressure call-to-action (e.g., "Happy to chat if this aligns").
+  Tone: friendly-professional, confident, and conversational — avoid jargon, hype, or hard-sell language.
+- LinkedIn (exactly 44 words): casual-professional, connection-oriented, same personalization style as the email, no greetings or sign-offs, written in one smooth sentence.
 `;
 
-  const user = `Company: ${input.company}
+const user = `Company: ${input.company}
 Role: ${input.role}
 Highlights: ${input.highlights}
 Verified insights: ${JSON.stringify(input.verified)}
-Output strictly valid JSON.`;
+Output must be strictly valid JSON — nothing extra.`;
+
 
   const { content } = await callGroq(
     [
