@@ -6,13 +6,13 @@ import { Button } from "../../components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardAction } from "../../components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../../components/ui/table";
 import { Badge } from "../../components/ui/badge";
-import { Separator } from "../../components/ui/separator";
 import { Alert, AlertDescription } from "../../components/ui/alert";
-import { Input } from "../../components/ui/input";
 import { Textarea } from "../../components/ui/textarea";
 import { Copy, Mail, MessageSquare, RefreshCw, Scissors, Search, User, LogOut } from "lucide-react";
 import { signOut } from "../../lib/supabase";
 import { useRouter } from "next/navigation";
+import NavigationSidebar from "../../components/NavigationSidebar";
+import { saveEmailHistory, saveLinkedInHistory } from "../../lib/history";
 
 interface ResearchFinding {
   title: string;
@@ -53,6 +53,7 @@ export default function HomePage() {
   const [verifiedPoints, setVerifiedPoints] = useState<Array<{ claim: string; source: { title: string; url: string } }>>([]);
   const [contact, setContact] = useState<{ name: string; title: string; email?: string; source?: { title: string; url: string } } | null>(null);
   const [primaryEmail, setPrimaryEmail] = useState<string>("");
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(true);
 
   const canRun = useMemo(() => !!company && !!role && !!highlights, [company, role, highlights]);
   const abortRef = useRef<AbortController | null>(null);
@@ -290,6 +291,27 @@ export default function HomePage() {
               // Extract primary email from final data
               const email = extractPrimaryEmail(evt.data.research, evt.data.contact);
               if (email) setPrimaryEmail(email);
+
+              // Save to history
+              try {
+                if (evt.data.outputs.email) {
+                  await saveEmailHistory({
+                    company_name: company,
+                    role: role,
+                    subject_line: `Outreach to ${company}`,
+                    content: evt.data.outputs.email
+                  });
+                }
+                if (evt.data.outputs.linkedin) {
+                  await saveLinkedInHistory({
+                    company_name: company,
+                    role: role,
+                    content: evt.data.outputs.linkedin
+                  });
+                }
+              } catch (historyError) {
+                console.error('Failed to save history:', historyError);
+              }
             }
             if (evt.type === "error") setError(evt.data.message);
           } catch (err) {
@@ -341,108 +363,148 @@ export default function HomePage() {
     }
   }, [company, role, highlights]);
 
+  const handleRunAgents = async (data: { company: string; role: string; highlights: string }) => {
+    setCompany(data.company);
+    setRole(data.role);
+    setHighlights(data.highlights);
+    
+    // Run chain with the new data immediately
+    setLoading(true);
+    setError(null);
+    setResult(null);
+    setIntermediate({});
+    setStatus({});
+    setLinkedin("");
+    setEmail("");
+    setEditableEmail("");
+    setEditableLinkedin("");
+    setPrimaryEmail("");
+    abortRef.current?.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
+    
+    try {
+      const res = await fetch("/api/run", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ 
+          company: data.company, 
+          role: data.role, 
+          highlights: data.highlights 
+        }),
+        signal: controller.signal,
+      });
+      if (!res.ok || !res.body) throw new Error("Failed to run chain");
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        let idx;
+        while ((idx = buffer.indexOf("\n")) >= 0) {
+          const line = buffer.slice(0, idx).trim();
+          buffer = buffer.slice(idx + 1);
+          if (!line) continue;
+          try {
+            const evt: NdEvent = JSON.parse(line);
+            if (evt.type === "status") setStatus((s) => ({ ...s, ...evt.data }));
+            if (evt.type === "intermediate") {
+              setIntermediate((i) => ({ ...i, ...evt.data }));
+              if (evt.data.research) {
+                const email = extractPrimaryEmail(evt.data.research, contact);
+                if (email) setPrimaryEmail(email);
+              }
+            }
+            if (evt.type === "final") {
+              setResult(evt.data);
+              setLinkedin(evt.data.outputs.linkedin);
+              setEmail(evt.data.outputs.email);
+              setEditableEmail(evt.data.outputs.email);
+              setEditableLinkedin(evt.data.outputs.linkedin);
+              setVerifiedPoints(evt.data.verified_points || []);
+              setContact(evt.data.contact || null);
+              
+              const email = extractPrimaryEmail(evt.data.research, evt.data.contact);
+              if (email) setPrimaryEmail(email);
+
+              // Save to history
+              try {
+                if (evt.data.outputs.email) {
+                  await saveEmailHistory({
+                    company_name: data.company,
+                    role: data.role,
+                    subject_line: `Outreach to ${data.company}`,
+                    content: evt.data.outputs.email
+                  });
+                }
+                if (evt.data.outputs.linkedin) {
+                  await saveLinkedInHistory({
+                    company_name: data.company,
+                    role: data.role,
+                    content: evt.data.outputs.linkedin
+                  });
+                }
+              } catch (historyError) {
+                console.error('Failed to save history:', historyError);
+              }
+            }
+            if (evt.type === "error") setError(evt.data.message);
+          } catch (err) {
+            // ignore malformed lines
+          }
+        }
+      }
+    } catch (e: any) {
+      if (e?.name !== "AbortError") setError(e?.message || "Unknown error");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen gradient-blue">
-      {/* Header */}
-      <div className="text-center py-12 px-6 border-b border-white/30 relative">
-        <Button
-          onClick={async () => {
-            try {
-              await signOut();
-              window.location.href = '/';
-            } catch (error) {
-              console.error('Logout failed:', error);
-              window.location.href = '/?auth=true';
-            }
-          }}
-          variant="outline"
-          size="sm"
-          className="absolute top-6 right-6 bg-white/80 hover:bg-white text-slate-700"
-        >
-          <LogOut className="h-4 w-4 mr-2" />
-          Logout
-        </Button>
-        <h1 className="text-5xl font-bold mb-4 text-gradient animate-fade-in">
-          Outreach.ai
-        </h1>
-        <p className="text-xl text-slate-600 max-w-3xl mx-auto leading-relaxed animate-fade-in" style={{ animationDelay: '0.1s' }}>
-          AI-powered company research and personalized outreach automation
-        </p>
-      </div>
-
-      {/* Two Column Layout */}
-      <div className="flex min-h-[calc(100vh-200px)] max-lg:flex-col">
-        {/* Left Sidebar */}
-        <div className="w-96 min-w-96 max-lg:w-full max-lg:min-w-full p-8 sticky top-0 h-fit max-h-screen overflow-y-auto">
-          <Card className="shadow-xl bg-gradient-to-br from-blue-50/50 to-purple-50/50">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-blue-900">
-                <Search className="h-5 w-5" />
-                Company Research
-              </CardTitle>
-              <CardDescription>
-                Enter company details to generate personalized outreach
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-            <form onSubmit={(e) => { 
-              e.preventDefault(); 
-              if (canRun && !loading) void runChain(); 
-            }} className="space-y-6">
-              <div className="space-y-2">
-                <label className="block text-sm font-semibold text-blue-800">
-                  Company
-                </label>
-                <Input
-                  type="text"
-                  value={company}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setCompany(e.target.value)}
-                  placeholder="Company name or URL"
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <label className="block text-sm font-semibold text-blue-800">
-                  Role
-                </label>
-                <Input
-                  type="text"
-                  value={role}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setRole(e.target.value)}
-                  placeholder="Target role"
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <label className="block text-sm font-semibold text-blue-800">
-                  Key Highlights
-                </label>
-                <Input
-                  type="text"
-                  value={highlights}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setHighlights(e.target.value)}
-                  placeholder="Your key skills and experience"
-                />
-              </div>
-              
-              <Button
-                type="submit"
-                disabled={loading || !canRun}
-                className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-200"
-              >
-                {loading 
-                  ? (status.messaging ? "Drafting Messages" : status.verify ? "Verifying Research" : status.research ? "Researching Company" : "Starting Agents")
-                  : "Run AI Agents"
-                }
-              </Button>
-            </form>
-            </CardContent>
-          </Card>
+      {/* Navigation Sidebar */}
+      <NavigationSidebar 
+        onRunAgents={handleRunAgents} 
+        onSidebarChange={setSidebarCollapsed}
+      />
+      
+      {/* Main Content */}
+      <div 
+        className="transition-all duration-300" 
+        style={{ marginLeft: sidebarCollapsed ? '4rem' : '20rem' }}
+      >
+        {/* Header */}
+        <div className="text-center py-12 px-6 border-b border-white/30 relative">
+          <Button
+            onClick={async () => {
+              try {
+                await signOut();
+                window.location.href = '/?auth=true';
+              } catch (error) {
+                console.error('Logout failed:', error);
+                window.location.href = '/?auth=true';
+              }
+            }}
+            variant="outline"
+            size="sm"
+            className="absolute top-6 right-6 bg-white/80 hover:bg-white text-slate-700"
+          >
+            <LogOut className="h-4 w-4 mr-2" />
+            Logout
+          </Button>
+          <h1 className="text-5xl font-bold mb-4 text-gradient animate-fade-in">
+            Outreach.ai
+          </h1>
+          <p className="text-xl text-slate-600 max-w-3xl mx-auto leading-relaxed animate-fade-in" style={{ animationDelay: '0.1s' }}>
+            AI-powered company research and personalized outreach automation
+          </p>
         </div>
 
-        {/* Right Content Area */}
-        <div className="flex-1 p-8 max-lg:p-6 max-w-[calc(100vw-400px)] max-lg:max-w-full overflow-x-hidden">
-
+        {/* Dashboard Content */}
+        <div className="p-8 max-lg:p-6">
           {/* Status Indicator */}
           {(loading || Object.keys(status).length > 0) && (
             <Card className="mb-8 shadow-lg bg-gradient-to-br from-blue-50/30 to-purple-50/30">
@@ -713,43 +775,6 @@ export default function HomePage() {
           </div>
         </div>
       </div>
-      
-      {/* Mobile Responsive Styles */}
-      <style jsx>{`
-        @media (max-width: 768px) {
-          .layout-container {
-            flex-direction: column !important;
-          }
-          .sidebar {
-            width: 100% !important;
-            min-width: 100% !important;
-            position: relative !important;
-            max-height: none !important;
-          }
-          .content-area {
-            max-width: 100% !important;
-            padding: 1rem !important;
-          }
-        }
-        @keyframes fadeInUp {
-          from {
-            opacity: 0;
-            transform: translateY(20px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
-        }
-        @keyframes pulse {
-          0%, 100% { opacity: 1; }
-          50% { opacity: 0.5; }
-        }
-        @keyframes spin {
-          from { transform: rotate(0deg); }
-          to { transform: rotate(360deg); }
-        }
-      `}</style>
     </div>
   );
 }
