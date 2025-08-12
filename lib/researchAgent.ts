@@ -7,7 +7,7 @@ export type TrustedContact = {
   source?: { title: string; url: string };
 };
 
-export type ResearchAgentInput = { company: string; role: string };
+export type ResearchAgentInput = { company: string; domain?: string; role: string };
 export type ResearchPoint = { claim: string; source?: { title: string; url: string } };
 export type ResearchAgentOutput = ResearchResult & {
   points: ResearchPoint[];
@@ -16,81 +16,105 @@ export type ResearchAgentOutput = ResearchResult & {
 
 export async function researchAgent(input: ResearchAgentInput): Promise<ResearchAgentOutput> {
   const systemPrompt = `
-  You are a precision-focused company research assistant.
-  Always output STRICT valid compact JSON only (no extra commentary).
-  Do not hallucinate facts — if you are uncertain, return empty fields and a confidence score.
-  Prefer official sources (company domains, official blog, LinkedIn company page, Crunchbase, TechCrunch, reputable press).
-  When you generate a likely/fallback email, mark it explicitly with "likely": true and provide the inference rationale and any observed email pattern in "email_inference".
-  Always include a "confidence" score (0.0 - 1.0) for the overall research and for the contact if present.
-  `
+You are a precision-focused company research assistant.
+
+Your task is to generate a detailed, accurate, and well-structured company research report.
+
+Always output human-readable text using markdown formatting: clear headings, bullet points, and clickable links.
+
+Avoid JSON, code syntax, brackets, or any technical formatting.
+
+Do NOT hallucinate facts — if information is uncertain or unavailable, clearly state limitations.
+
+Prioritize official and trusted sources, including:
+- Official company domains and websites
+- Company blogs or press pages
+- LinkedIn company profiles
+- Crunchbase and reputable VC/startup databases
+- Major tech and business press (e.g., TechCrunch, BusinessWire, Forbes)
+
+Always include a confidence assessment (High/Medium/Low) with explanation.
+
+Cite sources clearly using clickable markdown links: [Source Title](URL).
+
+---
+
+1) DISAMBIGUATION:
+- Identify the company’s official domain by checking the official website, LinkedIn, Crunchbase, and trusted news.
+- If multiple candidates appear, list up to two with domain and brief reason for the match.
+- Only research the candidate with confidence ≥ 0.7.
+- If confidence < 0.7, state low confidence and provide candidate options; do NOT invent data.
+
+2) TRUSTED SOURCES & CLAIMS:
+- Consider only trusted sources as defined above.
+- Mark any claims from less reliable sources as “untrusted” and lower confidence.
+- Every claim must cite a trusted source with a clickable markdown link.
+
+3) CONTACT & EMAILS:
+- Find CEO, CTO, founders, hiring managers, or senior engineers from LinkedIn or official pages.
+- Include official emails from trusted sources; mark contact.likely = false.
+- If no official email, infer a likely email pattern only if consistent patterns appear in ≥ 2 trusted sources.
+- Provide brief evidence for inferred patterns and mark contact.likely = true.
+- If uncertain, omit email and mark confidence accordingly.
+- Provide a confidence score (0.0 to 1.0) for the contact details.
+
+4) OUTPUT FORMAT:
+
+Generate a human readble report with proper headlines as follows:
+
+## Company Overview
+
+Two to three sentences summarizing the company’s core business, products, and market focus.
+
+## Key Business Points
+
+- Bullet 1: Funding history summary and latest round, e.g., "Raised $38M in Series B led by QED Investors." [Crunchbase](https://crunchbase.com/link)
+- Bullet 2: Top technologies used, e.g., "Uses AI-powered tax engine, API-first infrastructure." [Company Blog](https://company.com/blog)
+- Bullet 3: Recent product updates or launches. [TechCrunch](https://techcrunch.com/link)
+- Bullet 4: Technical challenges or market pain points. [BusinessWire](https://businesswire.com/link)
+- Bullet 5: Leadership details if relevant. [LinkedIn](https://linkedin.com/company)
+
+## Contact Information
+
+- Name: Jane Doe
+- Title: CEO
+- Email: jane.doe@company.com (likely inferred from consistent email pattern)
+- Confidence Score: 0.85
+
+## Confidence Assessment
+
+High confidence: The information is sourced from multiple official and reputable sources including the company website and Crunchbase. The contact email is inferred with consistent patterns verified across official domains.
+
+---
+
+If any data is unavailable or confidence is low, explicitly mention this instead of fabricating details.
+
+`;
+
 const prompt = [
-  `Company: ${input.company}`,
+  `Company: ${input.company}${input.domain ? ` (${input.domain})` : ''}`,
   `Role: ${input.role}`,
   `
-  1) DISAMBIGUATION STEP (required):
-     - Try to find the company's official domain first (company.com) by checking: official website, LinkedIn company page, Crunchbase, and top reputable news.
-     - If multiple matches exist, return the top 2 matches in "candidates" with domain and a short match_reason, and DO NOT invent data for a non-confirmed match.
-     - Only proceed to full research on the highest-confidence matched company (candidate.confidence >= 0.7). If below 0.7, set overall confidence < 0.7 and include candidate list.
-
-  2) TRUSTED-SOURCE RULES:
-     - Consider a source "trusted" if it is:
-         * The official company domain,
-         * The company's own blog or press page,
-         * LinkedIn company page,
-         * Crunchbase / reputable VC sites,
-         * Major tech press (TechCrunch, BusinessWire, Forbes).
-     - Claims should cite a trusted source. If the only evidence is untrusted or personal blogs, include it but mark source as untrusted and lower confidence.
-
-  3) CONTACT & EMAIL RULES:
-     - Locate CEO/CTO/founding engineer/hiring manager/most-active engineer via LinkedIn or official About/Team pages.
-     - If an official email is publicly available on a trusted source, include it and set contact.likely = false.
-     - If no public email exists, infer a likely email **only if** you can detect a consistent company email pattern from at least 2 distinct trusted sources (e.g., firstname.lastname@company.com or f.lastname@company.com). Put the pattern and brief evidence in contact.email_inference and set contact.likely = true.
-     - If no pattern can be inferred confidently, leave contact.email undefined and set contact.likely = false.
-     - Add contact.confidence (0.0 - 1.0) reflecting how confident you are about the contact/email.
-
-  4) REQUIRED OUTPUT (strict JSON schema):
-  {
-    "summary": string (<=80 words),
-    "confidence": number,              // overall confidence 0.0 - 1.0
-    "candidates"?: [                   // only if disambiguation needed
-      { name:string, domain:string, match_reason:string, confidence:number }
-    ],
-    "points": [
-      { "claim": string, "source"?: { "title": string, "url": string, "trusted": boolean } }
-    ],
-    "sources"?: [ { "title": string, "url": string, "trusted": boolean } ],
-    "contact"?: {
-      "name": string,
-      "title": string,
-      "email"?: string,
-      "likely"?: boolean,             // true if invented/inferred
-      "email_inference"?: string,     // short rationale for invented email
-      "source"?: { "title": string, "url": string },
-      "confidence"?: number
-    }
-  }
-
-  5) FORMATTING & SAFETY:
-     - Every claim with an external fact must include a source object with a URL (prefer trusted sources).
-     - Deduplicate sources.
-     - If overall confidence < 0.6, include a brief "warning" field in the JSON (string) to indicate low confidence.
-     - Minify JSON (no extra commentary). Keep URLs fully qualified.
-  `
+Use the instructions above to generate a detailed company research report.
+`
 ].join("\n");
+
 
   const res = await callPerplexity(prompt, {
     model: "sonar",
-    maxTokens: 700,
+    maxTokens: 1000,
     temperature: 0.2,
     systemPrompt,
   });
+  console.log("Research agent: ", res);
 
-  // Ensure shape
+  
+  // Return the raw text response - no JSON parsing needed
   const normalized: ResearchAgentOutput = {
-    summary: res.summary,
-    points: Array.isArray((res as any).points) ? (res as any).points : (res.points || []).map((p: any) => ({ claim: String(p), source: undefined })),
-    sources: res.sources,
-    contact: (res as any).contact,
+    summary: typeof res === 'string' ? res : res.summary || String(res),
+    points: [],
+    sources: [],
+    contact: undefined,
   };
   return normalized;
 }

@@ -15,7 +15,7 @@ function toNdjson(event: Event): string {
 
 export async function POST(req: NextRequest) {
   try {
-    const { company, role, highlights } = await req.json();
+    const { company, domain, role, highlights } = await req.json();
     if (!company || !role || !highlights) {
       return new Response(JSON.stringify({ error: "Missing company, role or highlights" }), { status: 400 });
     }
@@ -25,7 +25,7 @@ export async function POST(req: NextRequest) {
         const encoder = new TextEncoder();
         try {
           const result = await runChain(
-            { company: String(company), role: String(role), highlights: String(highlights) },
+            { company: String(company), domain: domain ? String(domain) : undefined, role: String(role), highlights: String(highlights) },
             {
               onStatus: (s) => controller.enqueue(encoder.encode(toNdjson({ type: "status", data: s }))),
               onIntermediate: (i) => controller.enqueue(encoder.encode(toNdjson({ type: "intermediate", data: i }))),

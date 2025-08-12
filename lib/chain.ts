@@ -3,12 +3,12 @@ import { verifierAgent } from "@/lib/verifyAgent";
 import { messagingAgent } from "@/lib/messagingAgent";
 import { saveRun, findRecentRun } from "@/lib/db";
 
-export type ChainInput = { company: string; role: string; highlights: string };
+export type ChainInput = { company: string; domain?: string; role: string; highlights: string };
 export type ChainOutput = {
   research: string;
   verified: string;
   outputs: { linkedin: string; email: string };
-  _intermediate?: { research?: string; verified?: string };
+  _intermediate?: { research?: string; verified?: string; verified_points?: Array<{ claim: string; source: { title: string; url: string } }> };
   _status?: { research?: string; verify?: string; messaging?: string };
   verified_points?: Array<{ claim: string; source: { title: string; url: string } }>;
   contact?: { name: string; title: string; email?: string; source?: { title: string; url: string } };
@@ -16,7 +16,7 @@ export type ChainOutput = {
 
 type StreamCallbacks = {
   onStatus?: (s: NonNullable<ChainOutput["_status"]>) => void;
-  onIntermediate?: (i: NonNullable<ChainOutput["_intermediate"]>) => void;
+  onIntermediate?: (i: { research?: string; verified?: string; verified_points?: Array<{ claim: string; source: { title: string; url: string } }> }) => void;
 };
 
 export async function runChain(input: ChainInput, cb?: StreamCallbacks): Promise<ChainOutput> {
@@ -35,7 +35,7 @@ export async function runChain(input: ChainInput, cb?: StreamCallbacks): Promise
     cb?.onStatus?.({ ...status });
   } else {
   try {
-    research = await researchAgent(input);
+    research = await researchAgent({ company: input.company, domain: input.domain, role: input.role });
     status.research = "complete";
     console.log("[chain] Research complete");
     cb?.onStatus?.({ ...status });
@@ -50,7 +50,7 @@ export async function runChain(input: ChainInput, cb?: StreamCallbacks): Promise
     status.verify = "complete";
     console.log("[chain] Verification complete");
     cb?.onStatus?.({ ...status });
-    cb?.onIntermediate?.({ verified: verified.summary });
+    cb?.onIntermediate?.({ verified: verified.summary, verified_points: verified.points });
   } catch (e: any) {
     console.error("[chain] Verification failed", e);
     throw new Error(`Verification failed: ${e?.message || e}`);
@@ -86,8 +86,9 @@ export async function runChain(input: ChainInput, cb?: StreamCallbacks): Promise
     verified: verified.summary,
     outputs: messages,
     _intermediate: {
-      research: `${research.summary}${researchPoints.length ? "\n- " + researchPoints.join("\n- ") : ""}`,
-      verified: `${verified.summary}${verifiedPoints.length ? "\n- " + verifiedPoints.join("\n- ") : ""}`,
+      research: research.summary,
+      verified: verified.summary,
+      verified_points: verified.points,
     },
     _status: status,
     verified_points: Array.isArray(verified.points) ? verified.points : [],

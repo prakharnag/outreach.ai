@@ -12,6 +12,8 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "..
 import { Copy, Mail, MessageSquare, RefreshCw, Scissors, Search, User, LogOut, Menu } from "lucide-react";
 import { signOut, createClient } from "../../lib/supabase";
 import { cn } from "../../lib/utils";
+import { CompanyAutocomplete } from "../../components/ui/company-autocomplete";
+import { ConsoleLogWriter } from "drizzle-orm";
 
 
 interface ResearchFinding {
@@ -71,19 +73,22 @@ export default function HomePage() {
   const [verifiedPoints, setVerifiedPoints] = useState<Array<{ claim: string; source: { title: string; url: string } }>>([]);
   const [contact, setContact] = useState<{ name: string; title: string; email?: string; source?: { title: string; url: string } } | null>(null);
   const [primaryEmail, setPrimaryEmail] = useState<string>("");
+  const [researchData, setResearchData] = useState<any>(null);
 
   // Form state
-  const [searchData, setSearchData] = useState({ company: "", role: "", highlights: "" });
+  const [searchData, setSearchData] = useState({ company: "", domain: "", role: "", highlights: "" });
   const [company, setCompany] = useState("");
+  const [selectedDomain, setSelectedDomain] = useState("");
   const [role, setRole] = useState("");
   const [highlights, setHighlights] = useState("");
+  const [hasValidCompany, setHasValidCompany] = useState(false);
   
   // History state
   const [emailHistory, setEmailHistory] = useState<EmailHistory[]>([]);
   const [linkedinHistory, setLinkedinHistory] = useState<LinkedInHistory[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
   
-  const canRun = useMemo(() => !!company && !!role && !!highlights, [company, role, highlights]);
+  const canRun = useMemo(() => hasValidCompany && !!role && !!highlights, [hasValidCompany, role, highlights]);
   const abortRef = useRef<AbortController | null>(null);
   const supabase = useMemo(() => createClient(), []);
   
@@ -116,147 +121,65 @@ export default function HomePage() {
   }, [supabase]);
 
   // Human-readable research content renderer
-  const renderResearchContent = (content: string) => {
+  const renderResearchContent = (content: string | any) => {
     if (!content) return null;
     
-    let data: any = {};
-    try {
-      data = JSON.parse(content);
-    } catch (e) {
-      // Try to fix common JSON truncation issues
-      let fixedContent = content;
+    const textContent = typeof content === 'string' ? content : content.summary || String(content);
+    
+    // Extract URLs from text and make them clickable
+    const renderTextWithLinks = (text: string) => {
+      const urlRegex = /(https?:\/\/[^\s\)]+)/g;
+      const parts = text.split(urlRegex);
       
-      // If it ends with incomplete string, try to close it
-      if (content.includes('"') && !content.endsWith('"')) {
-        fixedContent = content + '"';
-      }
-      
-      // If missing closing braces, try to add them
-      const openBraces = (content.match(/{/g) || []).length;
-      const closeBraces = (content.match(/}/g) || []).length;
-      if (openBraces > closeBraces) {
-        fixedContent = content + '}'.repeat(openBraces - closeBraces);
-      }
-      
-      try {
-        data = JSON.parse(fixedContent);
-      } catch {
-        // If still can't parse, extract readable text manually
-        const summaryMatch = content.match(/"summary"\s*:\s*"([^"]*)"/)?.[1];
-        const claimsMatches = [...content.matchAll(/"claim"\s*:\s*"([^"]*)"/g)];
-        const sourceMatches = [...content.matchAll(/"source"\s*:\s*{[^}]*"url"\s*:\s*"([^"]*)"/g)];
-        const titleMatches = [...content.matchAll(/"source"\s*:\s*{[^}]*"title"\s*:\s*"([^"]*)"/g)];
-        
-        return (
-          <div className="research-card">
-            {summaryMatch && (
-              <div className="font-bold text-lg mb-6 text-slate-800 relative z-10">
-                {summaryMatch}
-              </div>
-            )}
-            
-            {claimsMatches.length > 0 && (
-              <ul className="list-none p-0 m-0 relative z-10">
-                {claimsMatches.map((match, idx) => {
-                  const sourceUrl = sourceMatches[idx]?.[1];
-                  const sourceTitle = titleMatches[idx]?.[1];
-                  return (
-                    <li key={idx} className="flex items-start gap-3 mb-4">
-                      <div className="insight-bullet-modern mt-2" />
-                      <div className="flex-1">
-                        <span className="text-slate-800">{match[1]}</span>
-                        {sourceUrl && (
-                          <SourceLink 
-                            url={sourceUrl} 
-                            title={sourceTitle}
-                          />
-                        )}
-                      </div>
-                    </li>
-                  );
-                })}
-              </ul>
-            )}
-            
-            {!summaryMatch && claimsMatches.length === 0 && (
-              <div className="text-slate-500 italic relative z-10">
-                Research in progress...
-              </div>
-            )}
-          </div>
-        );
-      }
-    }
-
-    // Deduplicate sources by URL
-    const deduplicateSources = (sources: any[]) => {
-      const seen = new Set<string>();
-      return sources.filter(source => {
-        const url = source?.url;
-        if (!url || seen.has(url)) return false;
-        seen.add(url);
-        return true;
+      return parts.map((part, index) => {
+        if (urlRegex.test(part)) {
+          return (
+            <SourceLink 
+              key={index}
+              url={part} 
+              title={part}
+            />
+          );
+        }
+        return part;
       });
     };
-
-    const uniquePointSources = data.points ? deduplicateSources(
-      data.points.map((p: any) => p.source).filter(Boolean)
-    ) : [];
     
-    const globalSources = data.sources ? deduplicateSources(data.sources) : [];
-
     return (
       <div className="research-card">
-        {/* Summary */}
-        {data.summary && (
-          <div className="font-bold text-lg mb-6 text-slate-800 relative z-10">
-            {data.summary}
-          </div>
-        )}
-        
-        {/* Points */}
-        {data.points && Array.isArray(data.points) && (
-          <ul className="list-none p-0 m-0 relative z-10">
-            {data.points.map((point: any, idx: number) => (
-              <li key={idx} className="flex items-start gap-3 mb-4 animate-fade-in-up" style={{ animationDelay: `${idx * 0.1}s` }}>
-                <div className="insight-bullet-modern mt-2" />
-                <div className="flex-1">
-                  <span className="text-slate-800">{point.claim}</span>
-                  {point.source?.url && (
-                    <SourceLink 
-                      url={point.source.url} 
-                      title={point.source.title}
-                    />
-                  )}
+        <div className="text-slate-800 relative z-10 leading-relaxed space-y-4">
+          {textContent.split('\n').map((paragraph: string, idx: number) => {
+            if (!paragraph.trim()) return null;
+            
+            // Style bullet points
+            if (paragraph.trim().startsWith('•') || paragraph.trim().startsWith('-')) {
+              return (
+                <div key={idx} className="flex items-start gap-3 ml-4">
+                  <div className="insight-bullet-modern mt-2" />
+                  <div className="flex-1">
+                    {renderTextWithLinks(paragraph.replace(/^[•-]\s*/, ''))}
+                  </div>
                 </div>
-              </li>
-            ))}
-          </ul>
-        )}
-        
-        {/* Global Sources */}
-        {globalSources.length > 0 && (
-          <div className="mt-6 pt-4 border-t border-slate-200/50 relative z-10">
-            <div className="font-semibold text-slate-800 mb-3">
-              Sources:
-            </div>
-            <div className="flex flex-wrap gap-4">
-              {globalSources.map((source: any, idx: number) => (
-                <div key={idx} className="flex items-center gap-1">
-                  <span className="text-sm text-slate-700">{source.title}</span>
-                  <SourceLink url={source.url} title={source.title} />
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-        
-        {/* Fallback if no structured data */}
-        {!data.summary && (!data.points || data.points.length === 0) && globalSources.length === 0 && (
-          <div className="text-slate-500 italic text-center p-4 relative z-10">
-            Research data structure not recognized
-          </div>
-        )}
+              );
+            }
+            
+            // Style headings (lines ending with :)
+            if (paragraph.trim().endsWith(':')) {
+              return (
+                <h4 key={idx} className="font-semibold text-lg text-primary mt-6 mb-2">
+                  {paragraph.trim()}
+                </h4>
+              );
+            }
+            
+            // Regular paragraphs
+            return (
+              <p key={idx} className="text-slate-700">
+                {renderTextWithLinks(paragraph)}
+              </p>
+            );
+          }).filter(Boolean)}
+        </div>
       </div>
     );
   };
@@ -338,14 +261,28 @@ export default function HomePage() {
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     if (canRun && !loading) {
-      runChain({ company, role, highlights });
+      runChain({ company, domain: selectedDomain, role, highlights });
       setActiveView("research");
       setIsSearchExpanded(false);
     }
   };
 
-  const runChain = useCallback(async (data: { company: string; role: string; highlights: string }) => {
-    setSearchData(data);
+  const handleCompanySelect = (suggestion: { name: string; domain: string }) => {
+    setCompany(suggestion.name);
+    setSelectedDomain(suggestion.domain);
+    setHasValidCompany(true);
+  };
+
+  const handleCompanyChange = (value: string) => {
+    setCompany(value);
+    if (!value.trim()) {
+      setSelectedDomain("");
+      setHasValidCompany(false);
+    }
+  };
+
+  const runChain = useCallback(async (data: { company: string; domain?: string; role: string; highlights: string }) => {
+    setSearchData({ ...data, domain: data.domain || "" });
     setLoading(true);
     setError(null);
     setResult(null);
@@ -384,27 +321,57 @@ export default function HomePage() {
             if (evt.type === "status") setStatus((s) => ({ ...s, ...evt.data }));
             if (evt.type === "intermediate") {
               setIntermediate((i) => ({ ...i, ...evt.data }));
-              // Extract primary email when research is available
               if (evt.data.research) {
+                setResearchData(evt.data.research);
                 const email = extractPrimaryEmail(evt.data.research, contact);
                 if (email) setPrimaryEmail(email);
+              }
+              if (evt.data.verified_points) {
+                setVerifiedPoints(evt.data.verified_points);
               }
             }
             if (evt.type === "final") {
               setResult(evt.data);
-              setLinkedin(evt.data.outputs.linkedin);
-              setEmail(evt.data.outputs.email);
-              setEditableEmail(evt.data.outputs.email);
-              setEditableLinkedin(evt.data.outputs.linkedin);
+              
+              // Get confidence from research data - use stored researchData which has the actual confidence
+              let confidence = 0;
+              if (researchData && typeof researchData === 'object' && researchData.confidence) {
+                confidence = researchData.confidence;
+              } else {
+                // If we have plain text research, assume reasonable confidence
+                confidence = evt.data.research ? 0.8 : 0;
+              }
+              
+              console.log('Final processing:', {
+                company: data.company,
+                confidence: confidence,
+                threshold: 0.7,
+                willGenerate: confidence >= 0.7
+              });
+              
+              // Check confidence before setting email/linkedin content
+              if (confidence >= 0.7) {
+                setLinkedin(evt.data.outputs.linkedin);
+                setEmail(evt.data.outputs.email);
+                setEditableEmail(evt.data.outputs.email);
+                setEditableLinkedin(evt.data.outputs.linkedin);
+                
+                // Save to history and trigger real-time updates
+                await saveToHistory(data, evt.data.outputs);
+              } else {
+                console.warn('Confidence too low for generation:', {
+                  company: data.company,
+                  confidence: confidence
+                });
+                setError("Company not found. Unable to do research and generate cold email or LinkedIn message.");
+              }
+              
               setVerifiedPoints(evt.data.verified_points || []);
               setContact(evt.data.contact || null);
               
               // Extract primary email from final data
               const email = extractPrimaryEmail(evt.data.research, evt.data.contact);
               if (email) setPrimaryEmail(email);
-              
-              // Save to history
-              await saveToHistory(data, evt.data.outputs);
             }
             if (evt.type === "error") setError(evt.data.message);
           } catch (err) {
@@ -425,28 +392,33 @@ export default function HomePage() {
       const emailLines = outputs.email.split('\n');
       const subjectLine = emailLines.find(line => line.toLowerCase().includes('subject:'))?.replace(/subject:\s*/i, '') || `Outreach to ${searchData.company}`;
       
-      // Save email
-      await fetch('/api/history/emails', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          company_name: searchData.company,
-          role: searchData.role,
-          subject_line: subjectLine,
-          email_content: outputs.email
+      // Save email and LinkedIn in parallel
+      const [emailRes, linkedinRes] = await Promise.all([
+        fetch('/api/history/emails', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            company_name: searchData.company,
+            role: searchData.role,
+            subject_line: subjectLine,
+            email_content: outputs.email
+          })
+        }),
+        fetch('/api/history/linkedin', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            company_name: searchData.company,
+            role: searchData.role,
+            message_content: outputs.linkedin
+          })
         })
-      });
+      ]);
       
-      // Save LinkedIn message
-      await fetch('/api/history/linkedin', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          company_name: searchData.company,
-          role: searchData.role,
-          message_content: outputs.linkedin
-        })
-      });
+      // Real-time updates will be handled by Supabase subscriptions
+      if (!emailRes.ok || !linkedinRes.ok) {
+        console.error('Failed to save history');
+      }
     } catch (error) {
       console.error('Failed to save to history:', error);
     }
@@ -546,13 +518,23 @@ export default function HomePage() {
                 <label className="block text-sm font-medium text-slate-700 mb-2">
                   Company Name
                 </label>
-                <input
-                  type="text"
+                <CompanyAutocomplete
                   value={company}
-                  onChange={(e) => setCompany(e.target.value)}
-                  placeholder="Company name or URL"
-                  className="w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  onChange={handleCompanyChange}
+                  onSelect={handleCompanySelect}
+                  placeholder="Search for a company..."
+                  disabled={loading}
                 />
+                {selectedDomain && (
+                  <div className="mt-2 text-sm text-slate-600">
+                    Selected: <span className="font-medium">{company}</span> ({selectedDomain})
+                  </div>
+                )}
+                {company && !hasValidCompany && (
+                  <div className="mt-2 text-sm text-amber-600">
+                    Please select a company from the suggestions to ensure accurate research.
+                  </div>
+                )}
               </div>
               
               <div>
@@ -584,7 +566,11 @@ export default function HomePage() {
               <Button
                 type="submit"
                 disabled={loading || !canRun}
-                className="w-full"
+                className={cn(
+                  "w-full",
+                  !hasValidCompany && company && "opacity-50 cursor-not-allowed"
+                )}
+                title={!hasValidCompany && company ? "Please select a company from the suggestions" : undefined}
               >
                 {loading ? "Running..." : "Run AI Agents"}
               </Button>
@@ -599,17 +585,8 @@ export default function HomePage() {
         <div className="text-center py-8 px-6 border-b border-white/30 relative">
           <Button
             onClick={async () => {
-              try {
-                await supabase.auth.signOut({ scope: 'global' });
-                // Clear any cached data
-                setEmailHistory([]);
-                setLinkedinHistory([]);
-                // Force redirect
-                window.location.replace('/');
-              } catch (error) {
-                console.error('Logout failed:', error);
-                window.location.replace('/');
-              }
+              await signOut();
+              window.location.href = '/';
             }}
             variant="outline"
             size="sm"
@@ -752,6 +729,30 @@ export default function HomePage() {
                           </h4>
                           <div className="mb-4">
                             {renderResearchContent(intermediate.research)}
+                          </div>
+                        </div>
+                      )}
+                      
+                      {verifiedPoints.length > 0 && (
+                        <div>
+                          <h4 className="text-lg font-semibold text-primary mb-4 pb-2 border-b">
+                            Verified Research Points
+                          </h4>
+                          <div className="space-y-3">
+                            {verifiedPoints.map((point, idx) => (
+                              <div key={idx} className="flex items-start gap-3">
+                                <div className="insight-bullet-modern mt-2" />
+                                <div className="flex-1">
+                                  <span className="text-slate-800">{point.claim}</span>
+                                  {point.source?.url && (
+                                    <SourceLink 
+                                      url={point.source.url} 
+                                      title={point.source.title}
+                                    />
+                                  )}
+                                </div>
+                              </div>
+                            ))}
                           </div>
                         </div>
                       )}
@@ -928,10 +929,9 @@ export default function HomePage() {
                     <Table>
                       <TableHeader>
                         <TableRow className="border-b">
-                          <TableHead className="w-[30%] font-semibold">Subject</TableHead>
-                          <TableHead className="w-[25%] font-semibold">Company</TableHead>
-                          <TableHead className="w-[20%] font-semibold">Role</TableHead>
-                          <TableHead className="w-[25%] font-semibold">Date</TableHead>
+                          <TableHead className="w-[40%] font-semibold">Subject Line</TableHead>
+                          <TableHead className="w-[35%] font-semibold">Company Name</TableHead>
+                          <TableHead className="w-[25%] font-semibold">Created At</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -945,11 +945,6 @@ export default function HomePage() {
                             <TableCell className="py-4 px-4">
                               <div className="text-slate-700 truncate" title={email.company_name}>
                                 {email.company_name}
-                              </div>
-                            </TableCell>
-                            <TableCell className="py-4 px-4">
-                              <div className="text-slate-600 truncate" title={email.role}>
-                                {email.role}
                               </div>
                             </TableCell>
                             <TableCell className="py-4 px-4">
