@@ -30,7 +30,7 @@ Prioritize official and trusted sources, including:
 - Official company domains and websites
 - Company blogs or press pages
 - LinkedIn company profiles
-- Crunchbase and reputable VC/startup databases
+- Crunchbase and reputable VC/startup (e.g., Sequoia Capital, Venture Partners,YCombinator, etc) databases
 - Major tech and business press (e.g., TechCrunch, BusinessWire, Forbes)
 
 Always include a confidence assessment (High/Medium/Low) with explanation.
@@ -40,7 +40,7 @@ Cite sources clearly using clickable markdown links: [Source Title](URL).
 ---
 
 1) DISAMBIGUATION:
-- Identify the company’s official domain by checking the official website, LinkedIn, Crunchbase, and trusted news.
+- Identify the company’s official domain by checking the official website, LinkedIn, company blog, company resources, company magazine, Crunchbase, and trusted news.
 - If multiple candidates appear, list up to two with domain and brief reason for the match.
 - Only research the candidate with confidence ≥ 0.7.
 - If confidence < 0.7, state low confidence and provide candidate options; do NOT invent data.

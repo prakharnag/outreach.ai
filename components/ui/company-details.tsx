@@ -12,6 +12,7 @@ interface CompanyDetailsProps {
     contact_name?: string;
     contact_title?: string;
     contact_email?: string;
+    email_inferred?: boolean;
     confidence_score?: number;
     source_url?: string;
     source_title?: string;
@@ -123,15 +124,52 @@ export function CompanyDetails({ company, onClose }: CompanyDetailsProps) {
           </CardHeader>
           <CardContent>
             <div className="prose prose-sm max-w-none">
-              {typeof company.research_data === 'string' ? (
-                <div className="whitespace-pre-wrap text-slate-700">
-                  {company.research_data}
-                </div>
-              ) : (
-                <pre className="text-sm text-slate-700 whitespace-pre-wrap">
-                  {JSON.stringify(company.research_data, null, 2)}
-                </pre>
-              )}
+              {(() => {
+                let researchContent = '';
+                
+                if (typeof company.research_data === 'string') {
+                  researchContent = company.research_data;
+                } else if (company.research_data.research) {
+                  researchContent = company.research_data.research;
+                } else {
+                  researchContent = JSON.stringify(company.research_data, null, 2);
+                }
+                
+                // Convert markdown-style links to clickable links
+                const renderWithLinks = (text: string) => {
+                  const linkRegex = /\[([^\]]+)\]\(([^)]+)\)/g;
+                  const parts = text.split(linkRegex);
+                  
+                  return parts.map((part, index) => {
+                    if (index % 3 === 1) {
+                      // This is link text
+                      const url = parts[index + 1];
+                      return (
+                        <a
+                          key={index}
+                          href={url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-blue-600 hover:text-blue-800 underline"
+                        >
+                          {part}
+                        </a>
+                      );
+                    } else if (index % 3 === 2) {
+                      // This is the URL part, skip it
+                      return null;
+                    }
+                    // Regular text
+                    return <span key={index}>{part}</span>;
+                  });
+                };
+                
+                return (
+                  <div className="whitespace-pre-wrap text-slate-700 leading-relaxed">
+                    {renderWithLinks(researchContent)}
+                  </div>
+                );
+              })()}
             </div>
           </CardContent>
         </Card>
