@@ -274,3 +274,67 @@ body {
   transform: translateY(-2px);
   box-shadow: 0 12px 32px rgba(0, 0, 0, 0.12);
 }
+
+/* Expandable content animations */
+.expandable-enter {
+  max-height: 0;
+  opacity: 0;
+  overflow: hidden;
+}
+
+.expandable-enter-active {
+  max-height: 500px;
+  opacity: 1;
+  transition: max-height 300ms ease-in-out, opacity 200ms ease-in-out;
+}
+
+.expandable-exit {
+  max-height: 500px;
+  opacity: 1;
+  overflow: hidden;
+}
+
+.expandable-exit-active {
+  max-height: 0;
+  opacity: 0;
+  transition: max-height 300ms ease-in-out, opacity 200ms ease-in-out;
+}
+
+/* Smooth hover transitions for interactive elements */
+.hover-lift {
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.hover-lift:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+/* Header transition for context switching */
+.header-transition {
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Content area transitions */
+.content-transition {
+  transition: opacity 0.2s ease-in-out, transform 0.2s ease-in-out;
+}
+
+.content-enter {
+  opacity: 0;
+  transform: translateY(8px);
+}
+
+.content-enter-active {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Prevent layout shift during loading */
+.min-height-screen {
+  min-height: 100vh;
+}
+
+.skeleton-pulse {
+  animation: pulse-soft 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}

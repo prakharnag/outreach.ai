@@ -62,11 +62,11 @@ Cite sources clearly using clickable markdown links: [Source Title](URL).
 
 Generate a human readble report with proper headlines as follows:
 
-## Company Overview
+Company Overview
 
 Two to three sentences summarizing the company’s core business, products, and market focus.
 
-## Key Business Points
+Key Business Points
 
 - Bullet 1: Funding history summary and latest round, e.g., "Raised $38M in Series B led by QED Investors." [Crunchbase](https://crunchbase.com/link)
 - Bullet 2: Top technologies used, e.g., "Uses AI-powered tax engine, API-first infrastructure." [Company Blog](https://company.com/blog)
@@ -74,7 +74,7 @@ Two to three sentences summarizing the company’s core business, products, and 
 - Bullet 4: Technical challenges or market pain points. [BusinessWire](https://businesswire.com/link)
 - Bullet 5: Leadership details if relevant. [LinkedIn](https://linkedin.com/company)
 
-## Contact Information
+Contact Information
 
 - Name: Jane Doe
 - Title: CEO
