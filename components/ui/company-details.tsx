@@ -78,6 +78,11 @@ export function CompanyDetails({ company, onClose }: CompanyDetailsProps) {
                   <label className="text-sm font-medium text-slate-600">Email</label>
                   <div className="flex items-center gap-2">
                     <span className="text-slate-900">{company.contact_email}</span>
+                    {company.email_inferred && (
+                      <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">
+                        Inferred
+                      </span>
+                    )}
                     <Button
                       variant="outline"
                       size="sm"

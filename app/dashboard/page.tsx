@@ -353,11 +353,21 @@ export default function HomePage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(contactData)
       });
+      
       if (!res.ok) {
-        console.error('Failed to save contact result');
+        const errorData = await res.json();
+        console.error('Failed to save contact result:', errorData);
+        setError(`Failed to save research data: ${errorData.error || 'Unknown error'}`);
+        return false;
       }
+      
+      const savedData = await res.json();
+      console.log('Contact result saved successfully:', savedData);
+      return true;
     } catch (error) {
       console.error('Failed to save contact result:', error);
+      setError('Failed to save research data. Please try again.');
+      return false;
     }
   }, []);
   
@@ -485,21 +495,25 @@ export default function HomePage() {
               setVerifiedPoints(evt.data.verified_points || []);
               setContact(evt.data.contact || null);
               
-              // Save contact to database if found
-              if (evt.data.contact) {
-                const contactData = {
-                  company_name: data.company,
-                  contact_name: evt.data.contact.name,
-                  contact_title: evt.data.contact.title,
-                  contact_email: evt.data.contact.email,
-                  email_inferred: (evt.data.contact as any).inferred || false,
-                  confidence_score: confidence,
-                  source_url: evt.data.contact.source?.url,
-                  source_title: evt.data.contact.source?.title,
-                  research_data: evt.data.research
-                };
-                await saveContactResult(contactData);
-              }
+              // Always save research results to database
+              const contactData = {
+                company_name: data.company,
+                contact_name: evt.data.contact?.name || null,
+                contact_title: evt.data.contact?.title || null,
+                contact_email: evt.data.contact?.email || null,
+                email_inferred: (evt.data.contact as any)?.inferred || false,
+                confidence_score: confidence,
+                source_url: evt.data.contact?.source?.url || null,
+                source_title: evt.data.contact?.source?.title || null,
+                research_data: {
+                  research: evt.data.research,
+                  verified_points: evt.data.verified_points || [],
+                  contact: evt.data.contact || null,
+                  confidence: confidence,
+                  timestamp: new Date().toISOString()
+                }
+              };
+              await saveContactResult(contactData);
               
               // Extract primary email from final data
               const email = extractPrimaryEmail(evt.data.research, evt.data.contact);

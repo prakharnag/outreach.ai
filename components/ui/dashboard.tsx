@@ -14,7 +14,7 @@ interface DashboardProps {
 }
 
 export function Dashboard({ onStartResearch }: DashboardProps) {
-  const { contactResults, loading } = useContactResults();
+  const { contactResults, loading, error } = useContactResults();
   const [selectedCompany, setSelectedCompany] = useState<ContactResult | null>(null);
 
   const formatDate = (dateString: string) => {
@@ -97,6 +97,12 @@ export function Dashboard({ onStartResearch }: DashboardProps) {
 
   return (
     <div className="space-y-6">
+      {error && (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+          <p className="text-red-800 text-sm">{error}</p>
+        </div>
+      )}
+      
       <KPIDashboard />
       
       {/* Recent Companies */}
@@ -117,12 +123,27 @@ export function Dashboard({ onStartResearch }: DashboardProps) {
                   className="flex items-center justify-between p-3 rounded-lg hover:bg-slate-50 cursor-pointer transition-colors border border-slate-100"
                 >
                   <div className="flex-1">
-                    <div className="font-medium text-slate-900">
+                    <div className="font-medium text-slate-900 flex items-center gap-2">
                       {company.company_name}
+                      {company.confidence_score && company.confidence_score < 0.7 && (
+                        <span className="text-xs bg-orange-100 text-orange-800 px-2 py-1 rounded">
+                          Partial Data
+                        </span>
+                      )}
                     </div>
                     {company.contact_name && (
                       <div className="text-sm text-slate-600">
                         {company.contact_name} • {company.contact_title}
+                        {company.confidence_score && (
+                          <span className={`ml-2 px-2 py-1 rounded text-xs ${
+                            company.confidence_score >= 0.8 ? 'bg-green-100 text-green-800' :
+                            company.confidence_score >= 0.7 ? 'bg-yellow-100 text-yellow-800' :
+                            'bg-red-100 text-red-800'
+                          }`}>
+                            {company.confidence_score >= 0.8 ? 'High' :
+                             company.confidence_score >= 0.7 ? 'Medium' : 'Low'} Confidence
+                          </span>
+                        )}
                       </div>
                     )}
                   </div>

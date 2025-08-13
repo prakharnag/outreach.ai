@@ -96,22 +96,59 @@ export async function POST(request: NextRequest) {
       research_data
     } = body;
 
-    const { data, error } = await supabase
+    // Check if company already exists for this user
+    const { data: existing } = await supabase
       .from("contact_results")
-      .insert({
-        user_id: user.id,
-        company_name,
-        contact_name,
-        contact_title,
-        contact_email,
-        email_inferred: email_inferred || false,
-        confidence_score,
-        source_url,
-        source_title,
-        research_data
-      })
-      .select()
+      .select("id")
+      .eq("user_id", user.id)
+      .eq("company_name", company_name)
       .single();
+
+    let data, error;
+    
+    if (existing) {
+      // Update existing record
+      const result = await supabase
+        .from("contact_results")
+        .update({
+          contact_name,
+          contact_title,
+          contact_email,
+          email_inferred: email_inferred || false,
+          confidence_score,
+          source_url,
+          source_title,
+          research_data,
+          updated_at: new Date().toISOString()
+        })
+        .eq("id", existing.id)
+        .select()
+        .single();
+      
+      data = result.data;
+      error = result.error;
+    } else {
+      // Insert new record
+      const result = await supabase
+        .from("contact_results")
+        .insert({
+          user_id: user.id,
+          company_name,
+          contact_name,
+          contact_title,
+          contact_email,
+          email_inferred: email_inferred || false,
+          confidence_score,
+          source_url,
+          source_title,
+          research_data
+        })
+        .select()
+        .single();
+      
+      data = result.data;
+      error = result.error;
+    }
 
     if (error) {
       console.error('Supabase POST error:', error);
