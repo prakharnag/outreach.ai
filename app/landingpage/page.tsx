@@ -305,7 +305,7 @@ export default function LandingPage() {
                     </CardHeader>
                     <CardContent>
                       <p className="text-sm text-muted-foreground">
-                        "Hi Sarah, I noticed your recent API launch and thought you might be interested in..."
+                        &ldquo;Hi Sarah, I noticed your recent API launch and thought you might be interested in...&rdquo;
                       </p>
                     </CardContent>
                   </Card>
@@ -323,7 +323,7 @@ export default function LandingPage() {
             Ready to Transform Your Outreach Game?
           </h2>
           <p className="text-xl opacity-90 mb-8 max-w-2xl mx-auto">
-            Join thousands of sales professionals who've increased their response rates with AI-powered outreach.
+            Join thousands of sales professionals who&apos;ve increased their response rates with AI-powered outreach.
           </p>
           
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8 max-w-2xl mx-auto">

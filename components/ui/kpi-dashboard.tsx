@@ -99,7 +99,7 @@ export function KPIDashboard({ onDataLoad }: KPIDashboardProps) {
       linkedinChannel.unsubscribe();
       contactChannel.unsubscribe();
     };
-  }, []);
+  }, [loadStats]);
 
   if (loading) {
     return (

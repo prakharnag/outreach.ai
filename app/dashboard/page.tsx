@@ -8,8 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from ".
 import { Badge } from "../../components/ui/badge";
 import { Alert, AlertDescription } from "../../components/ui/alert";
 import { Textarea } from "../../components/ui/textarea";
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "../../components/ui/accordion";
-import { Copy, Mail, MessageSquare, RefreshCw, Scissors, Search, User, Settings as SettingsIcon, Menu, BarChart3 } from "lucide-react";
+import { Copy, Mail, MessageSquare, RefreshCw, Scissors, Search, User, Settings as SettingsIcon, BarChart3 } from "lucide-react";
 import { signOut, createClient } from "../../lib/supabase";
 import { cn } from "../../lib/utils";
 import { CompanyAutocomplete } from "../../components/ui/company-autocomplete";
@@ -23,7 +22,7 @@ import { Dashboard } from "../../components/ui/dashboard";
 import { useUser } from "../../hooks/useUser";
 import { ResearchSpinner } from "../../components/ui/research-spinner";
 import { CompanyLink } from "../../components/ui/company-link";
-
+import { ResearchOutput } from "../../components/ui/research-output";
 
 interface ResearchFinding {
   title: string;
@@ -65,16 +64,11 @@ interface LinkedInHistory {
 }
 
 export default function HomePage() {
-  // User data
   const { user, loading: userLoading } = useUser();
   
-  // Navigation state
   const [activeView, setActiveView] = useState<"home" | "search" | "email" | "linkedin" | "research" | "analytics" | "settings">("home");
   const [isSearchExpanded, setIsSearchExpanded] = useState(false);
   
-
-  
-  // Research state
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<ChainResponse | null>(null);
@@ -89,7 +83,6 @@ export default function HomePage() {
   const [primaryEmail, setPrimaryEmail] = useState<string>("");
   const [researchData, setResearchData] = useState<any>(null);
 
-  // Form state
   const [searchData, setSearchData] = useState({ company: "", domain: "", role: "", highlights: "" });
   const [company, setCompany] = useState("");
   const [selectedDomain, setSelectedDomain] = useState("");
@@ -97,7 +90,6 @@ export default function HomePage() {
   const [highlights, setHighlights] = useState("");
   const [hasValidCompany, setHasValidCompany] = useState(false);
   
-  // History state
   const [emailHistory, setEmailHistory] = useState<EmailHistory[]>([]);
   const [linkedinHistory, setLinkedinHistory] = useState<LinkedInHistory[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
@@ -107,7 +99,6 @@ export default function HomePage() {
   const abortRef = useRef<AbortController | null>(null);
   const supabase = useMemo(() => createClient(), []);
   
-  // Real-time subscriptions with comprehensive error handling
   useEffect(() => {
     let retryCount = 0;
     const maxRetries = 3;
@@ -121,19 +112,9 @@ export default function HomePage() {
             (payload: any) => {
               const newEmail = payload.new as EmailHistory;
               setEmailHistory(prev => {
-                // Prevent duplicates
                 if (prev.some(email => email.id === newEmail.id)) return prev;
                 return [newEmail, ...prev];
               });
-            }
-          )
-          .on('postgres_changes',
-            { event: 'UPDATE', schema: 'public', table: 'email_history' },
-            (payload: any) => {
-              const updatedEmail = payload.new as EmailHistory;
-              setEmailHistory(prev => 
-                prev.map(email => email.id === updatedEmail.id ? updatedEmail : email)
-              );
             }
           )
           .subscribe((status: string) => {
@@ -150,19 +131,9 @@ export default function HomePage() {
             (payload: any) => {
               const newMessage = payload.new as LinkedInHistory;
               setLinkedinHistory(prev => {
-                // Prevent duplicates
                 if (prev.some(msg => msg.id === newMessage.id)) return prev;
                 return [newMessage, ...prev];
               });
-            }
-          )
-          .on('postgres_changes',
-            { event: 'UPDATE', schema: 'public', table: 'linkedin_history' },
-            (payload: any) => {
-              const updatedMessage = payload.new as LinkedInHistory;
-              setLinkedinHistory(prev => 
-                prev.map(msg => msg.id === updatedMessage.id ? updatedMessage : msg)
-              );
             }
           )
           .subscribe((status: string) => {
@@ -179,7 +150,6 @@ export default function HomePage() {
             (payload: any) => {
               const newContact = payload.new;
               setContactResults(prev => {
-                // Prevent duplicates
                 if (prev.some(contact => contact.id === newContact.id)) return prev;
                 return [newContact, ...prev];
               });
@@ -210,79 +180,6 @@ export default function HomePage() {
     return cleanup;
   }, [supabase]);
 
-  // Human-readable research content renderer
-  const renderResearchContent = (content: string | any) => {
-    if (!content) return null;
-    
-    const textContent = typeof content === 'string' ? content : content.summary || String(content);
-    
-    // Extract URLs from text and make them clickable
-    const renderTextWithLinks = (text: string) => {
-      const urlRegex = /(https?:\/\/[^\s\)]+)/g;
-      const parts = text.split(urlRegex);
-      
-      return parts.map((part, index) => {
-        if (urlRegex.test(part)) {
-          // Use CompanyLink for company URLs, SourceLink for others
-          const isCompanyUrl = part.includes('company') || part.includes('corp') || part.includes('.com');
-          return isCompanyUrl ? (
-            <CompanyLink 
-              key={index}
-              url={part}
-              className="ml-2"
-            />
-          ) : (
-            <SourceLink 
-              key={index}
-              url={part} 
-              title={part}
-            />
-          );
-        }
-        return part;
-      });
-    };
-    
-    return (
-      <div className="research-card">
-        <div className="text-slate-800 relative z-10 leading-relaxed space-y-4">
-          {textContent.split('\n').map((paragraph: string, idx: number) => {
-            if (!paragraph.trim()) return null;
-            
-            // Style bullet points
-            if (paragraph.trim().startsWith('•') || paragraph.trim().startsWith('-')) {
-              return (
-                <div key={idx} className="flex items-start gap-3 ml-4">
-                  <div className="insight-bullet-modern mt-2" />
-                  <div className="flex-1">
-                    {renderTextWithLinks(paragraph.replace(/^[•-]\s*/, ''))}
-                  </div>
-                </div>
-              );
-            }
-            
-            // Style headings (lines ending with :)
-            if (paragraph.trim().endsWith(':')) {
-              return (
-                <h4 key={idx} className="font-semibold text-lg text-primary mt-6 mb-2">
-                  {paragraph.trim()}
-                </h4>
-              );
-            }
-            
-            // Regular paragraphs
-            return (
-              <p key={idx} className="text-slate-700">
-                {renderTextWithLinks(paragraph)}
-              </p>
-            );
-          }).filter(Boolean)}
-        </div>
-      </div>
-    );
-  };
-
-  // Function to extract primary email from research
   const extractPrimaryEmail = (researchData: any, contactData: any) => {
     if (contactData?.email) return contactData.email;
     
@@ -291,7 +188,6 @@ export default function HomePage() {
     const emails = researchText.match(emailRegex);
     
     if (emails && emails.length > 0) {
-      // Prioritize common business email patterns
       const businessEmails = emails.filter(email => 
         !email.includes('noreply') && 
         !email.includes('support') && 
@@ -384,7 +280,6 @@ export default function HomePage() {
   const handleNavClick = (view: "home" | "search" | "email" | "linkedin" | "research" | "analytics" | "settings") => {
     if (view === "search") {
       setIsSearchExpanded(!isSearchExpanded);
-      // Don't change activeView to preserve current content
     } else {
       setIsSearchExpanded(false);
       setActiveView(view);
@@ -469,43 +364,27 @@ export default function HomePage() {
             if (evt.type === "final") {
               setResult(evt.data);
               
-              // Get confidence from research data - use stored researchData which has the actual confidence
               let confidence = 0;
               if (researchData && typeof researchData === 'object' && researchData.confidence) {
                 confidence = researchData.confidence;
               } else {
-                // If we have plain text research, assume reasonable confidence
                 confidence = evt.data.research ? 0.8 : 0;
               }
               
-              console.log('Final processing:', {
-                company: data.company,
-                confidence: confidence,
-                threshold: 0.7,
-                willGenerate: confidence >= 0.7
-              });
-              
-              // Check confidence before setting email/linkedin content
               if (confidence >= 0.7) {
                 setLinkedin(evt.data.outputs.linkedin);
                 setEmail(evt.data.outputs.email);
                 setEditableEmail(evt.data.outputs.email);
                 setEditableLinkedin(evt.data.outputs.linkedin);
                 
-                // Save to history and trigger real-time updates
                 await saveToHistory(data, evt.data.outputs);
               } else {
-                console.warn('Confidence too low for generation:', {
-                  company: data.company,
-                  confidence: confidence
-                });
                 setError("Company not found. Unable to do research and generate cold email or LinkedIn message.");
               }
               
               setVerifiedPoints(evt.data.verified_points || []);
               setContact(evt.data.contact || null);
               
-              // Always save research results to database
               const contactData = {
                 company_name: data.company,
                 contact_name: evt.data.contact?.name || null,
@@ -525,7 +404,6 @@ export default function HomePage() {
               };
               await saveContactResult(contactData);
               
-              // Extract primary email from final data
               const email = extractPrimaryEmail(evt.data.research, evt.data.contact);
               if (email) setPrimaryEmail(email);
             }
@@ -540,22 +418,17 @@ export default function HomePage() {
     } finally {
       setLoading(false);
     }
-  }, [contact, saveContactResult]);
+  }, [contact, saveContactResult, researchData]);
   
-  // Load contact results on component mount
   useEffect(() => {
     loadContactResults();
   }, [loadContactResults]);
-  
-
 
   const saveToHistory = async (searchData: { company: string; role: string; highlights: string }, outputs: { email: string; linkedin: string }) => {
     try {
-      // Extract subject line from email
       const emailLines = outputs.email.split('\n');
       const subjectLine = emailLines.find(line => line.toLowerCase().includes('subject:'))?.replace(/subject:\s*/i, '') || `Outreach to ${searchData.company}`;
       
-      // Save email and LinkedIn in parallel
       const [emailRes, linkedinRes] = await Promise.all([
         fetch('/api/history/emails', {
           method: 'POST',
@@ -578,7 +451,6 @@ export default function HomePage() {
         })
       ]);
       
-      // Real-time updates will be handled by Supabase subscriptions
       if (!emailRes.ok || !linkedinRes.ok) {
         console.error('Failed to save history');
       }
@@ -624,17 +496,6 @@ export default function HomePage() {
     }
   }, [searchData]);
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      month: 'short',
-      day: '2-digit',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-  };
-
-  // Show loading state while user data is loading
   if (userLoading) {
     return (
       <div className="min-h-screen gradient-blue flex items-center justify-center">
@@ -648,17 +509,14 @@ export default function HomePage() {
 
   return (
     <div className="min-h-screen gradient-blue">
-      {/* Left Navigation - Always 64px wide */}
       <div className="fixed left-0 top-0 h-full w-16 bg-white/95 backdrop-blur-md border-r border-slate-200/50 shadow-xl z-50">
         <div className="flex flex-col items-center py-4 space-y-3">
-          {/* Brand Logo */}
           <div className="mb-4 p-2">
             <div className="text-xs font-bold text-primary text-center leading-tight">
               Outreach<br/>.ai
             </div>
           </div>
           
-          {/* Home Icon */}
           <Button
             variant={activeView === "home" ? "default" : "ghost"}
             size="sm"
@@ -671,7 +529,6 @@ export default function HomePage() {
             </svg>
           </Button>
           
-          {/* Search Icon */}
           <Button
             variant={activeView === "search" ? "default" : "ghost"}
             size="sm"
@@ -682,7 +539,6 @@ export default function HomePage() {
             <Search className="h-5 w-5" />
           </Button>
           
-          {/* Email Icon */}
           <Button
             variant={activeView === "email" ? "default" : "ghost"}
             size="sm"
@@ -693,7 +549,6 @@ export default function HomePage() {
             <Mail className="h-5 w-5" />
           </Button>
           
-          {/* LinkedIn Icon */}
           <Button
             variant={activeView === "linkedin" ? "default" : "ghost"}
             size="sm"
@@ -704,7 +559,6 @@ export default function HomePage() {
             <MessageSquare className="h-5 w-5" />
           </Button>
           
-          {/* Analytics Icon */}
           <Button
             variant={activeView === "analytics" ? "default" : "ghost"}
             size="sm"
@@ -715,7 +569,6 @@ export default function HomePage() {
             <BarChart3 className="h-5 w-5" />
           </Button>
           
-          {/* Settings Icon */}
           <Button
             variant={activeView === "settings" ? "default" : "ghost"}
             size="sm"
@@ -728,7 +581,6 @@ export default function HomePage() {
         </div>
       </div>
 
-      {/* Search Form Overlay */}
       {isSearchExpanded && (
         <div className="fixed left-16 top-0 h-full w-80 bg-white/95 backdrop-blur-md border-r border-slate-200/50 shadow-xl z-40">
           <div className="p-6">
@@ -799,9 +651,7 @@ export default function HomePage() {
         </div>
       )}
 
-      {/* Main Content */}
       <div className={cn("ml-16 layout-transition", isSearchExpanded && "ml-96")}>
-        {/* Dynamic Header */}
         <div className="header-transition">
           <DynamicHeader 
             currentView={activeView}
@@ -810,11 +660,7 @@ export default function HomePage() {
           />
         </div>
 
-        {/* Content Area */}
         <div className="p-6 max-w-6xl mx-auto content-transition min-height-screen">
-
-          
-          {/* Email History */}
           {activeView === "email" && (
             <div className="space-y-6">
               <div className="text-center">
@@ -833,7 +679,6 @@ export default function HomePage() {
             </div>
           )}
           
-          {/* LinkedIn History */}
           {activeView === "linkedin" && (
             <div className="space-y-6">
               <div className="text-center">
@@ -852,7 +697,6 @@ export default function HomePage() {
             </div>
           )}
           
-          {/* Analytics View */}
           {activeView === "analytics" && (
             <div className="space-y-6">
               <div className="text-center mb-8">
@@ -863,82 +707,24 @@ export default function HomePage() {
             </div>
           )}
           
-          {/* Settings View */}
           {activeView === "settings" && (
             <div className="max-w-md mx-auto py-8">
               <Settings />
             </div>
           )}
           
-          {/* Home Dashboard */}
           {activeView === "home" && (
             <Dashboard onStartResearch={() => setIsSearchExpanded(true)} />
           )}
           
-          {/* Research View */}
           {activeView === "research" && (
             <div className="space-y-6">
-              {/* Show research spinner when loading */}
               {loading && (
                 <ResearchSpinner status={status} loading={loading} />
               )}
               
-              {/* Show research results if available */}
               {(intermediate.research || verifiedPoints.length > 0 || contact || result) ? (
                 <div className="space-y-6">
-
-                  {/* Contact Prospect */}
-                  {(contact || primaryEmail) && (
-                    <Card className="shadow-lg bg-gradient-to-br from-blue-50/50 to-indigo-50/50">
-                      <CardHeader>
-                        <CardTitle className="flex items-center gap-2 text-blue-900">
-                          <User className="h-5 w-5" />
-                          Contact Prospect
-                        </CardTitle>
-                        <CardDescription>
-                          Key contact identified for outreach
-                        </CardDescription>
-                      </CardHeader>
-                      <CardContent>
-                        <Table>
-                          <TableHeader>
-                            <TableRow>
-                              <TableHead>Name</TableHead>
-                              <TableHead>Role</TableHead>
-                              <TableHead>Email</TableHead>
-                              <TableHead>Action</TableHead>
-                            </TableRow>
-                          </TableHeader>
-                          <TableBody>
-                            <TableRow>
-                              <TableCell className="font-medium">
-                                {contact?.name || "N/A"}
-                              </TableCell>
-                              <TableCell>
-                                {contact?.title || "N/A"}
-                              </TableCell>
-                              <TableCell>
-                                {contact?.email || primaryEmail || "N/A"}
-                              </TableCell>
-                              <TableCell>
-                                <Button
-                                  onClick={() => copyToClipboard(contact?.email || primaryEmail || "")}
-                                  variant="outline"
-                                  size="sm"
-                                  className="bg-gradient-to-r from-blue-100 to-indigo-100 hover:from-blue-200 hover:to-indigo-200 text-blue-800 shadow-md hover:shadow-lg"
-                                >
-                                  <Copy className="h-4 w-4 mr-2" />
-                                  Copy
-                                </Button>
-                              </TableCell>
-                            </TableRow>
-                          </TableBody>
-                        </Table>
-                      </CardContent>
-                    </Card>
-                  )}
-
-                  {/* Error Display */}
                   {error && (
                     <Alert variant="destructive">
                       <AlertDescription>
@@ -947,84 +733,14 @@ export default function HomePage() {
                     </Alert>
                   )}
 
-                  {/* Research Results Card */}
-                  {(intermediate.research || verifiedPoints.length > 0 || contact) && (
-                    <Card className="shadow-lg bg-gradient-to-br from-indigo-50/50 to-purple-50/50">
-                      <CardHeader>
-                        <CardTitle className="flex items-center gap-2 text-indigo-900">
-                          <Search className="h-5 w-5" />
-                          Research Results
-                        </CardTitle>
-                        <CardDescription>
-                          AI-powered company insights and key contact information
-                        </CardDescription>
-                      </CardHeader>
-                      <CardContent>
-                      <div className="space-y-6">
-                        {contact && (
-                          <div className="bg-muted p-4 rounded-lg">
-                            <div className="flex items-center gap-2 font-semibold text-primary mb-2">
-                              <User className="h-4 w-4" />
-                              Key Contact Identified
-                            </div>
-                            <div className="space-y-1">
-                              <div><strong>{contact.name}</strong> - {contact.title}</div>
-                              {contact.email && (
-                                <div><a href={`mailto:${contact.email}`} className="text-primary hover:underline">{contact.email}</a></div>
-                              )}
-                              {contact.source?.url && (
-                                <div><a href={contact.source.url} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">View Profile</a></div>
-                              )}
-                            </div>
-                          </div>
-                        )}
-                        
-                        {intermediate.research && (
-                          <div>
-                            <h4 className="text-lg font-semibold text-primary mb-4 pb-2 border-b">
-                              Company Research Findings
-                            </h4>
-                            <div className="mb-4">
-                              {renderResearchContent(intermediate.research)}
-                            </div>
-                          </div>
-                        )}
-                        
-                        {verifiedPoints.length > 0 && (
-                          <div>
-                            <h4 className="text-lg font-semibold text-primary mb-4 pb-2 border-b">
-                              Verified Research Points
-                            </h4>
-                            <div className="space-y-3">
-                              {verifiedPoints.map((point, idx) => (
-                                <div key={idx} className="flex items-start gap-3">
-                                  <div className="insight-bullet-modern mt-2" />
-                                  <div className="flex-1">
-                                    <span className="text-slate-800">{point.claim}</span>
-                                    {point.source?.url && (
-                                      <SourceLink 
-                                        url={point.source.url} 
-                                        title={point.source.title}
-                                      />
-                                    )}
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-                        
-                        {!intermediate.research && !verifiedPoints.length && !contact && (
-                          <div className="text-center p-8 text-muted-foreground italic">
-                            {loading ? "Researching company and role..." : "Research results will appear here..."}
-                          </div>
-                        )}
-                      </div>
-                      </CardContent>
-                    </Card>
+                  {intermediate.research && (
+                    <ResearchOutput
+                      content={intermediate.research}
+                      contact={contact || undefined}
+                      onCopyEmail={copyToClipboard}
+                    />
                   )}
 
-                  {/* Cold Email Card */}
                   {(email || (loading && status.messaging)) && (
                     <Card className="shadow-lg bg-gradient-to-br from-blue-50/50 to-purple-50/50">
                       <CardHeader>
@@ -1067,7 +783,6 @@ export default function HomePage() {
                     </Card>
                   )}
 
-                  {/* LinkedIn Message Card */}
                   {(linkedin || (loading && status.messaging && email)) && (
                     <Card className="shadow-lg bg-gradient-to-br from-purple-50/50 to-indigo-50/50">
                       <CardHeader>
@@ -1147,8 +862,6 @@ export default function HomePage() {
               )}
             </div>
           )}
-          
-
         </div>
       </div>
     </div>

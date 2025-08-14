@@ -1,8 +1,8 @@
-import { RunnableSequence, RunnableLambda } from "@langchain/core/runnables";
 import { createClient } from '@supabase/supabase-js';
 import { researchAgent, ResearchAgentOutput } from "./researchAgent";
 import { verifierAgent, VerifyAgentOutput } from "./verifyAgent";
 import { messagingAgent, MessagingAgentOutput } from "./messagingAgent";
+import { SourceTracker } from "./source-tracker";
 
 export interface ChainInput {
   company: string;
@@ -28,9 +28,11 @@ export interface StepCallbacks {
 class OutreachOrchestrator {
   private supabase: any;
   private callbacks: StepCallbacks;
+  private sourceTracker: SourceTracker;
 
   constructor(callbacks: StepCallbacks = {}) {
     this.callbacks = callbacks;
+    this.sourceTracker = new SourceTracker();
   }
 
   private async initSupabase() {
@@ -50,23 +52,23 @@ class OutreachOrchestrator {
       
       if (!user) return null;
 
-      const payload = {
-        user_id: user.id,
-        company_name: input.company,
-        step_name: step,
-        step_data: data,
-        created_at: new Date().toISOString()
-      };
-
-      // Save step data to contact_results table
       if (step === 'research') {
+        // Track sources from research content
+        const sourceMetrics = this.sourceTracker.extractSourcesFromContent(data.summary || '');
+        
         const { data: result } = await supabase
           .from('contact_results')
           .upsert({
             user_id: user.id,
             company_name: input.company,
             research_data: data,
-            confidence_score: 0.5, // Default until verification
+            confidence_score: 0.5,
+            source_metrics: {
+              unique_source_count: sourceMetrics.uniqueSourceCount,
+              source_urls: sourceMetrics.sourceUrls,
+              source_types: sourceMetrics.sourceTypes,
+              tracked_at: new Date().toISOString()
+            },
             updated_at: new Date().toISOString()
           }, {
             onConflict: 'user_id,company_name'
@@ -96,7 +98,6 @@ class OutreachOrchestrator {
         
         return result?.id;
       } else if (step === 'messaging') {
-        // Save to history tables
         const emailLines = data.email.split('\n');
         const subjectLine = emailLines.find((line: string) => 
           line.toLowerCase().includes('subject:')
@@ -127,7 +128,7 @@ class OutreachOrchestrator {
   }
 
   private calculateConfidence(verifiedData: VerifyAgentOutput): number {
-    let confidence = 0.5; // Base confidence
+    let confidence = 0.5;
     
     if (verifiedData.points && verifiedData.points.length > 0) {
       confidence += 0.2;
@@ -143,84 +144,57 @@ class OutreachOrchestrator {
     return Math.min(confidence, 1.0);
   }
 
-  private createResearchStep() {
-    return RunnableLambda.from(async (input: ChainInput) => {
-      this.callbacks.onStepStart?.('research');
-      
-      try {
-        const research = await researchAgent({
-          company: input.company,
-          domain: input.domain,
-          role: input.role
-        });
-
-        await this.saveToSupabase('research', research, input);
-        this.callbacks.onStepComplete?.('research', research);
-        
-        return { ...input, research };
-      } catch (error) {
-        this.callbacks.onError?.('research', error as Error);
-        throw error;
-      }
-    });
-  }
-
-  private createVerifyStep() {
-    return RunnableLambda.from(async (input: ChainInput & { research: ResearchAgentOutput }) => {
-      this.callbacks.onStepStart?.('verify');
-      
-      try {
-        const verified = await verifierAgent({ research: input.research });
-        
-        await this.saveToSupabase('verify', verified, input);
-        this.callbacks.onStepComplete?.('verify', verified);
-        
-        return { ...input, verified };
-      } catch (error) {
-        this.callbacks.onError?.('verify', error as Error);
-        throw error;
-      }
-    });
-  }
-
-  private createMessagingStep() {
-    return RunnableLambda.from(async (input: ChainInput & { research: ResearchAgentOutput; verified: VerifyAgentOutput }) => {
-      this.callbacks.onStepStart?.('messaging');
-      
-      try {
-        const messages = await messagingAgent({
-          verified: input.verified,
-          company: input.company,
-          role: input.role,
-          highlights: input.highlights
-        });
-
-        await this.saveToSupabase('messaging', messages, input);
-        this.callbacks.onStepComplete?.('messaging', messages);
-        
-        return {
-          research: input.research,
-          verified: input.verified,
-          messages
-        };
-      } catch (error) {
-        this.callbacks.onError?.('messaging', error as Error);
-        throw error;
-      }
-    });
-  }
-
-  createChain() {
-    return RunnableSequence.from([
-      this.createResearchStep(),
-      this.createVerifyStep(),
-      this.createMessagingStep()
-    ]);
-  }
-
   async runChain(input: ChainInput): Promise<ChainOutput> {
-    const chain = this.createChain();
-    return await chain.invoke(input);
+    // Step 1: Research
+    this.callbacks.onStepStart?.('research');
+    let research: ResearchAgentOutput;
+    try {
+      research = await researchAgent({
+        company: input.company,
+        domain: input.domain,
+        role: input.role
+      });
+      await this.saveToSupabase('research', research, input);
+      this.callbacks.onStepComplete?.('research', research);
+    } catch (error) {
+      this.callbacks.onError?.('research', error as Error);
+      throw error;
+    }
+
+    // Step 2: Verify
+    this.callbacks.onStepStart?.('verify');
+    let verified: VerifyAgentOutput;
+    try {
+      verified = await verifierAgent({ research });
+      await this.saveToSupabase('verify', verified, input);
+      this.callbacks.onStepComplete?.('verify', verified);
+    } catch (error) {
+      this.callbacks.onError?.('verify', error as Error);
+      throw error;
+    }
+
+    // Step 3: Messaging
+    this.callbacks.onStepStart?.('messaging');
+    let messages: MessagingAgentOutput;
+    try {
+      messages = await messagingAgent({
+        verified,
+        company: input.company,
+        role: input.role,
+        highlights: input.highlights
+      });
+      await this.saveToSupabase('messaging', messages, input);
+      this.callbacks.onStepComplete?.('messaging', messages);
+    } catch (error) {
+      this.callbacks.onError?.('messaging', error as Error);
+      throw error;
+    }
+
+    return {
+      research,
+      verified,
+      messages
+    };
   }
 }
 

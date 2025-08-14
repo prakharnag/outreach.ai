@@ -181,6 +181,7 @@ export function CompanyAutocomplete({
           aria-expanded={isOpen}
           aria-haspopup="listbox"
           aria-autocomplete="list"
+          aria-controls={isOpen ? 'company-suggestions' : undefined}
           role="combobox"
         />
         {loading && (
@@ -215,6 +216,7 @@ export function CompanyAutocomplete({
             "absolute z-50 w-full mt-1 bg-white border border-slate-200 rounded-md shadow-lg",
             "max-h-60 overflow-auto"
           )}
+          id="company-suggestions"
           role="listbox"
         >
           {suggestions.map((suggestion, index) => (
