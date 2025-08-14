@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import "./globals.css";
 import Head from "next/head";
+import { AuthProvider } from "../contexts/auth-context";
 
 export const metadata = {
   title: "Outreach.ai",
@@ -29,7 +30,9 @@ export default function RootLayout({
         <meta name="viewport" content="width=device-width, initial-scale=1" />
       </head>
       <body>
-        {children}
+        <AuthProvider>
+          {children}
+        </AuthProvider>
       </body>
     </html>
   );

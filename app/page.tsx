@@ -5,38 +5,12 @@ import { useRouter } from "next/navigation";
 import Dashboard from "./dashboard/page";
 import AuthPage from "./auth/page";
 import LandingPage from "./landingpage/page";
-import { getCurrentUser, supabase } from "../lib/supabase";
-import type { User } from "@supabase/supabase-js";
+import { useAuth } from "../contexts/auth-context";
 
 export default function HomePage() {
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
+  const { user, loading } = useAuth();
   const [showAuth, setShowAuth] = useState(false);
   const router = useRouter();
-
-  useEffect(() => {
-    const checkAuth = async () => {
-      const currentUser = await getCurrentUser();
-      setUser(currentUser);
-      setLoading(false);
-    };
-    checkAuth();
-
-    // Listen for auth state changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event: any, session: any) => {
-        if (event === 'SIGNED_IN' && session?.user && !user) {
-          setUser(session.user);
-          setShowAuth(false);
-        } else if (event === 'SIGNED_OUT') {
-          setUser(null);
-          setShowAuth(false);
-        }
-      }
-    );
-
-    return () => subscription.unsubscribe();
-  }, [user]);
 
   useEffect(() => {
     // Check URL for auth parameter

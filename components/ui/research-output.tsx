@@ -64,25 +64,33 @@ export function ResearchOutput({ content, contact, onCopyEmail }: ResearchOutput
   };
 
   const renderTextWithSources = (text: string) => {
-    // Extract URLs from text and add chain icons
-    const urlRegex = /(https?:\/\/[^\s\)\]\}]+)/g;
-    const urls = text.match(urlRegex) || [];
+    // Convert markdown-style links to clickable links (same logic as company-details.tsx)
+    const linkRegex = /\[([^\]]+)\]\(([^)]+)\)/g;
+    const parts = text.split(linkRegex);
     
-    // Remove URLs from text to clean it up
-    const cleanText = text.replace(urlRegex, '').trim();
-    
-    return (
-      <div className="flex items-center gap-2">
-        <span>{cleanText}</span>
-        {urls.map((url, index) => (
-          <SourceLink
+    return parts.map((part, index) => {
+      if (index % 3 === 1) {
+        // This is link text
+        const url = parts[index + 1];
+        return (
+          <a
             key={index}
-            url={url}
-            title="View source"
-          />
-        ))}
-      </div>
-    );
+            href={url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-blue-600 hover:text-blue-800 underline inline-flex items-center gap-1"
+          >
+            {part}
+            <SourceLink url={url} title={part} />
+          </a>
+        );
+      } else if (index % 3 === 2) {
+        // This is the URL part, skip it
+        return null;
+      }
+      // Regular text
+      return <span key={index}>{part}</span>;
+    });
   };
 
   const getSectionIcon = (type: string) => {

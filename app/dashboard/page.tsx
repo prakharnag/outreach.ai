@@ -9,7 +9,8 @@ import { Badge } from "../../components/ui/badge";
 import { Alert, AlertDescription } from "../../components/ui/alert";
 import { Textarea } from "../../components/ui/textarea";
 import { Copy, Mail, MessageSquare, RefreshCw, Scissors, Search, User, Settings as SettingsIcon, BarChart3 } from "lucide-react";
-import { signOut, createClient } from "../../lib/supabase";
+import { signOut } from "../../lib/supabase";
+import { getSupabaseClient } from "../../lib/supabase-singleton";
 import { cn } from "../../lib/utils";
 import { CompanyAutocomplete } from "../../components/ui/company-autocomplete";
 import { Settings } from "../../components/ui/settings";
@@ -97,7 +98,7 @@ export default function HomePage() {
   
   const canRun = useMemo(() => hasValidCompany && !!role && !!highlights, [hasValidCompany, role, highlights]);
   const abortRef = useRef<AbortController | null>(null);
-  const supabase = useMemo(() => createClient(), []);
+  const supabase = useMemo(() => getSupabaseClient(), []);
   
   useEffect(() => {
     let retryCount = 0;
@@ -655,7 +656,7 @@ export default function HomePage() {
         <div className="header-transition">
           <DynamicHeader 
             currentView={activeView}
-            userName={user?.full_name}
+            userName={user?.user_metadata?.full_name || user?.email?.split('@')[0]}
             onOpenSearch={() => setIsSearchExpanded(true)}
           />
         </div>
