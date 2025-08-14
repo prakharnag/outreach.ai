@@ -1,7 +1,5 @@
-import { researchAgent } from "@/lib/researchAgent";
-import { verifierAgent } from "@/lib/verifyAgent";
-import { messagingAgent } from "@/lib/messagingAgent";
-import { saveRun, findRecentRun } from "@/lib/db";
+import { OutreachOrchestrator } from "./langchain-orchestrator";
+import { saveRun, findRecentRun } from "./db";
 
 export type ChainInput = { company: string; domain?: string; role: string; highlights: string };
 export type ChainOutput = {
@@ -19,81 +17,104 @@ type StreamCallbacks = {
   onIntermediate?: (i: { research?: string; verified?: string; verified_points?: Array<{ claim: string; source: { title: string; url: string } }> }) => void;
 };
 
+// Map orchestrator status to chain status
+const mapStatus = (step: string): keyof NonNullable<ChainOutput["_status"]> => {
+  switch (step) {
+    case 'research': return 'research';
+    case 'verify': return 'verify';
+    case 'messaging': return 'messaging';
+    default: return 'research';
+  }
+};
+
 export async function runChain(input: ChainInput, cb?: StreamCallbacks): Promise<ChainOutput> {
-  let research;
-  let verified;
-  let messages;
   const status: NonNullable<ChainOutput["_status"]> = {};
 
-  // Cache: reuse a recent run for the same company/role within 7 days to avoid re-calling research
+  // Cache: reuse a recent run for the same company/role within 7 days
   const cached = await findRecentRun(input.company, input.role, 24 * 7);
   if (cached?.research_json && cached?.verified_json) {
-    research = cached.research_json as any;
-    verified = cached.verified_json as any;
+    const research = cached.research_json as any;
+    const verified = cached.verified_json as any;
     status.research = "from-cache";
     status.verify = "from-cache";
-    cb?.onStatus?.({ ...status });
-  } else {
-  try {
-    research = await researchAgent({ company: input.company, domain: input.domain, role: input.role });
-    status.research = "complete";
-    console.log("[chain] Research complete");
-    cb?.onStatus?.({ ...status });
-    cb?.onIntermediate?.({ research: research.summary });
-  } catch (e: any) {
-    console.error("[chain] Research failed", e);
-    throw new Error(`Research failed: ${e?.message || e}`);
-  }
-
-  try {
-    verified = await verifierAgent({ research });
-    status.verify = "complete";
-    console.log("[chain] Verification complete");
-    cb?.onStatus?.({ ...status });
-    cb?.onIntermediate?.({ verified: verified.summary, verified_points: verified.points });
-  } catch (e: any) {
-    console.error("[chain] Verification failed", e);
-    throw new Error(`Verification failed: ${e?.message || e}`);
-  }
-  }
-
-  try {
-    messages = await messagingAgent({ verified, company: input.company, role: input.role, highlights: input.highlights });
     status.messaging = "complete";
-    console.log("[chain] Messaging complete");
     cb?.onStatus?.({ ...status });
-  } catch (e: any) {
-    console.error("[chain] Messaging failed", e);
-    throw new Error(`Messaging failed: ${e?.message || e}`);
-  }
-
-  // Fire-and-forget persistence (no auth for MVP)
-  saveRun({
-    company: input.company,
-    role: input.role,
-    research_json: research,
-    verified_json: verified,
-    linkedin: messages.linkedin,
-    email: messages.email,
-  }).catch(() => {});
-
-  const toClaim = (p: any) => (typeof p === "string" ? p : p?.claim);
-  const researchPoints = Array.isArray(research.points) ? research.points.map(toClaim).filter(Boolean).slice(0, 5) : [];
-  const verifiedPoints = Array.isArray(verified.points) ? verified.points.map(toClaim).filter(Boolean).slice(0, 5) : [];
-
-  return {
-    research: research.summary,
-    verified: verified.summary,
-    outputs: messages,
-    _intermediate: {
+    
+    return {
       research: research.summary,
       verified: verified.summary,
-      verified_points: verified.points,
+      outputs: { 
+        linkedin: cached.linkedin || "", 
+        email: cached.email || "" 
+      },
+      _intermediate: {
+        research: research.summary,
+        verified: verified.summary,
+        verified_points: verified.points,
+      },
+      _status: status,
+      verified_points: Array.isArray(verified.points) ? verified.points : [],
+      contact: verified.contact,
+    };
+  }
+
+  // Create orchestrator with callbacks
+  const orchestrator = new OutreachOrchestrator({
+    onStepStart: (step: string) => {
+      const mappedStep = mapStatus(step);
+      status[mappedStep] = "running";
+      cb?.onStatus?.({ ...status });
     },
-    _status: status,
-    verified_points: Array.isArray(verified.points) ? verified.points : [],
-    contact: verified.contact,
-  };
+    onStepComplete: (step: string, data: any) => {
+      const mappedStep = mapStatus(step);
+      status[mappedStep] = "complete";
+      cb?.onStatus?.({ ...status });
+      
+      if (step === 'research') {
+        cb?.onIntermediate?.({ research: data.summary });
+      } else if (step === 'verify') {
+        cb?.onIntermediate?.({ 
+          verified: data.summary, 
+          verified_points: data.points 
+        });
+      }
+    },
+    onError: (step: string, error: Error) => {
+      console.error(`[chain] ${step} failed:`, error);
+      throw new Error(`${step} failed: ${error.message}`);
+    }
+  });
+
+  try {
+    const result = await orchestrator.runChain(input);
+    
+    // Fire-and-forget persistence
+    saveRun({
+      company: input.company,
+      role: input.role,
+      research_json: result.research,
+      verified_json: result.verified,
+      linkedin: result.messages.linkedin,
+      email: result.messages.email,
+    }).catch(() => {});
+
+    return {
+      research: result.research.summary,
+      verified: result.verified.summary,
+      outputs: result.messages,
+      _intermediate: {
+        research: result.research.summary,
+        verified: result.verified.summary,
+        verified_points: result.verified.points,
+      },
+      _status: status,
+      verified_points: Array.isArray(result.verified.points) ? result.verified.points : [],
+      contact: result.verified.contact,
+    };
+  } catch (error) {
+    console.error('[chain] Orchestration failed:', error);
+    throw error;
+  }
 }
 
 

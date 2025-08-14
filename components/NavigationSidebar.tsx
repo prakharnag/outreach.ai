@@ -17,7 +17,7 @@ import {
   X
 } from "lucide-react"
 import { cn } from "../lib/utils"
-import { getEmailHistory, getLinkedInHistory } from "../lib/history"
+
 
 type EmailHistory = {
   id: string
@@ -76,8 +76,11 @@ export default function NavigationSidebar({ onRunAgents, onSidebarChange, classN
 
   const loadEmailHistory = async () => {
     try {
-      const history = await getEmailHistory()
-      setEmailHistory(history)
+      const res = await fetch('/api/history/emails')
+      if (res.ok) {
+        const history = await res.json()
+        setEmailHistory(history)
+      }
     } catch (error) {
       console.error('Failed to load email history:', error)
     }
@@ -85,8 +88,11 @@ export default function NavigationSidebar({ onRunAgents, onSidebarChange, classN
 
   const loadLinkedInHistory = async () => {
     try {
-      const history = await getLinkedInHistory()
-      setLinkedinHistory(history)
+      const res = await fetch('/api/history/linkedin')
+      if (res.ok) {
+        const history = await res.json()
+        setLinkedinHistory(history)
+      }
     } catch (error) {
       console.error('Failed to load LinkedIn history:', error)
     }

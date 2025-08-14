@@ -34,7 +34,7 @@ export function useContactResults() {
       .channel('contact_results_realtime')
       .on('postgres_changes',
         { event: '*', schema: 'public', table: 'contact_results' },
-        (payload) => {
+        (payload: any) => {
           console.log('Real-time update received:', payload);
           
           if (payload.eventType === 'INSERT') {
@@ -53,7 +53,7 @@ export function useContactResults() {
           }
         }
       )
-      .subscribe((status) => {
+      .subscribe((status: any) => {
         console.log('Subscription status:', status);
         if (status === 'SUBSCRIPTION_ERROR') {
           setError('Real-time updates disconnected. Data may not be current.');

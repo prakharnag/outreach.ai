@@ -1,4 +1,4 @@
-import { callPerplexity, ResearchResult } from "@/lib/api";
+import { callPerplexity, ResearchResult } from "./api";
 
 export type TrustedContact = {
   name: string;
@@ -81,7 +81,7 @@ Contact Information
 - Email: jane.doe@company.com (likely inferred from consistent email pattern)
 - Confidence Score: 0.85
 
-## Confidence Assessment
+Confidence Assessment
 
 High confidence: The information is sourced from multiple official and reputable sources including the company website and Crunchbase. The contact email is inferred with consistent patterns verified across official domains.
 

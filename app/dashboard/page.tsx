@@ -21,6 +21,8 @@ import { ContactResultsTable } from "../../components/ui/contact-results-table";
 import { DynamicHeader } from "../../components/ui/dynamic-header";
 import { Dashboard } from "../../components/ui/dashboard";
 import { useUser } from "../../hooks/useUser";
+import { ResearchSpinner } from "../../components/ui/research-spinner";
+import { CompanyLink } from "../../components/ui/company-link";
 
 
 interface ResearchFinding {
@@ -221,7 +223,15 @@ export default function HomePage() {
       
       return parts.map((part, index) => {
         if (urlRegex.test(part)) {
-          return (
+          // Use CompanyLink for company URLs, SourceLink for others
+          const isCompanyUrl = part.includes('company') || part.includes('corp') || part.includes('.com');
+          return isCompanyUrl ? (
+            <CompanyLink 
+              key={index}
+              url={part}
+              className="ml-2"
+            />
+          ) : (
             <SourceLink 
               key={index}
               url={part} 
@@ -868,27 +878,14 @@ export default function HomePage() {
           {/* Research View */}
           {activeView === "research" && (
             <div className="space-y-6">
+              {/* Show research spinner when loading */}
+              {loading && (
+                <ResearchSpinner status={status} loading={loading} />
+              )}
+              
               {/* Show research results if available */}
-              {(loading || intermediate.research || verifiedPoints.length > 0 || contact) ? (
+              {(intermediate.research || verifiedPoints.length > 0 || contact || result) ? (
                 <div className="space-y-6">
-                  {/* Status Indicator */}
-                  {(loading || Object.keys(status).length > 0) && (
-                    <Card className="shadow-lg bg-gradient-to-br from-blue-50/30 to-purple-50/30">
-                      <CardContent className="pt-6">
-                        <div className="flex flex-wrap items-center gap-4">
-                          <Badge variant={status.research === 'completed' ? 'default' : status.research ? 'secondary' : 'outline'}>
-                            Research: {status.research || "pending"}
-                          </Badge>
-                          <Badge variant={status.verify === 'completed' ? 'default' : status.verify ? 'secondary' : 'outline'}>
-                            Verify: {status.verify || "pending"}
-                          </Badge>
-                          <Badge variant={status.messaging === 'completed' ? 'default' : status.messaging ? 'secondary' : 'outline'}>
-                            Messaging: {status.messaging || "pending"}
-                          </Badge>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  )}
 
                   {/* Contact Prospect */}
                   {(contact || primaryEmail) && (

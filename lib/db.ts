@@ -45,6 +45,8 @@ export type CachedRun = {
   research_json: unknown;
   verified_json: unknown;
   created_at: string;
+  linkedin?: string;
+  email?: string;
 } | null;
 
 export async function findRecentRun(
@@ -58,7 +60,7 @@ export async function findRecentRun(
     const sinceIso = new Date(Date.now() - withinHours * 3600 * 1000).toISOString();
     const { data, error } = await client
       .from("runs")
-      .select("research_json,verified_json,created_at")
+      .select("research_json,verified_json,created_at,linkedin,email")
       .eq("company", company)
       .eq("role", role)
       .gte("created_at", sinceIso)

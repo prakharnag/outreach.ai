@@ -1,4 +1,4 @@
-import { callGroq } from "@/lib/api";
+import { callGroq } from "./api";
 
 export type MessagingAgentInput = {
   verified: {

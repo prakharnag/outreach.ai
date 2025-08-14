@@ -178,7 +178,7 @@ export function ContactResultsTable({ contacts, loading }: ContactResultsTablePr
                         <Mail className="h-4 w-4 text-slate-400" />
                         <span className="font-mono text-sm">{contact.contact_email}</span>
                         {contact.email_inferred && (
-                          <AlertCircle className="h-4 w-4 text-amber-500" title="Email inferred from pattern" />
+                          <AlertCircle className="h-4 w-4 text-amber-500" />
                         )}
                       </div>
                     ) : (
