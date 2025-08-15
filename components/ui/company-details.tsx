@@ -134,7 +134,7 @@ export function CompanyDetails({ company, onClose }: CompanyDetailsProps) {
                 } else {
                   researchContent = JSON.stringify(company.research_data, null, 2);
                 }
-                
+                console.log("Research Content from company details: ", researchContent);
                 // Convert markdown-style links to clickable links
                 const renderWithLinks = (text: string) => {
                   const linkRegex = /\[([^\]]+)\]\(([^)]+)\)/g;

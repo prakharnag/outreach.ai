@@ -21,34 +21,40 @@ export function ResearchOutput({ content, contact, onCopyEmail }: ResearchOutput
     const sections: Array<{
       title: string;
       content: string[];
-      type: 'Company Overview' | 'Key Business' | 'Contact Information' | 'Confidence' | 'other';
+      type: 'overview' | 'business' | 'contact' | 'confidence' | 'other';
     }> = [];
     
     let currentSection: any = null;
     
     for (const line of lines) {
-      // Check for expected section headers
-      if (line === 'Company Overview' || line === '**Company Overview**') {
+      // Check for markdown headers (##) or section headers
+      const headerMatch = line.match(/^#{1,3}\s+(.+)$/);
+      if (headerMatch) {
+        const title = headerMatch[1];
         if (currentSection) sections.push(currentSection);
-        currentSection = { title: 'Company Overview', content: [], type: 'overview' };
+        
+        let type: 'overview' | 'business' | 'contact' | 'confidence' | 'other' = 'other';
+        if (title.toLowerCase().includes('overview') || title.toLowerCase().includes('company')) type = 'overview';
+        else if (title.toLowerCase().includes('business') || title.toLowerCase().includes('key')) type = 'business';
+        else if (title.toLowerCase().includes('contact') || title.toLowerCase().includes('information')) type = 'contact';
+        else if (title.toLowerCase().includes('confidence') || title.toLowerCase().includes('assessment')) type = 'confidence';
+        
+        currentSection = { title, content: [], type };
         continue;
       }
       
-      if (line === 'Key Business Points' || line === '**Key Business Points**') {
+      // Check for **Header** format
+      if (line.startsWith('**') && line.endsWith('**')) {
+        const title = line.replace(/\*\*/g, '');
         if (currentSection) sections.push(currentSection);
-        currentSection = { title: 'Key Business Points', content: [], type: 'business' };
-        continue;
-      }
-      
-      if (line === 'Contact Information' || line === '**Contact Information**') {
-        if (currentSection) sections.push(currentSection);
-        currentSection = { title: 'Contact Information', content: [], type: 'contact' };
-        continue;
-      }
-      
-      if (line === 'Confidence Assessment' || line === '**Confidence Assessment**') {
-        if (currentSection) sections.push(currentSection);
-        currentSection = { title: 'Confidence Assessment', content: [], type: 'confidence' };
+        
+        let type: 'overview' | 'business' | 'contact' | 'confidence' | 'other' = 'other';
+        if (title.toLowerCase().includes('overview') || title.toLowerCase().includes('company')) type = 'overview';
+        else if (title.toLowerCase().includes('business') || title.toLowerCase().includes('key')) type = 'business';
+        else if (title.toLowerCase().includes('contact') || title.toLowerCase().includes('information')) type = 'contact';
+        else if (title.toLowerCase().includes('confidence') || title.toLowerCase().includes('assessment')) type = 'confidence';
+        
+        currentSection = { title, content: [], type };
         continue;
       }
       
@@ -64,9 +70,13 @@ export function ResearchOutput({ content, contact, onCopyEmail }: ResearchOutput
   };
 
   const renderTextWithSources = (text: string) => {
-    // Convert markdown-style links to clickable links (same logic as company-details.tsx)
+    // First handle bold subheadings (**Text:**)
+    const boldRegex = /\*\*([^*]+):\*\*/g;
+    let processedText = text.replace(boldRegex, '<strong>$1:</strong>');
+    
+    // Then handle markdown links
     const linkRegex = /\[([^\]]+)\]\(([^)]+)\)/g;
-    const parts = text.split(linkRegex);
+    const parts = processedText.split(linkRegex);
     
     return parts.map((part, index) => {
       if (index % 3 === 1) {
@@ -88,17 +98,22 @@ export function ResearchOutput({ content, contact, onCopyEmail }: ResearchOutput
         // This is the URL part, skip it
         return null;
       }
-      // Regular text
-      return <span key={index}>{part}</span>;
+      // Regular text with bold formatting
+      return (
+        <span 
+          key={index} 
+          dangerouslySetInnerHTML={{ __html: part }}
+        />
+      );
     });
   };
 
   const getSectionIcon = (type: string) => {
     switch (type) {
-      case 'Company Overview': return <Building2 className="h-5 w-5 text-blue-600" />;
-      case 'Key Business Points': return <Rocket className="h-5 w-5 text-green-600" />;
-      case 'Contact Information': return <Users className="h-5 w-5 text-purple-600" />;
-      case 'Confidence': return <Building2 className="h-5 w-5 text-amber-600" />;
+      case 'overview': return <Building2 className="h-5 w-5 text-blue-600" />;
+      case 'business': return <Rocket className="h-5 w-5 text-green-600" />;
+      case 'contact': return <Users className="h-5 w-5 text-purple-600" />;
+      case 'confidence': return <Building2 className="h-5 w-5 text-amber-600" />;
       default: return <Building2 className="h-5 w-5 text-slate-600" />;
     }
   };

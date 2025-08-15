@@ -56,11 +56,11 @@ export function DynamicHeader({ currentView, userName, onOpenSearch }: DynamicHe
     <div className="py-6 px-6 border-b border-white/30 relative flex items-center justify-between">
       <div className="flex items-center gap-3">
         <Image
-          src="/assets/brandicon.png"
+          src="/assets/outreach.png"
           alt="Outreach.ai"
-          width={32}
+          width={50}
           height={32}
-          className="w-8 h-8"
+          className="w-12 h-10"
           priority
         />
         <div>

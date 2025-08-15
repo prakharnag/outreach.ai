@@ -269,7 +269,6 @@ export default function HomePage() {
       }
       
       const savedData = await res.json();
-      console.log('Contact result saved successfully:', savedData);
       return true;
     } catch (error) {
       console.error('Failed to save contact result:', error);

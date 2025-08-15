@@ -8,11 +8,11 @@ export const metadata = {
   description: "Agentic AI to automate your job hunt",
   icons: {
     icon: [
-      { url: "/assets/brandicon.png", sizes: "32x32", type: "image/png" },
-      { url: "/assets/brandicon.png", sizes: "16x16", type: "image/png" },
+      { url: "/assets/outreach.png", sizes: "32x32", type: "image/png" },
+      { url: "/assets/outreach.png", sizes: "16x16", type: "image/png" },
     ],
     apple: [
-      { url: "/assets/brandicon.png", sizes: "180x180", type: "image/png" },
+      { url: "/assets/outreach.png", sizes: "180x180", type: "image/png" },
     ],
   },
 };
@@ -25,8 +25,8 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
-        <link rel="icon" href="/assets/brandicon.png" sizes="any" />
-        <link rel="apple-touch-icon" href="/assets/brandicon.png" />
+        <link rel="icon" href="/assets/outreach.png" sizes="any" />
+        <link rel="apple-touch-icon" href="/assets/outreach.png" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
       </head>
       <body>

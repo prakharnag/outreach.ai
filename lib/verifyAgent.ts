@@ -79,6 +79,7 @@ Rules:
       : [];
     const summary: string = typeof parsed.summary === "string" ? parsed.summary : "";
     const contact = parsed.contact;
+    console.log("Verified Output: ", { summary, points, contact });
     return { summary, points, contact } as VerifyAgentOutput;
   } catch {
     return { summary: content, points: [] };
