@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { rephraseLinkedInTo22Words } from "@/lib/messagingAgent";
+import { rephraseLinkedInTo22Words } from "lib/messagingAgent";
 
 export const runtime = "edge";
 

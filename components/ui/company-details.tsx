@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "./card";
 import { Badge } from "./badge";
 import { Button } from "./button";
 import { User, Mail, ExternalLink, Copy } from "lucide-react";
+import { ResearchOutput } from "./research-output";
 
 interface CompanyDetailsProps {
   company: {
@@ -23,6 +24,16 @@ interface CompanyDetailsProps {
 }
 
 export function CompanyDetails({ company, onClose }: CompanyDetailsProps) {
+  // Debug logging for company data
+  console.log('[CompanyDetails] Received company data:', {
+    id: company.id,
+    company_name: company.company_name,
+    has_research_data: !!company.research_data,
+    research_data_type: typeof company.research_data,
+    research_data_keys: company.research_data ? Object.keys(company.research_data) : [],
+    research_data_sample: company.research_data ? JSON.stringify(company.research_data).slice(0, 500) + '...' : null
+  });
+
   const copyToClipboard = async (text: string) => {
     try {
       await navigator.clipboard.writeText(text);
@@ -38,7 +49,7 @@ export function CompanyDetails({ company, onClose }: CompanyDetailsProps) {
     if (score >= 0.6) return <Badge variant="secondary">Medium Confidence</Badge>;
     return <Badge variant="outline">Low Confidence</Badge>;
   };
-
+  
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -117,59 +128,115 @@ export function CompanyDetails({ company, onClose }: CompanyDetailsProps) {
       )}
 
       {/* Research Data */}
-      {company.research_data && (
-        <Card>
+      {company.research_data ? (
+        <ResearchOutput 
+          content={
+            // Debug: Log the data structure
+            (() => {
+              console.log('[CompanyDetails] Processing research_data:', company.research_data);
+              
+              // Check if it's the rich research data format (NEW) - check at top level first
+              if (company.research_data.company_overview || company.research_data.key_business_points) {
+                console.log('[CompanyDetails] Using NEW rich research data format (top level)');
+                return company.research_data;
+              }
+              
+              // Check for verified_points (OLD format from verifier) with actual content
+              if (company.research_data.verified_points && company.research_data.verified_points.length > 0) {
+                console.log('[CompanyDetails] Using OLD verified_points format');
+                return {
+                  points: company.research_data.verified_points,
+                  summary: company.research_data.overview || '',
+                };
+              }
+              
+              // Check for nested research structure
+              if (company.research_data.research) {
+                console.log('[CompanyDetails] Using nested research structure');
+                // If nested research has the rich data, use it
+                if (company.research_data.research.company_overview || company.research_data.research.key_business_points) {
+                  console.log('[CompanyDetails] Found rich data in nested research');
+                  return company.research_data.research;
+                }
+                return {
+                  summary: company.research_data.research.summary || '',
+                  points: company.research_data.research.points || [],
+                };
+              }
+              
+              // For any other object structure, check if it has meaningful research data
+              if (typeof company.research_data === 'object') {
+                // Look for any field that suggests rich content
+                const possibleContentFields = ['company_overview', 'key_business_points', 'business_overview', 'overview', 'description'];
+                const hasRichContent = possibleContentFields.some(field => 
+                  company.research_data[field] && 
+                  typeof company.research_data[field] === 'string' && 
+                  company.research_data[field].length > 50
+                );
+                
+                if (hasRichContent) {
+                  console.log('[CompanyDetails] Found rich content in research_data');
+                  return company.research_data;
+                }
+              }
+              
+              console.log('[CompanyDetails] No rich content found, using fallback structure');
+              return {
+                summary: 'Research data available but in unsupported format. Please check the debug section below.',
+                points: []
+              };
+            })()
+          }
+          contact={company.research_data.contact || company.research_data.contact_information || null}
+        />
+      ) : (
+        <Card className="shadow bg-gradient-to-br from-red-50/50 to-orange-50/50">
           <CardHeader>
-            <CardTitle>Research Summary</CardTitle>
+            <CardTitle className="text-red-900 text-lg">No Research Data</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="prose prose-sm max-w-none">
-              {(() => {
-                let researchContent = '';
-                
-                if (typeof company.research_data === 'string') {
-                  researchContent = company.research_data;
-                } else if (company.research_data.research) {
-                  researchContent = company.research_data.research;
-                } else {
-                  researchContent = JSON.stringify(company.research_data, null, 2);
-                }
-                console.log("Research Content from company details: ", researchContent);
-                // Convert markdown-style links to clickable links
-                const renderWithLinks = (text: string) => {
-                  const linkRegex = /\[([^\]]+)\]\(([^)]+)\)/g;
-                  const parts = text.split(linkRegex);
-                  
-                  return parts.map((part, index) => {
-                    if (index % 3 === 1) {
-                      // This is link text
-                      const url = parts[index + 1];
-                      return (
-                        <a
-                          key={index}
-                          href={url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-blue-600 hover:text-blue-800 underline"
-                        >
-                          {part}
-                        </a>
-                      );
-                    } else if (index % 3 === 2) {
-                      // This is the URL part, skip it
-                      return null;
-                    }
-                    // Regular text
-                    return <span key={index}>{part}</span>;
-                  });
-                };
-                
-                return (
-                  <div className="whitespace-pre-wrap text-slate-700 leading-relaxed">
-                    {renderWithLinks(researchContent)}
-                  </div>
-                );
-              })()}
+            <div className="text-slate-500 italic">No research data found for this company. This might indicate an issue with data storage or retrieval.</div>
+          </CardContent>
+        </Card>
+      )}
+      
+      {/* Debug Section - Remove in production */}
+      {process.env.NODE_ENV === 'development' && (
+        <Card className="shadow bg-gradient-to-br from-gray-50/50 to-slate-50/50">
+          <CardHeader>
+            <CardTitle className="text-gray-900 text-lg">Debug: Raw Research Data</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <pre className="text-xs text-gray-600 whitespace-pre-wrap overflow-auto max-h-64">
+              {JSON.stringify(company.research_data, null, 2)}
+            </pre>
+          </CardContent>
+        </Card>
+      )}
+      
+      {/* Generated Messages */}
+      {company.research_data?.messages && (
+        <Card className="shadow-lg">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-blue-900">
+              <Mail className="h-5 w-5" />
+              Generated Messages
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {company.research_data.messages.linkedin && (
+                <div>
+                  <h4 className="text-sm font-medium text-slate-600 mb-2">LinkedIn Message</h4>
+                  <p className="text-slate-700 whitespace-pre-wrap">{company.research_data.messages.linkedin}</p>
+                </div>
+              )}
+              {company.research_data.messages.email && (
+                <div>
+                  <h4 className="text-sm font-medium text-slate-600 mb-2">Email Draft</h4>
+                  <p className="text-slate-700 whitespace-pre-wrap">{company.research_data.messages.email}</p>
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>

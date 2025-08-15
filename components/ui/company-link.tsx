@@ -1,7 +1,7 @@
 "use client";
 
 import { ExternalLink, Link } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn } from "lib/utils";
 
 interface CompanyLinkProps {
   url: string;

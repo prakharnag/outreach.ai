@@ -1,5 +1,7 @@
 import { NextRequest } from "next/server";
-import { runChain } from "@/lib/chain";
+import { runChain } from "lib/chain";
+import { createServerClient } from '@supabase/ssr';
+import { cookies } from 'next/headers';
 
 export const runtime = "edge";
 
@@ -15,6 +17,36 @@ function toNdjson(event: Event): string {
 
 export async function POST(req: NextRequest) {
   try {
+    // Authenticate user
+    const cookieStore = await cookies();
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          getAll() {
+            return cookieStore.getAll()
+          },
+          setAll(cookiesToSet) {
+            try {
+              cookiesToSet.forEach(({ name, value, options }) =>
+                cookieStore.set(name, value, options)
+              )
+            } catch {
+              // Ignore if called from Server Component
+            }
+          },
+        },
+      }
+    );
+
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !user) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401 });
+    }
+
+    console.log('[API Run] Authenticated user:', user.id);
+
     const { company, domain, role, highlights } = await req.json();
     if (!company || !role || !highlights) {
       return new Response(JSON.stringify({ error: "Missing company, role or highlights" }), { status: 400 });
@@ -25,7 +57,13 @@ export async function POST(req: NextRequest) {
         const encoder = new TextEncoder();
         try {
           const result = await runChain(
-            { company: String(company), domain: domain ? String(domain) : undefined, role: String(role), highlights: String(highlights) },
+            { 
+              company: String(company), 
+              domain: domain ? String(domain) : undefined, 
+              role: String(role), 
+              highlights: String(highlights),
+              userId: user.id 
+            },
             {
               onStatus: (s) => controller.enqueue(encoder.encode(toNdjson({ type: "status", data: s }))),
               onIntermediate: (i) => controller.enqueue(encoder.encode(toNdjson({ type: "intermediate", data: i }))),

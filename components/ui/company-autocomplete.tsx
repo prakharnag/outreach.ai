@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Search, Building2, ChevronDown } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn } from "lib/utils";
 
 interface CompanySuggestion {
   name: string;

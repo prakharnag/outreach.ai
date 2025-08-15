@@ -354,7 +354,13 @@ export default function HomePage() {
               setIntermediate((i) => ({ ...i, ...evt.data }));
               if (evt.data.research) {
                 setResearchData(evt.data.research);
-                const email = extractPrimaryEmail(evt.data.research, contact);
+                // Extract email from research data (handle both string and structured formats)
+                const researchText = typeof evt.data.research === 'string' 
+                  ? evt.data.research 
+                  : (typeof evt.data.research === 'object' && 'summary' in evt.data.research && typeof (evt.data.research as any).summary === 'string'
+                      ? (evt.data.research as any).summary
+                      : JSON.stringify(evt.data.research));
+                const email = extractPrimaryEmail(researchText, contact);
                 if (email) setPrimaryEmail(email);
               }
               if (evt.data.verified_points) {
@@ -365,10 +371,30 @@ export default function HomePage() {
               setResult(evt.data);
               
               let confidence = 0;
-              if (researchData && typeof researchData === 'object' && researchData.confidence) {
-                confidence = researchData.confidence;
-              } else {
-                confidence = evt.data.research ? 0.8 : 0;
+              
+              // First check if we have successful outputs (LinkedIn and email)
+              if (evt.data.outputs && evt.data.outputs.linkedin && evt.data.outputs.email) {
+                confidence = 0.8; // If we have successful outputs, we should have good confidence
+              }
+              
+              // Then try to get more precise confidence from research data
+              if (researchData && typeof researchData === 'object') {
+                if (researchData.confidence_assessment && researchData.confidence_assessment.level) {
+                  const level = researchData.confidence_assessment.level.toLowerCase();
+                  if (level === "high") confidence = 1.0;
+                  else if (level === "medium") confidence = 0.8;
+                  else if (level === "low") confidence = 0.5;
+                } else if (researchData.contact_information && typeof researchData.contact_information.confidence_score === "number") {
+                  confidence = researchData.contact_information.confidence_score;
+                } else if (researchData.company_overview) {
+                  // If we have company overview, that's a good sign
+                  confidence = Math.max(confidence, 0.8);
+                }
+              }
+              
+              // Fallback: if we have research data, assume reasonable confidence
+              if (confidence === 0 && evt.data.research) {
+                confidence = 0.8;
               }
               
               if (confidence >= 0.7) {
@@ -395,7 +421,11 @@ export default function HomePage() {
                 source_url: evt.data.contact?.source?.url || null,
                 source_title: evt.data.contact?.source?.title || null,
                 research_data: {
-                  research: evt.data.research,
+                  research: typeof evt.data.research === 'string' 
+                    ? evt.data.research 
+                    : (typeof evt.data.research === 'object' && 'summary' in evt.data.research && typeof (evt.data.research as any).summary === 'string'
+                        ? (evt.data.research as any).summary
+                        : JSON.stringify(evt.data.research)),
                   verified_points: evt.data.verified_points || [],
                   contact: evt.data.contact || null,
                   confidence: confidence,
@@ -404,7 +434,14 @@ export default function HomePage() {
               };
               await saveContactResult(contactData);
               
-              const email = extractPrimaryEmail(evt.data.research, evt.data.contact);
+              const email = extractPrimaryEmail(
+                typeof evt.data.research === 'string' 
+                  ? evt.data.research 
+                  : (typeof evt.data.research === 'object' && 'summary' in evt.data.research && typeof (evt.data.research as any).summary === 'string'
+                      ? (evt.data.research as any).summary
+                      : JSON.stringify(evt.data.research)), 
+                evt.data.contact
+              );
               if (email) setPrimaryEmail(email);
             }
             if (evt.type === "error") setError(evt.data.message);
@@ -584,7 +621,6 @@ export default function HomePage() {
       {isSearchExpanded && (
         <div className="fixed left-16 top-0 h-full w-80 bg-white/95 backdrop-blur-md border-r border-slate-200/50 shadow-xl z-40">
           <div className="p-6">
-            <h3 className="font-semibold text-slate-800 mb-4">Company Research</h3>
             <form onSubmit={handleSearch} className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-2">

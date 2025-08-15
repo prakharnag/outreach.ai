@@ -3,7 +3,7 @@
 import * as React from "react";
 import { ExternalLink } from "lucide-react";
 import { Button } from "./button";
-import { cn } from "@/lib/utils";
+import { cn } from "lib/utils";
 
 interface SourceLinkProps {
   url: string;

@@ -38,8 +38,21 @@ export async function GET(request: NextRequest) {
       .order("created_at", { ascending: false })
       .limit(100);
 
+    console.log('[ContactResults API] Fetched data:', {
+      dataCount: data?.length || 0,
+      hasError: !!error,
+      error: error?.message,
+      sampleData: data?.[0] ? {
+        id: data[0].id,
+        company_name: data[0].company_name,
+        has_research_data: !!data[0].research_data,
+        research_data_keys: data[0].research_data ? Object.keys(data[0].research_data) : [],
+        research_data_sample: data[0].research_data ? JSON.stringify(data[0].research_data).slice(0, 300) + '...' : null
+      } : null
+    });
+
     if (error) {
-      console.error('Supabase error:', error);
+      console.error('[ContactResults API] Supabase error:', error);
       // If table doesn't exist, return empty array
       if (error.message.includes('relation "contact_results" does not exist')) {
         return NextResponse.json([]);

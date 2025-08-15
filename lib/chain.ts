@@ -1,12 +1,12 @@
 import { OutreachOrchestrator } from "./langchain-orchestrator";
 import { saveRun, findRecentRun } from "./db";
 
-export type ChainInput = { company: string; domain?: string; role: string; highlights: string };
+export type ChainInput = { company: string; domain?: string; role: string; highlights: string; userId?: string };
 export type ChainOutput = {
   research: string;
   verified: string;
   outputs: { linkedin: string; email: string };
-  _intermediate?: { research?: string; verified?: string; verified_points?: Array<{ claim: string; source: { title: string; url: string } }> };
+  _intermediate?: { research?: any; verified?: string; verified_points?: Array<{ claim: string; source: { title: string; url: string } }> };
   _status?: { research?: string; verify?: string; messaging?: string };
   verified_points?: Array<{ claim: string; source: { title: string; url: string } }>;
   contact?: { name: string; title: string; email?: string; source?: { title: string; url: string } };
@@ -14,7 +14,7 @@ export type ChainOutput = {
 
 type StreamCallbacks = {
   onStatus?: (s: NonNullable<ChainOutput["_status"]>) => void;
-  onIntermediate?: (i: { research?: string; verified?: string; verified_points?: Array<{ claim: string; source: { title: string; url: string } }> }) => void;
+  onIntermediate?: (i: { research?: any; verified?: string; verified_points?: Array<{ claim: string; source: { title: string; url: string } }> }) => void;
 };
 
 // Map orchestrator status to chain status
@@ -48,7 +48,7 @@ export async function runChain(input: ChainInput, cb?: StreamCallbacks): Promise
         email: cached.email || "" 
       },
       _intermediate: {
-        research: research.summary,
+        research: research,
         verified: verified.summary,
         verified_points: verified.points,
       },
@@ -71,7 +71,7 @@ export async function runChain(input: ChainInput, cb?: StreamCallbacks): Promise
       cb?.onStatus?.({ ...status });
       
       if (step === 'research') {
-        cb?.onIntermediate?.({ research: data.summary });
+        cb?.onIntermediate?.({ research: data });
       } else if (step === 'verify') {
         cb?.onIntermediate?.({ 
           verified: data.summary, 
@@ -99,13 +99,13 @@ export async function runChain(input: ChainInput, cb?: StreamCallbacks): Promise
     }).catch(() => {});
 
     return {
-      research: result.research.summary,
-      verified: result.verified.summary,
+      research: (result.research as any).company_overview || (result.research as any).summary || JSON.stringify(result.research),
+      verified: result.verified.summary || JSON.stringify(result.verified),
       outputs: result.messages,
       _intermediate: {
-        research: result.research.summary,
-        verified: result.verified.summary,
-        verified_points: result.verified.points,
+        research: result.research,
+        verified: result.verified.summary || JSON.stringify(result.verified),
+        verified_points: result.verified.points || [],
       },
       _status: status,
       verified_points: Array.isArray(result.verified.points) ? result.verified.points : [],

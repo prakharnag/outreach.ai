@@ -1,8 +1,8 @@
 import { NextRequest } from "next/server";
-import { findRecentRun } from "@/lib/db";
-import { verifierAgent } from "@/lib/verifyAgent";
-import { researchAgent } from "@/lib/researchAgent";
-import { messagingAgent } from "@/lib/messagingAgent";
+import { findRecentRun } from "lib/db";
+import { verifierAgent } from "lib/verifyAgent";
+import { researchAgent } from "lib/researchAgent";
+import { messagingAgent } from "lib/messagingAgent";
 
 export const runtime = "edge";
 
