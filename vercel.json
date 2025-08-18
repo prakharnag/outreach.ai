@@ -1,8 +1,6 @@
 {
-  "functions": {
-    "app/**/route.ts": {
-      "runtime": "edge"
-    }
-  }
+  "buildCommand": "npm run build",
+  "outputDirectory": ".next",
+  "framework": "nextjs"
 }
 
