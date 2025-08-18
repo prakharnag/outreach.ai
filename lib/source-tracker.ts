@@ -86,10 +86,8 @@ export class SourceTracker {
         })
         .eq('user_id', userId)
         .eq('company_name', companyName);
-
-      console.log(`Tracked ${metrics.uniqueSourceCount} unique sources for ${companyName}`);
     } catch (error) {
-      console.error('Failed to save source metrics:', error);
+      // Fail silently
     }
   }
 
@@ -130,7 +128,6 @@ export class SourceTracker {
         sourceTypeDistribution: allSourceTypes
       };
     } catch (error) {
-      console.error('Failed to get aggregated metrics:', error);
       return { totalSources: 0, avgSourcesPerCompany: 0, sourceTypeDistribution: {} };
     }
   }

@@ -64,7 +64,8 @@ Do **not** output markdown formatting, code blocks, or numbered citations like [
      - flastname@domain.com
      - first.last@domain.com
   4. Use the most senior available contact (CEO, CTO, or department head for the requested role)
-- Always attempt to infer an email unless absolutely no contact information exists
+- **IMPORTANT**: If no reliable contact information can be found or inferred, OMIT the "contact_information" field entirely from the JSON response
+- Only include contact_information if you have at least a name OR a reasonable email inference
 - Mark inferred emails with "inferred": true and provide confidence reasoning
 - Provide a "confidence_score" (0.00–1.00) for contact details.
 - Prefer recent leadership information (check for recent changes or appointments)
@@ -84,7 +85,7 @@ Do **not** output markdown formatting, code blocks, or numbered citations like [
   },
   "contact_information": {
     "name": "Jane Doe",
-    "title": "CEO",
+    "title": "CEO", 
     "email": "jane.doe@company.com",
     "inferred": true,
     "confidence_score": 0.85
@@ -94,6 +95,11 @@ Do **not** output markdown formatting, code blocks, or numbered citations like [
     "explanation": "Brief explanation referencing source quality."
   }
 }
+
+**CRITICAL**: 
+- If no reliable contact information is found, OMIT the entire "contact_information" field
+- Do NOT include "contact_information" with "N/A" values or explanatory text
+- Only include contact_information when you have actual name/title/email data
 
 ---
 
@@ -112,7 +118,6 @@ If any section cannot be completed with high confidence, clearly state so instea
     temperature: 0.2,
     systemPrompt,
   });
-  console.log("Research agent: ", res);
 
   // The callPerplexity function already parses JSON, so we can use the result directly
   // Check if the result has the expected structure

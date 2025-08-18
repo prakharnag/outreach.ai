@@ -54,7 +54,7 @@ export function useContactResults() {
         }
       )
       .subscribe((status: any) => {
-        console.log('Subscription status:', status);
+        //console.log('Subscription status:', status);
         if (status === 'SUBSCRIPTION_ERROR') {
           setError('Real-time updates disconnected. Data may not be current.');
         }

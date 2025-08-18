@@ -38,21 +38,7 @@ export async function GET(request: NextRequest) {
       .order("updated_at", { ascending: false })
       .limit(100);
 
-    console.log('[ContactResults API] Fetched data:', {
-      dataCount: data?.length || 0,
-      hasError: !!error,
-      error: error?.message,
-      sampleData: data?.[0] ? {
-        id: data[0].id,
-        company_name: data[0].company_name,
-        has_research_data: !!data[0].research_data,
-        research_data_keys: data[0].research_data ? Object.keys(data[0].research_data) : [],
-        research_data_sample: data[0].research_data ? JSON.stringify(data[0].research_data).slice(0, 300) + '...' : null
-      } : null
-    });
-
     if (error) {
-      console.error('[ContactResults API] Supabase error:', error);
       // If table doesn't exist, return empty array
       if (error.message.includes('relation "contact_results" does not exist')) {
         return NextResponse.json([]);
@@ -62,7 +48,6 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(data || []);
   } catch (error) {
-    console.error('Contact results GET error:', error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
@@ -164,7 +149,6 @@ export async function POST(request: NextRequest) {
     }
 
     if (error) {
-      console.error('Supabase POST error:', error);
       // If table doesn't exist, return error but don't crash
       if (error.message.includes('relation "contact_results" does not exist')) {
         return NextResponse.json({ error: "Contact results table not available" }, { status: 503 });
@@ -174,7 +158,6 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(data);
   } catch (error) {
-    console.error('Contact results POST error:', error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

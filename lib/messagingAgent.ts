@@ -17,13 +17,6 @@ export type MessagingAgentOutput = {
 };
 
 export async function messagingAgent(input: MessagingAgentInput): Promise<MessagingAgentOutput> {
-  console.log('[MessagingAgent] Starting message generation with input:', {
-    company: input.company,
-    role: input.role,
-    hasVerifiedData: !!input.verified,
-    verifiedPointsCount: input.verified?.points?.length
-  });
-
   const system = `You are a master of warm, high-conversion outreach. Return ONLY valid JSON: {"linkedin":"string","email":"string"}.
 Rules:
 - Cold Email (90â€“100 words): natural, human, and value-driven. Personalize with company-specific insights and key highlights from user input. 
@@ -60,8 +53,6 @@ Output must be strictly valid JSON with ONLY "linkedin" and "email" properties â
     { model: "llama3-70b-8192", temperature: 0.5 }
   );
 
-  console.log('[MessagingAgent] Received response from Groq:', content.slice(0, 200) + '...');
-
   try {
     // Clean the content to ensure it's valid JSON
     let cleanContent = content.trim();
@@ -78,26 +69,15 @@ Output must be strictly valid JSON with ONLY "linkedin" and "email" properties â
       cleanContent = cleanContent.substring(0, lastBrace + 1);
     }
     
-    console.log('[MessagingAgent] Cleaned content:', cleanContent.slice(0, 200) + '...');
-    
     const parsed = JSON.parse(cleanContent);
-    console.log('[MessagingAgent] Successfully parsed JSON response:', {
-      hasLinkedin: !!parsed.linkedin,
-      hasEmail: !!parsed.email,
-      linkedinLength: parsed.linkedin?.length,
-      emailLength: parsed.email?.length
-    });
     
     // Guardrails on lengths
     const linkedin: string = String(parsed.linkedin || "").trim();
     const email: string = String(parsed.email || "").trim();
     
     const result = { linkedin, email };
-    console.log('[MessagingAgent] Returning result:', result);
     return result;
   } catch (parseError) {
-    console.error('[MessagingAgent] Failed to parse JSON response:', parseError);
-    console.log('[MessagingAgent] Raw content:', content);
     return { linkedin: content.slice(0, 300), email: content };
   }
 }

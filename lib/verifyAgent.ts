@@ -67,12 +67,6 @@ Requirements:
 - Return ONLY the JSON object specified in the schema. No explanations, no markdown, no extra text.
 `;
 
-  console.log('[VerifyAgent] Starting verification with input research data:', {
-    hasSummary: !!input.research?.summary,
-    pointsCount: input.research?.points?.length || 0,
-    hasContact: !!input.research?.contact
-  });
-
   const { content } = await callGroq(
     [
       { role: "system", content: system },
@@ -80,8 +74,6 @@ Requirements:
     ],
     { model: "llama3-70b-8192", temperature: 0.2 }
   );
-
-  console.log('[VerifyAgent] Raw response from Groq:', content.slice(0, 300) + '...');
 
   try {
     // Clean the content to ensure it's valid JSON - similar to messaging agent
@@ -99,8 +91,6 @@ Requirements:
       cleanContent = cleanContent.substring(0, lastBrace + 1);
     }
     
-    console.log('[VerifyAgent] Cleaned content for parsing:', cleanContent.slice(0, 200) + '...');
-    
     const parsed = JSON.parse(cleanContent);
     // Ensure shape and sources present for each point
     const points = Array.isArray(parsed.points)
@@ -108,11 +98,8 @@ Requirements:
       : [];
     const summary: string = typeof parsed.summary === "string" ? parsed.summary : "";
     const contact = parsed.contact;
-    console.log("Verified Output: ", { summary, points, contact });
     return { summary, points, contact } as VerifyAgentOutput;
   } catch (parseError) {
-    console.error('[VerifyAgent] Failed to parse JSON response:', parseError);
-    console.log('[VerifyAgent] Raw content:', content);
     // Return a more structured fallback instead of using raw content as summary
     return { 
       summary: "Verification step encountered parsing issues. Original research data should be preserved.", 

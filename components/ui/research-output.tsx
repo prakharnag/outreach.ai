@@ -16,30 +16,9 @@ interface ResearchOutputProps {
 }
 
 export function ResearchOutput({ content, contact, onCopyEmail }: ResearchOutputProps) {
-  // Debug logging for research output
-  console.log('[ResearchOutput] Received props:', {
-    contentType: typeof content,
-    hasContent: !!content,
-    contentKeys: content && typeof content === 'object' ? Object.keys(content) : [],
-    hasContact: !!contact,
-    contactKeys: contact ? Object.keys(contact) : [],
-    contentSample: content ? JSON.stringify(content).slice(0, 300) + '...' : null
-  });
-
   // Handle the new structured JSON format from research agent
   const isStructuredJSON = typeof content === 'object' && content !== null && 
     (content.company_overview || content.key_business_points || content.contact_information || content.confidence_assessment);
-  
-  console.log('[ResearchOutput] Data analysis:', {
-    isStructuredJSON,
-    hasCompanyOverview: !!(content as any)?.company_overview,
-    hasKeyBusinessPoints: !!(content as any)?.key_business_points,
-    hasContactInformation: !!(content as any)?.contact_information,
-    hasConfidenceAssessment: !!(content as any)?.confidence_assessment,
-    hasPoints: !!(content as any)?.points,
-    hasSummary: !!(content as any)?.summary,
-    contentKeys: content && typeof content === 'object' ? Object.keys(content) : []
-  });
   
   if (isStructuredJSON) {
     // Use the content directly since it's now the JSON object
@@ -109,45 +88,91 @@ export function ResearchOutput({ content, contact, onCopyEmail }: ResearchOutput
                 </div>
               )}
 
-              {/* Contact Information */}
-              {jsonContent.contact_information && (
+              {/* Contact Information - check both JSON format and legacy contact prop */}
+              {(jsonContent.contact_information || contact) && (
                 <div className="space-y-3">
                   <h3 className="flex items-center gap-3 text-lg font-semibold text-slate-800">
                     <Users className="h-5 w-5 text-purple-600" />
                     Contact Information
                   </h3>
                   <div className="space-y-2 pl-8">
-                    {jsonContent.contact_information.name && (
-                      <div className="flex items-center gap-2">
-                        <span className="text-slate-600 font-medium">Name:</span>
-                        <span className="text-slate-700">{jsonContent.contact_information.name}</span>
-                      </div>
-                    )}
-                    {jsonContent.contact_information.title && (
-                      <div className="flex items-center gap-2">
-                        <span className="text-slate-600 font-medium">Title:</span>
-                        <span className="text-slate-700">{jsonContent.contact_information.title}</span>
-                      </div>
-                    )}
-                    {jsonContent.contact_information.email && (
-                      <div className="flex items-center gap-2">
-                        <span className="text-slate-600 font-medium">Email:</span>
-                        <span className="text-slate-700">{jsonContent.contact_information.email}</span>
-                        {onCopyEmail && (
-                          <button
-                            onClick={() => onCopyEmail(jsonContent.contact_information.email)}
-                            className="text-blue-600 hover:text-blue-800 text-sm underline"
-                          >
-                            Copy
-                          </button>
-                        )}
-                      </div>
-                    )}
-                    {jsonContent.contact_information.note && (
-                      <div className="text-sm text-slate-500 italic">
-                        {jsonContent.contact_information.note}
-                      </div>
-                    )}
+                    {/* Helper function to check if a value is valid */}
+                    {(() => {
+                      const isValidValue = (value: string | undefined) => {
+                        if (!value || value.trim() === '') return false;
+                        if (value === "N/A" || value === "n/a") return false;
+                        if (value.toLowerCase().includes("no publicly available")) return false;
+                        if (value.toLowerCase().includes("not available")) return false;
+                        if (value.toLowerCase().includes("contact typically routed")) return false;
+                        return true;
+                      };
+
+                      // Use JSON contact_information if available, otherwise fall back to legacy contact prop
+                      const contactInfo = jsonContent.contact_information || contact;
+                      
+                      const hasValidContact = 
+                        isValidValue(contactInfo?.name) ||
+                        isValidValue(contactInfo?.title) ||
+                        isValidValue(contactInfo?.email);
+
+                      if (!hasValidContact) {
+                        return (
+                          <div className="text-sm text-slate-500 italic">
+                            No direct contact information found in public sources. Consider reaching out through the company's official website or LinkedIn.
+                          </div>
+                        );
+                      }
+
+                      return (
+                        <>
+                          {isValidValue(contactInfo.name) && (
+                            <div className="flex items-center gap-2">
+                              <span className="text-slate-600 font-medium">Name:</span>
+                              <span className="text-slate-700">{contactInfo.name}</span>
+                            </div>
+                          )}
+                          {isValidValue(contactInfo.title) && (
+                            <div className="flex items-center gap-2">
+                              <span className="text-slate-600 font-medium">Title:</span>
+                              <span className="text-slate-700">{contactInfo.title}</span>
+                            </div>
+                          )}
+                          {isValidValue(contactInfo.email) && (
+                            <div className="flex items-center gap-2">
+                              <span className="text-slate-600 font-medium">Email:</span>
+                              <span className="text-slate-700">{contactInfo.email}</span>
+                              {onCopyEmail && (
+                                <button
+                                  onClick={() => onCopyEmail(contactInfo.email)}
+                                  className="text-blue-600 hover:text-blue-800 text-sm underline"
+                                >
+                                  Copy
+                                </button>
+                              )}
+                            </div>
+                          )}
+                          {contactInfo.note && (
+                            <div className="text-sm text-slate-500 italic">
+                              {contactInfo.note}
+                            </div>
+                          )}
+                          {contactInfo.source && (
+                            <div className="flex items-center gap-2">
+                              <span className="text-slate-600 font-medium">Source:</span>
+                              <a
+                                href={contactInfo.source.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-1 text-sm text-blue-600 hover:text-blue-800 hover:underline"
+                              >
+                                <ExternalLink className="h-3 w-3" />
+                                {contactInfo.source.title}
+                              </a>
+                            </div>
+                          )}
+                        </>
+                      );
+                    })()}
                   </div>
                 </div>
               )}
@@ -244,53 +269,81 @@ export function ResearchOutput({ content, contact, onCopyEmail }: ResearchOutput
             )}
 
             {/* Contact Information */}
-            {contact && (contact.name || contact.email) && (
+            {contact && (
               <div className="space-y-3">
                 <h3 className="flex items-center gap-3 text-lg font-semibold text-slate-800">
                   <Users className="h-5 w-5 text-purple-600" />
                   Contact Information
                 </h3>
                 <div className="space-y-2 pl-8">
-                  {contact.name && (
-                    <div className="flex items-center gap-2">
-                      <span className="text-slate-600 font-medium">Name:</span>
-                      <span className="text-slate-700">{contact.name}</span>
-                    </div>
-                  )}
-                  {contact.title && (
-                    <div className="flex items-center gap-2">
-                      <span className="text-slate-600 font-medium">Title:</span>
-                      <span className="text-slate-700">{contact.title}</span>
-                    </div>
-                  )}
-                  {contact.email && (
-                    <div className="flex items-center gap-2">
-                      <span className="text-slate-600 font-medium">Email:</span>
-                      <span className="text-slate-700">{contact.email}</span>
-                      {onCopyEmail && (
-                        <button
-                          onClick={() => onCopyEmail(contact.email!)}
-                          className="text-blue-600 hover:text-blue-800 text-sm underline"
-                        >
-                          Copy
-                        </button>
-                      )}
-                    </div>
-                  )}
-                  {contact.source && (
-                    <div className="flex items-center gap-2">
-                      <span className="text-slate-600 font-medium">Source:</span>
-                      <a
-                        href={contact.source.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1 text-sm text-blue-600 hover:text-blue-800 hover:underline"
-                      >
-                        <ExternalLink className="h-3 w-3" />
-                        {contact.source.title}
-                      </a>
-                    </div>
-                  )}
+                  {(() => {
+                    const isValidValue = (value: string | undefined) => {
+                      if (!value || value.trim() === '') return false;
+                      if (value === "N/A" || value === "n/a") return false;
+                      if (value.toLowerCase().includes("no publicly available")) return false;
+                      if (value.toLowerCase().includes("not available")) return false;
+                      if (value.toLowerCase().includes("contact typically routed")) return false;
+                      return true;
+                    };
+
+                    const hasValidContact = 
+                      isValidValue(contact.name) ||
+                      isValidValue(contact.title) ||
+                      isValidValue(contact.email);
+
+                    if (!hasValidContact) {
+                      return (
+                        <div className="text-sm text-slate-500 italic">
+                          No direct contact information found in public sources. Consider reaching out through the company's official website or LinkedIn.
+                        </div>
+                      );
+                    }
+
+                    return (
+                      <>
+                        {isValidValue(contact.name) && (
+                          <div className="flex items-center gap-2">
+                            <span className="text-slate-600 font-medium">Name:</span>
+                            <span className="text-slate-700">{contact.name}</span>
+                          </div>
+                        )}
+                        {isValidValue(contact.title) && (
+                          <div className="flex items-center gap-2">
+                            <span className="text-slate-600 font-medium">Title:</span>
+                            <span className="text-slate-700">{contact.title}</span>
+                          </div>
+                        )}
+                        {isValidValue(contact.email) && (
+                          <div className="flex items-center gap-2">
+                            <span className="text-slate-600 font-medium">Email:</span>
+                            <span className="text-slate-700">{contact.email}</span>
+                            {onCopyEmail && (
+                              <button
+                                onClick={() => onCopyEmail(contact.email!)}
+                                className="text-blue-600 hover:text-blue-800 text-sm underline"
+                              >
+                                Copy
+                              </button>
+                            )}
+                          </div>
+                        )}
+                        {contact.source && (
+                          <div className="flex items-center gap-2">
+                            <span className="text-slate-600 font-medium">Source:</span>
+                            <a
+                              href={contact.source.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1 text-sm text-blue-600 hover:text-blue-800 hover:underline"
+                            >
+                              <ExternalLink className="h-3 w-3" />
+                              {contact.source.title}
+                            </a>
+                          </div>
+                        )}
+                      </>
+                    );
+                  })()}
                 </div>
               </div>
             )}

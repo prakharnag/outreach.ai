@@ -24,21 +24,11 @@ interface CompanyDetailsProps {
 }
 
 export function CompanyDetails({ company, onClose }: CompanyDetailsProps) {
-  // Debug logging for company data
-  console.log('[CompanyDetails] Received company data:', {
-    id: company.id,
-    company_name: company.company_name,
-    has_research_data: !!company.research_data,
-    research_data_type: typeof company.research_data,
-    research_data_keys: company.research_data ? Object.keys(company.research_data) : [],
-    research_data_sample: company.research_data ? JSON.stringify(company.research_data).slice(0, 500) + '...' : null
-  });
-
   const copyToClipboard = async (text: string) => {
     try {
       await navigator.clipboard.writeText(text);
     } catch (err) {
-      console.error('Failed to copy text: ', err);
+      // Copy failed silently
     }
   };
 
@@ -131,19 +121,14 @@ export function CompanyDetails({ company, onClose }: CompanyDetailsProps) {
       {company.research_data ? (
         <ResearchOutput 
           content={
-            // Debug: Log the data structure
             (() => {
-              console.log('[CompanyDetails] Processing research_data:', company.research_data);
-              
               // Check if it's the rich research data format (NEW) - check at top level first
               if (company.research_data.company_overview || company.research_data.key_business_points) {
-                console.log('[CompanyDetails] Using NEW rich research data format (top level)');
                 return company.research_data;
               }
               
               // Check for verified_points (OLD format from verifier) with actual content
               if (company.research_data.verified_points && company.research_data.verified_points.length > 0) {
-                console.log('[CompanyDetails] Using OLD verified_points format');
                 return {
                   points: company.research_data.verified_points,
                   summary: company.research_data.overview || '',
@@ -152,10 +137,8 @@ export function CompanyDetails({ company, onClose }: CompanyDetailsProps) {
               
               // Check for nested research structure
               if (company.research_data.research) {
-                console.log('[CompanyDetails] Using nested research structure');
                 // If nested research has the rich data, use it
                 if (company.research_data.research.company_overview || company.research_data.research.key_business_points) {
-                  console.log('[CompanyDetails] Found rich data in nested research');
                   return company.research_data.research;
                 }
                 return {
@@ -175,12 +158,10 @@ export function CompanyDetails({ company, onClose }: CompanyDetailsProps) {
                 );
                 
                 if (hasRichContent) {
-                  console.log('[CompanyDetails] Found rich content in research_data');
                   return company.research_data;
                 }
               }
               
-              console.log('[CompanyDetails] No rich content found, using fallback structure');
               return {
                 summary: 'Research data available but in unsupported format. Please check the debug section below.',
                 points: []

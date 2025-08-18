@@ -309,6 +309,9 @@ export default function HomePage() {
     if (!value.trim()) {
       setSelectedDomain("");
       setHasValidCompany(false);
+    } else {
+      // Consider any non-empty company name as valid
+      setHasValidCompany(true);
     }
   };
 
@@ -640,9 +643,9 @@ export default function HomePage() {
                     Selected: <span className="font-medium">{company}</span> ({selectedDomain})
                   </div>
                 )}
-                {company && !hasValidCompany && (
-                  <div className="mt-2 text-sm text-amber-600">
-                    Please select a company from the suggestions to ensure accurate research.
+                {company && !selectedDomain && (
+                  <div className="mt-2 text-sm text-blue-600">
+                    Using manual entry: <span className="font-medium">{company}</span>
                   </div>
                 )}
               </div>
@@ -676,11 +679,7 @@ export default function HomePage() {
               <Button
                 type="submit"
                 disabled={loading || !canRun}
-                className={cn(
-                  "w-full",
-                  !hasValidCompany && company && "opacity-50 cursor-not-allowed"
-                )}
-                title={!hasValidCompany && company ? "Please select a company from the suggestions" : undefined}
+                className="w-full"
               >
                 {loading ? "Running..." : "Run AI Agents"}
               </Button>

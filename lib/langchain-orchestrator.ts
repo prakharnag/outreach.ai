@@ -42,13 +42,11 @@ class OutreachOrchestrator {
       // Use service role key for backend operations to bypass RLS
       const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
       if (serviceRoleKey) {
-        console.log('[Orchestrator] Using service role key for database operations');
         this.supabase = createClient(
           process.env.NEXT_PUBLIC_SUPABASE_URL!,
           serviceRoleKey
         );
       } else {
-        console.log('[Orchestrator] Using anon key for database operations');
         this.supabase = createClient(
           process.env.NEXT_PUBLIC_SUPABASE_URL!,
           process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
@@ -59,14 +57,7 @@ class OutreachOrchestrator {
   }
 
   private async saveToSupabase(step: string, data: any, input: ChainInput) {
-    console.log(`[Orchestrator] Saving step ${step} to Supabase`, { 
-      data: JSON.stringify(data).slice(0, 200) + '...',
-      company: input.company,
-      step 
-    });
-    
     if (!input.userId) {
-      console.error('[Orchestrator] No userId provided in input');
       return null;
     }
 
@@ -74,12 +65,7 @@ class OutreachOrchestrator {
       const supabase = await this.initSupabase();
       const userId = input.userId;
 
-      console.log(`[Orchestrator] Processing step ${step} for user: ${userId}`);
-
       if (step === 'research') {
-        console.log('[Orchestrator] Inserting research data to contact_results');
-        console.log('[Orchestrator] Research data keys:', Object.keys(data));
-        
         // For service role operations, we need to bypass RLS by setting the user context
         const { data: result, error } = await supabase.rpc('insert_contact_result', {
           p_user_id: userId,
@@ -88,7 +74,6 @@ class OutreachOrchestrator {
         });
         
         if (error) {
-          console.error('[Orchestrator] RPC failed, trying direct insert:', error);
           // Fallback to direct insert with service role
           const { data: directResult, error: directError } = await supabase
             .from('contact_results')
@@ -102,35 +87,27 @@ class OutreachOrchestrator {
             .single();
           
           if (directError) {
-            console.error('[Orchestrator] Failed to insert research data:', directError);
             return null;
           }
           
-          console.log('[Orchestrator] Successfully inserted research data (direct):', directResult?.id);
           this.currentRecordId = directResult?.id; // Store the record ID
           
           if (!this.currentRecordId) {
-            console.error('[Orchestrator] Failed to get record ID from direct insert');
             throw new Error('Failed to get record ID from direct insert');
           }
           
           return directResult?.id;
         }
         
-        console.log('[Orchestrator] Successfully inserted research data (RPC):', result);
         this.currentRecordId = result; // Store the record ID
         
         if (!this.currentRecordId) {
-          console.error('[Orchestrator] Failed to get record ID from research step');
           throw new Error('Failed to get record ID from research step');
         }
         
         return result;
       } else if (step === 'verify') {
-        console.log('[Orchestrator] Updating contact_results with verified data');
-        
         if (!this.currentRecordId) {
-          console.error('[Orchestrator] No current record ID available for verify step');
           return null;
         }
 
@@ -142,7 +119,6 @@ class OutreachOrchestrator {
           .single();
 
         if (fetchError) {
-          console.error('[Orchestrator] Failed to fetch existing record for verify step:', fetchError);
           return null;
         }
 
@@ -159,14 +135,6 @@ class OutreachOrchestrator {
           verification_timestamp: new Date().toISOString(),
           last_step: 'verified'
         };
-
-        console.log('[Orchestrator] Merging verification data:', {
-          originalDataKeys: Object.keys(existingRecord.research_data || {}),
-          hasVerifiedPoints: !!(data.points && data.points.length > 0),
-          hasContact: !!data.contact,
-          mergedDataKeys: Object.keys(mergedResearchData),
-          preservedOriginalData: !!(mergedResearchData.company_overview || mergedResearchData.key_business_points)
-        });
 
         const { data: result, error } = await supabase
           .from('contact_results')
@@ -186,24 +154,18 @@ class OutreachOrchestrator {
           .single();
         
         if (error) {
-          console.error('[Orchestrator] Failed to update with verified data:', error);
           return null;
         }
         
-        console.log('[Orchestrator] Successfully updated with verified data:', result?.id);
         return result?.id;
       } else if (step === 'messaging') {
-        console.log('[Orchestrator] Processing messaging step');
         const emailLines = data.email.split('\n');
         const subjectLine = emailLines.find((line: string) => 
           line.toLowerCase().includes('subject:')
         )?.replace(/subject:\s*/i, '') || `Outreach to ${input.company}`;
 
         // Get the existing record
-        console.log('[Orchestrator] Getting current contact_results data');
-        
         if (!this.currentRecordId) {
-          console.error('[Orchestrator] No current record ID available for messaging step');
           return null;
         }
 
@@ -214,7 +176,7 @@ class OutreachOrchestrator {
           .single();
 
         if (fetchError) {
-          console.error('[Orchestrator] Failed to fetch current data:', fetchError);
+          // Continue with history save even if update fails
         } else {
           const updatedResearchData = {
             ...currentData.research_data,
@@ -223,7 +185,6 @@ class OutreachOrchestrator {
             last_step: 'messaging'
           };
 
-          console.log('[Orchestrator] Updating contact_results with messages');
           const { data: updateResult, error: updateError } = await supabase
             .from('contact_results')
             .update({
@@ -235,14 +196,11 @@ class OutreachOrchestrator {
             .single();
 
           if (updateError) {
-            console.error('[Orchestrator] Failed to update with messages:', updateError);
-          } else {
-            console.log('[Orchestrator] Successfully updated with messages:', updateResult?.id);
+            // Continue with history save even if update fails
           }
         }
 
         // Save to history tables
-        console.log('[Orchestrator] Saving to history tables');
         const historyPromises = await Promise.allSettled([
           supabase.from('email_history').insert({
             user_id: userId,
@@ -258,15 +216,10 @@ class OutreachOrchestrator {
             content: data.linkedin
           })
         ]);
-
-        console.log('[Orchestrator] History save results:', {
-          historyResults: historyPromises.map(p => p.status)
-        });
       }
 
       return null;
     } catch (error) {
-      console.error(`[Orchestrator] Failed to save ${step} data to Supabase:`, error);
       return null;
     }
   }
@@ -355,7 +308,6 @@ class OutreachOrchestrator {
         .single();
 
       if (fetchError || !currentRecord) {
-        console.error('[Orchestrator] Failed to fetch record for messaging step:', fetchError);
         throw new Error('Failed to fetch current research data for messaging');
       }
 
@@ -386,13 +338,6 @@ class OutreachOrchestrator {
           messagingInput.points = currentRecord.research_data.verified_points;
         }
       }
-
-      console.log('[Orchestrator] Using messaging input:', {
-        hasRichData: !!currentRecord.research_data,
-        pointsCount: messagingInput.points?.length || 0,
-        hasSummary: !!messagingInput.summary,
-        hasContact: !!messagingInput.contact
-      });
 
       messages = await messagingAgent({
         verified: messagingInput,

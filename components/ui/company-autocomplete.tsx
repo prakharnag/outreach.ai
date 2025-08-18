@@ -70,7 +70,7 @@ export function CompanyAutocomplete({
       })).filter((company: CompanySuggestion) => company.name && company.domain);
 
       setSuggestions(companies);
-      setIsOpen(companies.length > 0);
+      setIsOpen(companies.length > 0 || (query.trim().length >= 2));
       setSelectedIndex(-1);
     } catch (err) {
       console.error('Company autocomplete error:', err);
@@ -112,26 +112,47 @@ export function CompanyAutocomplete({
     inputRef.current?.blur();
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (!isOpen || suggestions.length === 0) return;
+  const handleManualEntry = () => {
+    if (value.trim()) {
+      // Create a suggestion object for manually entered company
+      const manualSuggestion: CompanySuggestion = {
+        name: value.trim(),
+        domain: "", // No domain available for manual entry
+        website: ""
+      };
+      onSelect(manualSuggestion);
+      setIsOpen(false);
+      setSelectedIndex(-1);
+      inputRef.current?.blur();
+    }
+  };
 
+  const handleKeyDown = (e: React.KeyboardEvent) => {
     switch (e.key) {
       case 'ArrowDown':
-        e.preventDefault();
-        setSelectedIndex(prev => 
-          prev < suggestions.length - 1 ? prev + 1 : 0
-        );
+        if (isOpen && suggestions.length > 0) {
+          e.preventDefault();
+          setSelectedIndex(prev => 
+            prev < suggestions.length - 1 ? prev + 1 : 0
+          );
+        }
         break;
       case 'ArrowUp':
-        e.preventDefault();
-        setSelectedIndex(prev => 
-          prev > 0 ? prev - 1 : suggestions.length - 1
-        );
+        if (isOpen && suggestions.length > 0) {
+          e.preventDefault();
+          setSelectedIndex(prev => 
+            prev > 0 ? prev - 1 : suggestions.length - 1
+          );
+        }
         break;
       case 'Enter':
         e.preventDefault();
-        if (selectedIndex >= 0 && selectedIndex < suggestions.length) {
+        if (isOpen && selectedIndex >= 0 && selectedIndex < suggestions.length) {
+          // User selected from dropdown
           handleSuggestionClick(suggestions[selectedIndex]);
+        } else if (value.trim()) {
+          // User pressed Enter with a manually typed company name
+          handleManualEntry();
         }
         break;
       case 'Escape':
@@ -143,7 +164,7 @@ export function CompanyAutocomplete({
   };
 
   const handleInputFocus = () => {
-    if (suggestions.length > 0) {
+    if (suggestions.length > 0 || (value.trim().length >= 2)) {
       setIsOpen(true);
     }
   };
@@ -203,13 +224,18 @@ export function CompanyAutocomplete({
 
       {/* No Results Message */}
       {!loading && value.length >= 2 && suggestions.length === 0 && !error && (
-        <div className="mt-1 text-sm text-slate-500">
-          No companies found. Please try a different search term.
+        <div className="mt-1 p-3 bg-slate-50 border border-slate-200 rounded-md">
+          <div className="text-sm text-slate-600">
+            No companies found in suggestions.
+          </div>
+          <div className="text-xs text-slate-500 mt-1">
+            Press Enter to proceed with "<span className="font-medium">{value}</span>" or continue typing.
+          </div>
         </div>
       )}
 
       {/* Dropdown */}
-      {isOpen && suggestions.length > 0 && (
+      {isOpen && (
         <div
           ref={dropdownRef}
           className={cn(
@@ -219,31 +245,57 @@ export function CompanyAutocomplete({
           id="company-suggestions"
           role="listbox"
         >
-          {suggestions.map((suggestion, index) => (
-            <div
-              key={`${suggestion.domain}-${index}`}
-              onClick={() => handleSuggestionClick(suggestion)}
-              className={cn(
-                "px-4 py-3 cursor-pointer border-b border-slate-100 last:border-b-0",
-                "hover:bg-slate-50 transition-colors",
-                selectedIndex === index && "bg-blue-50 text-blue-900"
-              )}
-              role="option"
-              aria-selected={selectedIndex === index}
-            >
-              <div className="flex items-center gap-3">
-                <Building2 className="h-4 w-4 text-slate-400 flex-shrink-0" />
-                <div className="flex-1 min-w-0">
-                  <div className="font-medium text-slate-900 truncate">
-                    {suggestion.name}
-                  </div>
-                  <div className="text-sm text-slate-500 truncate">
-                    {suggestion.domain}
+          {suggestions.length > 0 ? (
+            suggestions.map((suggestion, index) => (
+              <div
+                key={`${suggestion.domain}-${index}`}
+                onClick={() => handleSuggestionClick(suggestion)}
+                className={cn(
+                  "px-4 py-3 cursor-pointer border-b border-slate-100 last:border-b-0",
+                  "hover:bg-slate-50 transition-colors",
+                  selectedIndex === index && "bg-blue-50 text-blue-900"
+                )}
+                role="option"
+                aria-selected={selectedIndex === index}
+              >
+                <div className="flex items-center gap-3">
+                  <Building2 className="h-4 w-4 text-slate-400 flex-shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <div className="font-medium text-slate-900 truncate">
+                      {suggestion.name}
+                    </div>
+                    <div className="text-sm text-slate-500 truncate">
+                      {suggestion.domain}
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
-          ))}
+            ))
+          ) : (
+            value.trim() && value.length >= 2 && !loading && (
+              <div
+                onClick={handleManualEntry}
+                className={cn(
+                  "px-4 py-3 cursor-pointer border-b border-slate-100",
+                  "hover:bg-blue-50 transition-colors",
+                  "bg-blue-25"
+                )}
+                role="option"
+              >
+                <div className="flex items-center gap-3">
+                  <Building2 className="h-4 w-4 text-blue-600 flex-shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <div className="font-medium text-blue-900">
+                      Add "{value.trim()}"
+                    </div>
+                    <div className="text-sm text-blue-600">
+                      Use this company name for research
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )
+          )}
         </div>
       )}
     </div>

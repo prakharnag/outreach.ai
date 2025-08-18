@@ -131,7 +131,6 @@ export function AnalyticsDashboard() {
       // Default to Small for most companies instead of Unknown
       return 'Small (10-100)';
     } catch (error) {
-      console.log('Company size extraction error:', error);
       return 'Small (10-100)'; // Better default than Unknown
     }
   }, []);
@@ -314,7 +313,6 @@ export function AnalyticsDashboard() {
       return topIndustry;
       
     } catch (error) {
-      console.log('Industry extraction error:', error);
       return 'Technology'; // Default to Technology instead of "Other"
     }
   }, []);
@@ -380,7 +378,6 @@ export function AnalyticsDashboard() {
       
       return factors > 0 ? Math.min(score, 100) : 0;
     } catch (error) {
-      console.log('Confidence calculation error:', error);
       return 0;
     }
   }, []);
@@ -405,28 +402,6 @@ export function AnalyticsDashboard() {
         const industry = extractIndustry(result.research_data);
         const confidence = calculateConfidence(result);
         
-        // Debug logging for first few results
-        if (index < 5) {
-          console.log(`[Analytics Debug ${index}] Company: ${result.company_name}`);
-          console.log(`[Analytics Debug ${index}] Extracted Industry: ${industry}`);
-          console.log(`[Analytics Debug ${index}] Research Data Sample:`, 
-            typeof result.research_data === 'string' 
-              ? result.research_data.slice(0, 300) 
-              : JSON.stringify(result.research_data).slice(0, 300)
-          );
-          
-          // Check what text we're analyzing
-          const data = typeof result.research_data === 'string' 
-            ? JSON.parse(result.research_data) 
-            : result.research_data;
-          
-          let analyzedText = '';
-          if (data?.research) analyzedText += data.research.slice(0, 200);
-          if (data?.verified_points) analyzedText += ` Points: ${data.verified_points.length}`;
-          
-          console.log(`[Analytics Debug ${index}] Analyzed Text:`, analyzedText);
-        }
-        
         const current = industryMap.get(industry) || { count: 0, totalConfidence: 0 };
         industryMap.set(industry, { 
           count: current.count + 1, 
@@ -449,9 +424,6 @@ export function AnalyticsDashboard() {
         }))
         .sort((a, b) => b.companies - a.companies)
         .slice(0, 8);
-      
-      console.log('[Analytics Debug] Final Industry Distribution:', industryAnalytics);
-      console.log('[Analytics Debug] Industry Map:', Array.from(industryMap.entries()));
       
       // Process company size data
       const sizeAnalytics = Array.from(sizeMap.entries())
@@ -488,7 +460,6 @@ export function AnalyticsDashboard() {
       setCompanySizeData(sizeAnalytics);
       setResearchTrends(trendData);
     } catch (error) {
-      console.error('Failed to load analytics:', error);
       setError('Failed to load analytics data');
     } finally {
       setLoading(false);
