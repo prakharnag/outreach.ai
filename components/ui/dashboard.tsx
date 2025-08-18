@@ -85,7 +85,7 @@ export function Dashboard({
             <div className="mb-8">
               <Sparkles className="h-20 w-20 text-blue-500 mx-auto mb-6" />
               <h2 className="text-3xl font-bold text-slate-800 mb-4">
-                Welcome to Outreach.ai
+                Welcome to Outreach
               </h2>
               <p className="text-lg text-slate-600 leading-relaxed">
                 Start your AI-powered outreach journey. Research companies, find contacts, and generate personalized messages in seconds.

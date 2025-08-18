@@ -28,14 +28,17 @@ export function ResearchOutput({ content, contact, onCopyEmail }: ResearchOutput
 
   // Handle the new structured JSON format from research agent
   const isStructuredJSON = typeof content === 'object' && content !== null && 
-    (content.company_overview || content.key_business_points);
+    (content.company_overview || content.key_business_points || content.contact_information || content.confidence_assessment);
   
   console.log('[ResearchOutput] Data analysis:', {
     isStructuredJSON,
     hasCompanyOverview: !!(content as any)?.company_overview,
     hasKeyBusinessPoints: !!(content as any)?.key_business_points,
+    hasContactInformation: !!(content as any)?.contact_information,
+    hasConfidenceAssessment: !!(content as any)?.confidence_assessment,
     hasPoints: !!(content as any)?.points,
-    hasSummary: !!(content as any)?.summary
+    hasSummary: !!(content as any)?.summary,
+    contentKeys: content && typeof content === 'object' ? Object.keys(content) : []
   });
   
   if (isStructuredJSON) {
@@ -317,11 +320,45 @@ export function ResearchOutput({ content, contact, onCopyEmail }: ResearchOutput
   }
 
   // Fallback for string content (legacy support)
-  const parseContent = (text: string) => {
+  const parseContent = (text: any) => {
+    // If we receive a non-string object that isn't structured correctly, convert it to a readable format
     if (typeof text !== 'string') {
-      text = text ? JSON.stringify(text, null, 2) : '';
+      if (text && typeof text === 'object') {
+        // Try to extract meaningful content from unstructured JSON
+        if (text.company_overview || text.summary) {
+          // Convert to a readable string format
+          let readableText = '';
+          if (text.company_overview) {
+            readableText += `## Company Overview\n${text.company_overview}\n\n`;
+          }
+          if (text.summary) {
+            readableText += `## Summary\n${text.summary}\n\n`;
+          }
+          if (text.key_business_points) {
+            readableText += `## Key Business Points\n`;
+            Object.entries(text.key_business_points).forEach(([key, value]: [string, any]) => {
+              if (value && typeof value === 'object' && value.description) {
+                readableText += `- ${value.description}\n`;
+              }
+            });
+            readableText += '\n';
+          }
+          if (text.contact_information) {
+            readableText += `## Contact Information\n`;
+            if (text.contact_information.name) readableText += `Name: ${text.contact_information.name}\n`;
+            if (text.contact_information.title) readableText += `Title: ${text.contact_information.title}\n`;
+            if (text.contact_information.email) readableText += `Email: ${text.contact_information.email}\n`;
+          }
+          text = readableText;
+        } else {
+          // Last resort: convert to JSON string but make it readable
+          text = JSON.stringify(text, null, 2);
+        }
+      } else {
+        text = text ? String(text) : '';
+      }
     }
-    const lines = text.split('\n').map(line => line.trim()).filter(Boolean);
+    const lines = text.split('\n').map((line: string) => line.trim()).filter(Boolean);
     const sections: Array<{
       title: string;
       content: string[];

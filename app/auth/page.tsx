@@ -93,7 +93,7 @@ export default function AuthPage() {
         <Card className="shadow-2xl bg-white/95 backdrop-blur-sm">
           <CardHeader className="text-center">
             <CardTitle className="text-2xl font-bold text-navy">
-              Welcome to Outreach.ai
+              Welcome to Outreach
             </CardTitle>
             <p className="text-muted-foreground">
               Sign in to start your AI-powered outreach journey

@@ -1,21 +1,13 @@
 import type { ReactNode } from "react";
+import type { Metadata } from "next";
 import "./globals.css";
 import Head from "next/head";
 import { AuthProvider } from "../contexts/auth-context";
 
-export const metadata = {
-  title: "Outreach.ai",
-  description: "Agentic AI to automate your job hunt",
-  icons: {
-    icon: [
-      { url: "/assets/outreach.png", sizes: "32x32", type: "image/png" },
-      { url: "/assets/outreach.png", sizes: "16x16", type: "image/png" },
-    ],
-    apple: [
-      { url: "/assets/outreach.png", sizes: "180x180", type: "image/png" },
-    ],
-  },
-};
+export const metadata: Metadata = {
+  title: "Outreach",
+  description: "AI-powered outreach platform for personalized cold emails and LinkedIn messages",
+}
 
 export default function RootLayout({
   children,

@@ -359,7 +359,9 @@ export default function HomePage() {
                   ? evt.data.research 
                   : (typeof evt.data.research === 'object' && 'summary' in evt.data.research && typeof (evt.data.research as any).summary === 'string'
                       ? (evt.data.research as any).summary
-                      : JSON.stringify(evt.data.research));
+                      : (typeof evt.data.research === 'object' && evt.data.research.company_overview 
+                          ? evt.data.research.company_overview 
+                          : JSON.stringify(evt.data.research)));
                 const email = extractPrimaryEmail(researchText, contact);
                 if (email) setPrimaryEmail(email);
               }
@@ -550,7 +552,7 @@ export default function HomePage() {
         <div className="flex flex-col items-center py-4 space-y-3">
           <div className="mb-4 p-2">
             <div className="text-xs font-bold text-primary text-center leading-tight">
-              Outreach<br/>.ai
+              Outreach
             </div>
           </div>
           
@@ -890,17 +892,7 @@ export default function HomePage() {
                     </Card>
                   )}
                 </div>
-              ) : (
-                <div className="text-center py-16">
-                  <Search className="h-16 w-16 text-slate-400 mx-auto mb-4" />
-                  <h2 className="text-2xl font-semibold text-slate-700 mb-2">Start Company Research</h2>
-                  <p className="text-slate-500 mb-6">Use the search panel to research companies and generate personalized outreach messages.</p>
-                  <Button onClick={() => setIsSearchExpanded(true)} className="bg-blue-600 hover:bg-blue-700">
-                    <Search className="h-4 w-4 mr-2" />
-                    Open Research Panel
-                  </Button>
-                </div>
-              )}
+              ) : null}
             </div>
           )}
         </div>

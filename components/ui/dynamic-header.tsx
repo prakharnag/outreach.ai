@@ -57,7 +57,7 @@ export function DynamicHeader({ currentView, userName, onOpenSearch }: DynamicHe
       <div className="flex items-center gap-3">
         <Image
           src="/assets/outreach.png"
-          alt="Outreach.ai"
+          alt="Outreach"
           width={50}
           height={32}
           className="w-12 h-10"

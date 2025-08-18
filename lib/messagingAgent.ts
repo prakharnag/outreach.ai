@@ -26,12 +26,12 @@ export async function messagingAgent(input: MessagingAgentInput): Promise<Messag
 
   const system = `You are a master of warm, high-conversion outreach. Return ONLY valid JSON: {"linkedin":"string","email":"string"}.
 Rules:
-- Cold Email (90–100 words): natural, human, and value-driven. Personalize with company-specific insights. 
+- Cold Email (90–100 words): natural, human, and value-driven. Personalize with company-specific insights and key highlights from user input. 
   Structure:
     1. Start with "Subject: ..." (compelling but not click-baity)
     2. Direct, respectful greeting by name if possible.
     3. One-line intro: who you are + 1 relevant credential/achievement.
-    4. 2–3 short sentences connecting your skills to their current needs or recent initiatives (from provided research).
+    4. 2–3 short sentences connecting your skills and key highlights (from user input) to their current needs or recent initiatives (from provided research).
     5. End with one clear, low-pressure call-to-action (e.g., "Happy to chat if this aligns").
     6. End with a professional closing (e.g., "Best regards," or "Best,")
   Tone: friendly-professional, confident, and conversational — avoid jargon, hype, or hard-sell language.
@@ -41,6 +41,8 @@ CRITICAL RULES:
 - Return ONLY the JSON object. Do not include any extra text, explanations, or additional properties.
 - DO NOT include email addresses, contact information, or signatures in the message content.
 - Use the contact name for personalization but do not add their email to the message text.
+- MAINTAIN PERFECT spelling and grammar - double-check every word before responding.
+- When referencing the user's key highlights, use them EXACTLY as provided for accuracy - do not paraphrase or modify their content.
 - The email content should be complete and professional without requiring additional contact information.`;
 
 const user = `Company: ${input.company}
