@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { Building2, Mail, MessageSquare } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "./card";
-import { getSupabaseClient } from "../../lib/supabase-singleton";
+import { supabase } from "../../lib/supabase";
 
 interface KPIStats {
   companiesResearched: number;
@@ -154,7 +154,7 @@ export function KPIDashboard({ onDataLoad }: KPIDashboardProps) {
     loadStats(true);
 
     // Set up real-time subscriptions with debouncing
-    const supabase = getSupabaseClient();
+    const supabaseClient = supabase;
     let updateTimeout: NodeJS.Timeout;
 
     const debouncedUpdate = () => {

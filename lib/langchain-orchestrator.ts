@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
+import { supabase as sharedSupabase } from './supabase';
 import { researchAgent, ResearchAgentOutput } from "./researchAgent";
 import { verifierAgent, VerifyAgentOutput } from "./verifyAgent";
 import { messagingAgent, MessagingAgentOutput } from "./messagingAgent";
@@ -41,16 +42,15 @@ class OutreachOrchestrator {
     if (!this.supabase) {
       // Use service role key for backend operations to bypass RLS
       const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-      if (serviceRoleKey) {
+      if (serviceRoleKey && typeof window === 'undefined') {
+        // Server-side: use service role key
         this.supabase = createClient(
           process.env.NEXT_PUBLIC_SUPABASE_URL!,
           serviceRoleKey
         );
       } else {
-        this.supabase = createClient(
-          process.env.NEXT_PUBLIC_SUPABASE_URL!,
-          process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-        );
+        // Client-side or no service role: use shared singleton client
+        this.supabase = sharedSupabase;
       }
     }
     return this.supabase;

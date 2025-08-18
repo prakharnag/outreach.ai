@@ -324,7 +324,7 @@ export default function LandingPage() {
           
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8 max-w-2xl mx-auto">
             {[
-              "100% accurate company research",
+              "99% accurate company research",
               "AI-generated personalized messages",
               "Verified contact information",
               "Real-time outreach tracking"

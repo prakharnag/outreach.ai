@@ -3,15 +3,24 @@ import { createBrowserClient } from '@supabase/ssr'
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 
-let supabaseInstance: ReturnType<typeof createBrowserClient> | null = null;
+// Singleton pattern to prevent multiple instances
+let browserClientInstance: ReturnType<typeof createBrowserClient> | null = null;
 
 export const createClient = () => {
-  if (!supabaseInstance) {
-    supabaseInstance = createBrowserClient(supabaseUrl, supabaseAnonKey);
+  // Always return the same instance to prevent multiple GoTrueClient warnings
+  if (typeof window !== 'undefined') {
+    // Client-side: use browser client
+    if (!browserClientInstance) {
+      browserClientInstance = createBrowserClient(supabaseUrl, supabaseAnonKey);
+    }
+    return browserClientInstance;
+  } else {
+    // Server-side: create a new instance each time (SSR/API routes)
+    return createBrowserClient(supabaseUrl, supabaseAnonKey);
   }
-  return supabaseInstance;
 }
 
+// Single shared instance for the entire app
 export const supabase = createClient()
 
 export const signInWithGoogle = async () => {

@@ -118,7 +118,7 @@ export function ResearchOutput({ content, contact, onCopyEmail }: ResearchOutput
                       if (!hasValidContact) {
                         return (
                           <div className="text-sm text-slate-500 italic">
-                            No direct contact information found in public sources. Consider reaching out through the company's official website or LinkedIn.
+                            No direct contact information found in public sources. Consider reaching out through the company&apos;s official website or LinkedIn.
                           </div>
                         );
                       }
@@ -294,7 +294,7 @@ export function ResearchOutput({ content, contact, onCopyEmail }: ResearchOutput
                     if (!hasValidContact) {
                       return (
                         <div className="text-sm text-slate-500 italic">
-                          No direct contact information found in public sources. Consider reaching out through the company's official website or LinkedIn.
+                          No direct contact information found in public sources. Consider reaching out through the company&apos;s official website or LinkedIn.
                         </div>
                       );
                     }

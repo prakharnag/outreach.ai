@@ -10,7 +10,7 @@ import { Alert, AlertDescription } from "../../components/ui/alert";
 import { Textarea } from "../../components/ui/textarea";
 import { Copy, Mail, MessageSquare, RefreshCw, Scissors, Search, User, Settings as SettingsIcon, BarChart3 } from "lucide-react";
 import { signOut } from "../../lib/supabase";
-import { getSupabaseClient } from "../../lib/supabase-singleton";
+import { supabase } from "../../lib/supabase";
 import { cn } from "../../lib/utils";
 import { CompanyAutocomplete } from "../../components/ui/company-autocomplete";
 import { Settings } from "../../components/ui/settings";
@@ -98,7 +98,7 @@ export default function HomePage() {
   
   const canRun = useMemo(() => hasValidCompany && !!role && !!highlights, [hasValidCompany, role, highlights]);
   const abortRef = useRef<AbortController | null>(null);
-  const supabase = useMemo(() => getSupabaseClient(), []);
+  const supabaseClient = useMemo(() => supabase, []);
   
   useEffect(() => {
     let retryCount = 0;
@@ -106,7 +106,7 @@ export default function HomePage() {
     
     const setupSubscriptions = () => {
       try {
-        const emailChannel = supabase
+        const emailChannel = supabaseClient
           .channel('email_history_changes')
           .on('postgres_changes', 
             { event: 'INSERT', schema: 'public', table: 'email_history' },
@@ -125,7 +125,7 @@ export default function HomePage() {
             }
           });
           
-        const linkedinChannel = supabase
+        const linkedinChannel = supabaseClient
           .channel('linkedin_history_changes')
           .on('postgres_changes',
             { event: 'INSERT', schema: 'public', table: 'linkedin_history' },
@@ -144,7 +144,7 @@ export default function HomePage() {
             }
           });
           
-        const contactChannel = supabase
+        const contactChannel = supabaseClient
           .channel('contact_results_changes')
           .on('postgres_changes',
             { event: 'INSERT', schema: 'public', table: 'contact_results' },
@@ -179,7 +179,7 @@ export default function HomePage() {
     
     const cleanup = setupSubscriptions();
     return cleanup;
-  }, [supabase]);
+  }, [supabaseClient]);
 
   const extractPrimaryEmail = (researchData: any, contactData: any) => {
     if (contactData?.email) return contactData.email;

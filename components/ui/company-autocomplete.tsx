@@ -229,7 +229,7 @@ export function CompanyAutocomplete({
             No companies found in suggestions.
           </div>
           <div className="text-xs text-slate-500 mt-1">
-            Press Enter to proceed with "<span className="font-medium">{value}</span>" or continue typing.
+            Press Enter to proceed with &quot;<span className="font-medium">{value}</span>&quot; or continue typing.
           </div>
         </div>
       )}
@@ -281,12 +281,13 @@ export function CompanyAutocomplete({
                   "bg-blue-25"
                 )}
                 role="option"
+                aria-selected="false"
               >
                 <div className="flex items-center gap-3">
                   <Building2 className="h-4 w-4 text-blue-600 flex-shrink-0" />
                   <div className="flex-1 min-w-0">
                     <div className="font-medium text-blue-900">
-                      Add "{value.trim()}"
+                      Add &quot;{value.trim()}&quot;
                     </div>
                     <div className="text-sm text-blue-600">
                       Use this company name for research
