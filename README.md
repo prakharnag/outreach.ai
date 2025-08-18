@@ -1,0 +1,361 @@
+# Outreach.ai
+
+[![Next.js](https://img.shields.io/badge/Next.js-14.2.5-black?logo=next.js)](https://nextjs.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.9.2-blue?logo=typescript)](https://www.typescriptlang.org/)
+[![Supabase](https://img.shields.io/badge/Supabase-Ready-green?logo=supabase)](https://supabase.com/)
+[![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-4.1.11-38B2AC?logo=tailwind-css)](https://tailwindcss.com/)
+
+## 🚀 Overview
+
+Outreach.ai is an intelligent cold outreach automation platform that combines AI-powered company research with personalized email and LinkedIn message generation. The platform streamlines the entire outreach process from prospect research to message delivery.
+
+## ✨ Key Features
+
+### 🔍 **AI-Powered Company Research**
+- Automated company discovery and analysis
+- Real-time data collection from trusted sources
+- Confidence scoring for research accuracy
+- Source verification and tracking
+
+### 👥 **Contact Intelligence**
+- Executive and decision-maker identification
+- Email inference and validation
+- Contact information scoring
+- Multiple data source aggregation
+
+### 📧 **Personalized Messaging**
+- AI-generated email campaigns
+- LinkedIn message automation
+- Custom messaging based on research insights
+- Multi-channel outreach coordination
+
+### 📊 **Analytics & Insights**
+- Real-time campaign performance tracking
+- Contact engagement analytics
+- Success rate monitoring
+- Historical data analysis
+
+### 🎯 **Smart Targeting**
+- Company autocomplete with manual entry support
+- Role-based targeting
+- Industry-specific customization
+- Advanced filtering capabilities
+
+## 🛠️ Technology Stack
+
+### **Frontend**
+- **Next.js 14.2.5** - React framework with App Router
+- **TypeScript 5.9.2** - Type-safe development
+- **Tailwind CSS 4.1.11** - Utility-first styling
+- **Radix UI** - Accessible component primitives
+- **Lucide React** - Beautiful icons
+
+### **Backend**
+- **Supabase** - PostgreSQL database with real-time subscriptions
+- **LangChain** - AI agent orchestration
+- **Edge Runtime** - Serverless API functions
+
+### **AI & APIs**
+- **Groq API** - Fast LLM inference
+- **Perplexity AI** - Real-time web search and research
+- **Company Autocomplete API** - Business data enrichment
+
+### **Development Tools**
+- **ESLint** - Code linting
+- **Drizzle ORM** - Type-safe database operations
+- **PostCSS** - CSS processing
+
+## 📁 Project Structure
+
+```
+outreach.ai/
+├── app/                          # Next.js App Router
+│   ├── api/                      # API routes
+│   │   ├── company-autocomplete/ # Company search endpoints
+│   │   ├── contact-results/      # Contact management APIs
+│   │   ├── history/             # Email/LinkedIn history
+│   │   ├── messaging/           # Message generation
+│   │   ├── rephrase/           # Content refinement
+│   │   └── run/                # Main orchestration endpoint
+│   ├── auth/                    # Authentication pages
+│   ├── dashboard/              # Main application interface
+│   └── landingpage/           # Marketing site
+├── components/                 # Reusable UI components
+│   ├── ui/                    # Base UI components
+│   └── NavigationSidebar.tsx  # Main navigation
+├── contexts/                  # React contexts
+│   └── auth-context.tsx      # Authentication state
+├── hooks/                    # Custom React hooks
+├── lib/                     # Core business logic
+│   ├── api.ts              # External API integrations
+│   ├── chain.ts            # AI agent chains
+│   ├── db.ts               # Database utilities
+│   ├── researchAgent.ts    # Company research AI
+│   ├── verifyAgent.ts      # Data verification AI
+│   ├── messagingAgent.ts   # Message generation AI
+│   ├── langchain-orchestrator.ts # Main AI orchestration
+│   ├── schema.ts           # Database schemas
+│   ├── supabase.ts         # Supabase client
+│   └── utils.ts            # Shared utilities
+├── types/                  # TypeScript type definitions
+├── supabase/              # Database migrations and config
+└── public/               # Static assets
+```
+
+## 🚀 Getting Started
+
+### Prerequisites
+
+- **Node.js 18.0+**
+- **npm or yarn**
+- **Supabase account**
+- **API keys for:**
+  - Groq API
+  - Perplexity AI
+
+### Installation
+
+1. **Clone the repository**
+   ```bash
+   git clone https://github.com/prakharnag/outreach.ai.git
+   cd outreach.ai
+   ```
+
+2. **Install dependencies**
+   ```bash
+   npm install
+   ```
+
+3. **Environment Setup**
+   
+   Create a `.env.local` file in the root directory:
+   ```env
+   # Supabase Configuration
+   NEXT_PUBLIC_SUPABASE_URL=your_supabase_url_here
+   NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key_here
+   SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key_here
+
+   # AI API Keys
+   GROQ_API_KEY=your_groq_api_key_here
+   PERPLEXITY_API_KEY=your_perplexity_api_key_here
+
+   # Optional: Database direct connection
+   DATABASE_URL=your_database_url_here
+   ```
+
+4. **Database Setup**
+   
+   Run the Supabase migrations:
+   ```bash
+   npm run drizzle:push
+   ```
+
+5. **Development Server**
+   ```bash
+   npm run dev
+   ```
+
+   Open [http://localhost:3000](http://localhost:3000) in your browser.
+
+## 🔧 Configuration
+
+### Supabase Setup
+
+1. Create a new Supabase project
+2. Enable Google OAuth (optional)
+3. Run the provided SQL migrations in `supabase/migrations/`
+4. Configure Row Level Security (RLS) policies
+
+### API Keys Setup
+
+#### Groq API
+1. Visit [Groq Console](https://console.groq.com/)
+2. Create an account and generate an API key
+3. Add to `.env.local` as `GROQ_API_KEY`
+
+#### Perplexity AI
+1. Visit [Perplexity AI](https://www.perplexity.ai/)
+2. Generate an API key
+3. Add to `.env.local` as `PERPLEXITY_API_KEY`
+
+## 🏗️ Architecture
+
+### AI Agent System
+
+The platform uses a multi-agent AI system for intelligent outreach:
+
+```mermaid
+graph TD
+    A[User Input] --> B[Research Agent]
+    B --> C[Verification Agent]
+    C --> D[Messaging Agent]
+    D --> E[Output Generation]
+    
+    B --> F[Perplexity API]
+    C --> G[Data Validation]
+    D --> H[Groq LLM]
+```
+
+1. **Research Agent** - Gathers company intelligence
+2. **Verification Agent** - Validates and scores data accuracy
+3. **Messaging Agent** - Generates personalized outreach content
+
+### Data Flow
+
+1. **Company Research** → Real-time web search and data aggregation
+2. **Contact Discovery** → Executive identification and email inference
+3. **Message Generation** → Personalized email and LinkedIn content
+4. **Analytics Tracking** → Performance monitoring and optimization
+
+### Database Schema
+
+Key tables:
+- `contact_results` - Research and contact data
+- `email_history` - Generated email campaigns
+- `linkedin_history` - LinkedIn message history
+- User authentication managed by Supabase Auth
+
+## 🚀 Deployment
+
+### Vercel Deployment (Recommended)
+
+1. **Connect Repository**
+   - Link your GitHub repository to Vercel
+   - Import the project
+
+2. **Environment Variables**
+   Configure all environment variables in Vercel dashboard:
+   - `NEXT_PUBLIC_SUPABASE_URL`
+   - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+   - `SUPABASE_SERVICE_ROLE_KEY`
+   - `GROQ_API_KEY`
+   - `PERPLEXITY_API_KEY`
+
+3. **Deploy**
+   ```bash
+   npm run build
+   vercel --prod
+   ```
+
+### Manual Deployment
+
+1. **Build the application**
+   ```bash
+   npm run build
+   ```
+
+2. **Start production server**
+   ```bash
+   npm start
+   ```
+
+## 📊 Usage Guide
+
+### Basic Workflow
+
+1. **Authentication** - Sign in with Google or email
+2. **Company Research** - Enter company name and role
+3. **Review Results** - Analyze research findings and contact data
+4. **Generate Messages** - Create personalized outreach content
+5. **Track Performance** - Monitor campaign success rates
+
+### Advanced Features
+
+- **Bulk Processing** - Handle multiple prospects simultaneously
+- **Custom Templates** - Create reusable message templates
+- **A/B Testing** - Compare message variants
+- **Integration APIs** - Connect with external CRM systems
+
+## 🧪 Development
+
+### Running Tests
+
+```bash
+npm run test
+```
+
+### Code Quality
+
+```bash
+npm run lint
+npm run type-check
+```
+
+### Database Operations
+
+```bash
+# Generate migrations
+npm run drizzle:generate
+
+# Apply migrations
+npm run drizzle:push
+```
+
+## 🔒 Security & Privacy
+
+- **Data Encryption** - All sensitive data encrypted at rest
+- **API Rate Limiting** - Prevents abuse and ensures stability
+- **User Privacy** - GDPR compliant data handling
+- **Secure Authentication** - Supabase Auth with OAuth support
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+### Development Guidelines
+
+- Follow TypeScript best practices
+- Use Tailwind CSS for styling
+- Write comprehensive tests
+- Document new features
+- Maintain backward compatibility
+
+## 📈 Performance
+
+- **Cold Start** - < 200ms average response time
+- **Build Size** - Optimized bundle splitting
+- **Caching** - Intelligent data caching strategies
+- **Edge Runtime** - Global deployment for low latency
+
+## 🐛 Troubleshooting
+
+### Common Issues
+
+**Build Errors**
+- Ensure all environment variables are set
+- Check TypeScript compilation errors
+- Verify API key permissions
+
+**Database Connection**
+- Confirm Supabase configuration
+- Check network connectivity
+- Verify RLS policies
+
+**API Rate Limits**
+- Monitor usage quotas
+- Implement exponential backoff
+- Consider API key rotation
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## 🙏 Acknowledgments
+
+- [Next.js](https://nextjs.org/) for the amazing React framework
+- [Supabase](https://supabase.com/) for the backend infrastructure
+- [Tailwind CSS](https://tailwindcss.com/) for the styling system
+- [LangChain](https://langchain.com/) for AI agent orchestration
+- [Radix UI](https://www.radix-ui.com/) for accessible components
+
+## 📞 Support
+
+For support, email [support@outreach.ai](mailto:support@outreach.ai) or join our [Discord community](https://discord.gg/outreach-ai).
+
+---
+
+**Built with ❤️ by the Outreach.ai Team**
