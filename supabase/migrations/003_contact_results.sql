@@ -25,28 +25,32 @@ ALTER TABLE contact_results ENABLE ROW LEVEL SECURITY;
 
 -- Create RLS policies
 CREATE POLICY "Users can view their own contact results" ON contact_results
-  FOR SELECT USING (auth.uid() = user_id);
+  FOR SELECT USING ((select auth.uid()) = user_id);
 
 CREATE POLICY "Users can insert their own contact results" ON contact_results
-  FOR INSERT WITH CHECK (auth.uid() = user_id);
+  FOR INSERT WITH CHECK ((select auth.uid()) = user_id);
 
 CREATE POLICY "Users can update their own contact results" ON contact_results
-  FOR UPDATE USING (auth.uid() = user_id);
+  FOR UPDATE USING ((select auth.uid()) = user_id);
 
 CREATE POLICY "Users can delete their own contact results" ON contact_results
-  FOR DELETE USING (auth.uid() = user_id);
+  FOR DELETE USING ((select auth.uid()) = user_id);
 
 -- Enable realtime for contact_results
 ALTER PUBLICATION supabase_realtime ADD TABLE contact_results;
 
 -- Create function to automatically update updated_at timestamp
 CREATE OR REPLACE FUNCTION update_updated_at_column()
-RETURNS TRIGGER AS $$
+RETURNS TRIGGER 
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
 BEGIN
   NEW.updated_at = NOW();
   RETURN NEW;
 END;
-$$ language 'plpgsql';
+$$;
 
 -- Create trigger for updated_at
 CREATE TRIGGER update_contact_results_updated_at 

@@ -14,6 +14,9 @@ interface HistoryItem {
   content: string;
   created_at: string;
   type: 'email' | 'linkedin';
+  total_count?: number; // Number of messages/emails for this company
+  all_emails?: HistoryItem[]; // All emails for this company
+  all_messages?: HistoryItem[]; // All LinkedIn messages for this company
 }
 
 interface ExpandableHistoryProps {
@@ -111,6 +114,11 @@ export function ExpandableHistory({ items, type, loading, emptyMessage }: Expand
                   <div className="flex-1 min-w-0">
                     <div className="font-medium text-slate-900 truncate">
                       {type === 'email' && item.subject_line ? item.subject_line : `${type === 'email' ? 'Email' : 'LinkedIn message'} to ${item.company_name}`}
+                      {item.total_count && item.total_count > 1 && (
+                        <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                          {item.total_count} {type === 'email' ? 'emails' : 'messages'}
+                        </span>
+                      )}
                     </div>
                     <div className="flex items-center gap-2 text-sm text-slate-500">
                       <span>{item.company_name}</span>
@@ -121,7 +129,7 @@ export function ExpandableHistory({ items, type, loading, emptyMessage }: Expand
                         </>
                       )}
                       <span>•</span>
-                      <span>{formatDate(item.created_at)}</span>
+                      <span>Latest: {formatDate(item.created_at)}</span>
                     </div>
                   </div>
                 </div>
@@ -150,7 +158,7 @@ export function ExpandableHistory({ items, type, loading, emptyMessage }: Expand
               {/* Expanded Content */}
               <div className={cn(
                 "overflow-hidden transition-all duration-300 ease-in-out",
-                isExpanded ? "max-h-96 opacity-100" : "max-h-0 opacity-0"
+                isExpanded ? "max-h-[600px] opacity-100" : "max-h-0 opacity-0"
               )}>
                 <div className="px-4 pb-4 border-t border-slate-100">
                   <div className="mt-4 space-y-4">
@@ -158,8 +166,13 @@ export function ExpandableHistory({ items, type, loading, emptyMessage }: Expand
                     <div className="flex items-center gap-4 text-sm text-slate-600">
                       <div className="flex items-center gap-1">
                         <Calendar className="h-3 w-3" />
-                        <span>Created {formatDate(item.created_at)}</span>
+                        <span>Latest: {formatDate(item.created_at)}</span>
                       </div>
+                      {item.total_count && item.total_count > 1 && (
+                        <div>
+                          <span className="font-medium">Total:</span> {item.total_count} {type === 'email' ? 'emails' : 'messages'}
+                        </div>
+                      )}
                       {item.role && (
                         <div>
                           <span className="font-medium">Role:</span> {item.role}
@@ -167,26 +180,58 @@ export function ExpandableHistory({ items, type, loading, emptyMessage }: Expand
                       )}
                     </div>
 
-                    {/* Content */}
-                    <div className="bg-slate-50 rounded-lg p-4">
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-sm font-medium text-slate-700">
-                          {type === 'email' ? 'Email Content' : 'LinkedIn Message'}
-                        </span>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => copyToClipboard(item.content)}
-                          className="text-xs"
-                        >
-                          <Copy className="h-3 w-3 mr-1" />
-                          Copy
-                        </Button>
+                    {/* Show all messages/emails if there are multiple */}
+                    {item.total_count && item.total_count > 1 ? (
+                      <div className="space-y-3">
+                        <h4 className="text-sm font-medium text-slate-700">
+                          All {type === 'email' ? 'Emails' : 'LinkedIn Messages'} for {item.company_name}
+                        </h4>
+                        <div className="max-h-96 overflow-y-auto space-y-3 pr-2">
+                          {(type === 'email' ? item.all_emails : item.all_messages)?.map((subItem, index) => (
+                            <div key={subItem.id} className="bg-slate-50 rounded-lg p-4">
+                              <div className="flex items-center justify-between mb-2">
+                                <span className="text-sm font-medium text-slate-700">
+                                  {type === 'email' ? 'Email' : 'LinkedIn Message'} #{index + 1} - {formatDate(subItem.created_at)}
+                                </span>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => copyToClipboard(subItem.content)}
+                                  className="text-xs"
+                                >
+                                  <Copy className="h-3 w-3 mr-1" />
+                                  Copy
+                                </Button>
+                              </div>
+                              <div className="text-sm text-slate-800 whitespace-pre-wrap max-h-32 overflow-y-auto">
+                                {subItem.content}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
                       </div>
-                      <div className="text-sm text-slate-800 whitespace-pre-wrap max-h-48 overflow-y-auto">
-                        {item.content}
+                    ) : (
+                      // Show single content
+                      <div className="bg-slate-50 rounded-lg p-4">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-sm font-medium text-slate-700">
+                            {type === 'email' ? 'Email Content' : 'LinkedIn Message'}
+                          </span>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => copyToClipboard(item.content)}
+                            className="text-xs"
+                          >
+                            <Copy className="h-3 w-3 mr-1" />
+                            Copy
+                          </Button>
+                        </div>
+                        <div className="text-sm text-slate-800 whitespace-pre-wrap max-h-48 overflow-y-auto">
+                          {item.content}
+                        </div>
                       </div>
-                    </div>
+                    )}
 
                     {/* Actions */}
                     <div className="flex items-center gap-2 pt-2">
@@ -197,7 +242,7 @@ export function ExpandableHistory({ items, type, loading, emptyMessage }: Expand
                         className="text-xs"
                       >
                         <Copy className="h-3 w-3 mr-1" />
-                        Copy {type === 'email' ? 'Email' : 'Message'}
+                        Copy Latest {type === 'email' ? 'Email' : 'Message'}
                       </Button>
                       
                       {type === 'email' && (

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Building2, Search, Clock } from "lucide-react";
+import { Building2, Search, Clock, BarChart3 } from "lucide-react";
 import { Button } from "./button";
 import { Card, CardContent, CardHeader, CardTitle } from "./card";
 import { KPIDashboard } from "./kpi-dashboard";
@@ -202,19 +202,38 @@ export function HomeDashboard({ onStartResearch, onCompanySelect }: HomeDashboar
         </Card>
 
         {/* Quick Actions */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Quick Actions</CardTitle>
+        <Card className="h-fit">
+          <CardHeader className="pb-4">
+            <CardTitle className="text-lg">Quick Actions</CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
+          <CardContent className="pt-0">
+            <div className="grid grid-cols-1 gap-2">
               <Button
                 onClick={onStartResearch}
-                className="w-full justify-start"
+                className="justify-start h-9"
                 variant="outline"
+                size="sm"
               >
                 <Search className="h-4 w-4 mr-2" />
                 Research New Company
+              </Button>
+              <Button
+                onClick={() => window.location.href = '/dashboard?tab=analytics'}
+                className="justify-start h-9"
+                variant="ghost"
+                size="sm"
+              >
+                <BarChart3 className="h-4 w-4 mr-2" />
+                View Analytics
+              </Button>
+              <Button
+                onClick={() => window.location.href = '/dashboard?tab=history'}
+                className="justify-start h-9"
+                variant="ghost"
+                size="sm"
+              >
+                <Clock className="h-4 w-4 mr-2" />
+                View History
               </Button>
             </div>
           </CardContent>

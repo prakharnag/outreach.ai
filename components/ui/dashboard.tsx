@@ -1,6 +1,6 @@
 "use client";
 
-import { Building2, Search, Clock, Sparkles } from "lucide-react";
+import { Building2, Search, Clock, Sparkles, BarChart3 } from "lucide-react";
 import { Button } from "./button";
 import { Card, CardContent, CardHeader, CardTitle } from "./card";
 import { KPIDashboard } from "./kpi-dashboard";
@@ -11,23 +11,40 @@ import { useState } from "react";
 
 interface DashboardProps {
   onStartResearch: () => void;
+  onNavigateToAnalytics?: () => void;
+  onNavigateToEmailHistory?: () => void;
+  onNavigateToLinkedInHistory?: () => void;
 }
 
-export function Dashboard({ onStartResearch }: DashboardProps) {
+export function Dashboard({ 
+  onStartResearch, 
+  onNavigateToAnalytics, 
+  onNavigateToEmailHistory, 
+  onNavigateToLinkedInHistory 
+}: DashboardProps) {
   const { contactResults, loading, error } = useContactResults();
   const [selectedCompany, setSelectedCompany] = useState<ContactResult | null>(null);
 
-  const formatDate = (dateString: string) => {
+  const formatDate = (dateString: string, updatedString?: string) => {
     const date = new Date(dateString);
+    const updated = updatedString ? new Date(updatedString) : null;
     const now = new Date();
-    const diffMs = now.getTime() - date.getTime();
+    
+    // Use updated date if it's different from created date (indicating an update)
+    const displayDate = updated && Math.abs(updated.getTime() - date.getTime()) > 1000 ? updated : date;
+    const isUpdated = updated && Math.abs(updated.getTime() - date.getTime()) > 1000;
+    
+    const diffMs = now.getTime() - displayDate.getTime();
     const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
     const diffDays = Math.floor(diffHours / 24);
 
-    if (diffHours < 1) return 'Just now';
-    if (diffHours < 24) return `${diffHours}h ago`;
-    if (diffDays < 7) return `${diffDays}d ago`;
-    return date.toLocaleDateString();
+    let timeText = '';
+    if (diffHours < 1) timeText = 'Just now';
+    else if (diffHours < 24) timeText = `${diffHours}h ago`;
+    else if (diffDays < 7) timeText = `${diffDays}d ago`;
+    else timeText = displayDate.toLocaleDateString();
+    
+    return { timeText, isUpdated };
   };
 
   if (selectedCompany) {
@@ -105,18 +122,18 @@ export function Dashboard({ onStartResearch }: DashboardProps) {
       
       <KPIDashboard />
       
-      {/* Recent Companies */}
+      {/* Searched Companies */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Building2 className="h-5 w-5" />
-              Recent Companies
+              Searched Companies ({contactResults.length})
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-3">
-              {contactResults.slice(0, 10).map((company) => (
+            <div className="space-y-3 max-h-96 overflow-y-auto">
+              {contactResults.map((company) => (
                 <div
                   key={company.id}
                   onClick={() => setSelectedCompany(company)}
@@ -149,7 +166,19 @@ export function Dashboard({ onStartResearch }: DashboardProps) {
                   </div>
                   <div className="flex items-center gap-2 text-sm text-slate-500">
                     <Clock className="h-4 w-4" />
-                    {formatDate(company.created_at)}
+                    {(() => {
+                      const { timeText, isUpdated } = formatDate(company.created_at, company.updated_at);
+                      return (
+                        <span className="flex items-center gap-1">
+                          {timeText}
+                          {isUpdated && (
+                            <span className="text-xs bg-blue-100 text-blue-800 px-1.5 py-0.5 rounded">
+                              Updated
+                            </span>
+                          )}
+                        </span>
+                      );
+                    })()}
                   </div>
                 </div>
               ))}
@@ -158,19 +187,47 @@ export function Dashboard({ onStartResearch }: DashboardProps) {
         </Card>
 
         {/* Quick Actions */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Quick Actions</CardTitle>
+        <Card className="h-fit">
+          <CardHeader className="pb-4">
+            <CardTitle className="text-lg">Quick Actions</CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
+          <CardContent className="pt-0">
+            <div className="grid grid-cols-1 gap-2">
               <Button
                 onClick={onStartResearch}
-                className="w-full justify-start"
+                className="justify-start h-9"
                 variant="outline"
+                size="sm"
               >
                 <Search className="h-4 w-4 mr-2" />
                 Research New Company
+              </Button>
+              <Button
+                onClick={onNavigateToAnalytics}
+                className="justify-start h-9"
+                variant="ghost"
+                size="sm"
+              >
+                <BarChart3 className="h-4 w-4 mr-2" />
+                View Analytics
+              </Button>
+              <Button
+                onClick={onNavigateToEmailHistory}
+                className="justify-start h-9"
+                variant="ghost"
+                size="sm"
+              >
+                <Clock className="h-4 w-4 mr-2" />
+                Email History
+              </Button>
+              <Button
+                onClick={onNavigateToLinkedInHistory}
+                className="justify-start h-9"
+                variant="ghost"
+                size="sm"
+              >
+                <Clock className="h-4 w-4 mr-2" />
+                LinkedIn History
               </Button>
             </div>
           </CardContent>

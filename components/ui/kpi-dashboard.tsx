@@ -7,8 +7,8 @@ import { getSupabaseClient } from "../../lib/supabase-singleton";
 
 interface KPIStats {
   companiesResearched: number;
-  totalEmails: number;
-  totalLinkedIn: number;
+  highConfidenceContacts: number;
+  successfulInferences: number;
 }
 
 interface KPIDashboardProps {
@@ -34,8 +34,8 @@ const setCachedData = (key: string, data: any) => {
 export function KPIDashboard({ onDataLoad }: KPIDashboardProps) {
   const [stats, setStats] = useState<KPIStats>({
     companiesResearched: 0,
-    totalEmails: 0,
-    totalLinkedIn: 0
+    highConfidenceContacts: 0,
+    successfulInferences: 0
   });
   const [loading, setLoading] = useState(true);
   const loadingRef = useRef(false);
@@ -50,7 +50,7 @@ export function KPIDashboard({ onDataLoad }: KPIDashboardProps) {
       if (cachedStats) {
         setStats(cachedStats);
         setLoading(false);
-        const hasAnyData = cachedStats.companiesResearched > 0 || cachedStats.totalEmails > 0 || cachedStats.totalLinkedIn > 0;
+        const hasAnyData = cachedStats.companiesResearched > 0;
         onDataLoad?.(hasAnyData);
         return;
       }
@@ -59,41 +59,82 @@ export function KPIDashboard({ onDataLoad }: KPIDashboardProps) {
     loadingRef.current = true;
 
     try {
-      const [emailRes, linkedinRes, contactRes] = await Promise.all([
-        fetch('/api/history/emails'),
-        fetch('/api/history/linkedin'),
+      const [contactRes] = await Promise.all([
         fetch('/api/contact-results')
       ]);
 
       if (!mountedRef.current) return;
 
-      if (emailRes.ok && linkedinRes.ok && contactRes.ok) {
-        const [emails, linkedin, contacts] = await Promise.all([
-          emailRes.json(),
-          linkedinRes.json(),
+      if (contactRes.ok) {
+        const [contacts] = await Promise.all([
           contactRes.json()
         ]);
 
         if (!mountedRef.current) return;
 
-        // Calculate unique companies from all sources
-        const allCompanies = new Set([
-          ...emails.map((e: any) => e.company_name),
-          ...linkedin.map((l: any) => l.company_name),
-          ...contacts.map((c: any) => c.company_name)
-        ]);
+        // Calculate meaningful metrics from contact results
+        const highConfidenceContacts = contacts.filter((c: any) => {
+          try {
+            // Check confidence from database fields
+            const confidenceScore = c.confidence_score || 0;
+            const hasDirectContactData = c.contact_name || c.contact_email;
+            
+            // Also check research_data JSON for contact info
+            if (c.research_data) {
+              const data = typeof c.research_data === 'string' ? JSON.parse(c.research_data) : c.research_data;
+              const hasJsonContact = data.contact && (data.contact.name || data.contact.email);
+              const jsonConfidence = data.confidence || (data.confidence_assessment?.level === 'High' ? 0.8 : 0.5);
+              
+              return (hasDirectContactData || hasJsonContact) && (confidenceScore >= 0.7 || jsonConfidence >= 0.7);
+            }
+            
+            return hasDirectContactData && confidenceScore >= 0.7;
+          } catch (error) {
+            console.error('Error parsing contact data:', error);
+            return false;
+          }
+        }).length;
+
+        const successfulInferences = contacts.filter((c: any) => {
+          try {
+            // Check direct fields first
+            if (c.email_inferred || c.contact_email) {
+              return true;
+            }
+            
+            // Check research_data JSON
+            if (c.research_data) {
+              const data = typeof c.research_data === 'string' ? JSON.parse(c.research_data) : c.research_data;
+              
+              // Check if contact has email or is inferred
+              if (data.contact) {
+                return data.contact.email || data.contact.inferred === true;
+              }
+              
+              // Check contact_information field
+              if (data.contact_information) {
+                return data.contact_information.email || data.contact_information.inferred === true;
+              }
+            }
+            
+            return false;
+          } catch (error) {
+            console.error('Error parsing inference data:', error);
+            return false;
+          }
+        }).length;
 
         const newStats = {
-          companiesResearched: allCompanies.size,
-          totalEmails: emails.length,
-          totalLinkedIn: linkedin.length
+          companiesResearched: contacts.length,
+          highConfidenceContacts,
+          successfulInferences
         };
         
         setStats(newStats);
         setCachedData('kpi-stats', newStats);
         
         // Notify parent about data availability
-        const hasAnyData = newStats.companiesResearched > 0 || newStats.totalEmails > 0 || newStats.totalLinkedIn > 0;
+        const hasAnyData = newStats.companiesResearched > 0;
         onDataLoad?.(hasAnyData);
       }
     } catch (error) {
@@ -126,24 +167,8 @@ export function KPIDashboard({ onDataLoad }: KPIDashboardProps) {
     };
     
     const emailChannel = supabase
-      .channel('kpi_email_updates')
+      .channel('kpi_contact_updates_only')
       .on('postgres_changes', 
-        { event: '*', schema: 'public', table: 'email_history' },
-        debouncedUpdate
-      )
-      .subscribe();
-      
-    const linkedinChannel = supabase
-      .channel('kpi_linkedin_updates')
-      .on('postgres_changes',
-        { event: '*', schema: 'public', table: 'linkedin_history' },
-        debouncedUpdate
-      )
-      .subscribe();
-      
-    const contactChannel = supabase
-      .channel('kpi_contact_updates')
-      .on('postgres_changes',
         { event: '*', schema: 'public', table: 'contact_results' },
         debouncedUpdate
       )
@@ -153,8 +178,6 @@ export function KPIDashboard({ onDataLoad }: KPIDashboardProps) {
       mountedRef.current = false;
       clearTimeout(updateTimeout);
       emailChannel.unsubscribe();
-      linkedinChannel.unsubscribe();
-      contactChannel.unsubscribe();
     };
   }, [loadStats]);
 
@@ -187,23 +210,23 @@ export function KPIDashboard({ onDataLoad }: KPIDashboardProps) {
 
       <Card className="card-hover">
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Total Cold Emails Generated</CardTitle>
+          <CardTitle className="text-sm font-medium">High Quality Contacts</CardTitle>
           <Mail className="h-4 w-4 text-blue-600" />
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold text-blue-600">{stats.totalEmails}</div>
-          <p className="text-xs text-muted-foreground">Personalized emails created</p>
+          <div className="text-2xl font-bold text-blue-600">{stats.highConfidenceContacts}</div>
+          <p className="text-xs text-muted-foreground">Contacts with high confidence & data</p>
         </CardContent>
       </Card>
 
       <Card className="card-hover">
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Total LinkedIn Messages Generated</CardTitle>
+          <CardTitle className="text-sm font-medium">Successful Email Inferences</CardTitle>
           <MessageSquare className="h-4 w-4 text-purple-600" />
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold text-purple-600">{stats.totalLinkedIn}</div>
-          <p className="text-xs text-muted-foreground">Professional messages created</p>
+          <div className="text-2xl font-bold text-purple-600">{stats.successfulInferences}</div>
+          <p className="text-xs text-muted-foreground">Contact emails found or inferred</p>
         </CardContent>
       </Card>
     </div>

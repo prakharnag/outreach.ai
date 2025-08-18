@@ -67,10 +67,6 @@ export default function LandingPage() {
                 <div className="text-2xl font-bold text-navy">10x</div>
                 <div className="text-sm text-muted-foreground">Faster Research</div>
               </div>
-              <div className="text-center">
-                <div className="text-2xl font-bold text-navy">50+</div>
-                <div className="text-sm text-muted-foreground">Data Sources</div>
-              </div>
             </div>
           </div>
           
@@ -323,15 +319,15 @@ export default function LandingPage() {
             Ready to Transform Your Outreach Game?
           </h2>
           <p className="text-xl opacity-90 mb-8 max-w-2xl mx-auto">
-            Join thousands of sales professionals who&apos;ve increased their response rates with AI-powered outreach.
+            Join thousands of job seekers and sales professionals who&apos;ve increased their response rates with AI-powered outreach.
           </p>
           
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8 max-w-2xl mx-auto">
             {[
-              "No credit card required",
-              "5 free research credits", 
-              "Full platform access",
-              "Cancel anytime"
+              "100% accurate company research",
+              "AI-generated personalized messages",
+              "Verified contact information",
+              "Real-time outreach tracking"
             ].map((benefit, index) => (
               <div key={index} className="flex items-center gap-2 text-sm">
                 <Check className="h-4 w-4 text-green-300" />
@@ -347,10 +343,6 @@ export default function LandingPage() {
               onClick={() => { window.location.href = '/?auth=true'; }}
             >
               Get Started for Free
-            </Button>
-            <Button variant="outline" size="lg" className="border-white text-white hover:bg-white/10">
-              Book a Demo
-              Book a Demo
             </Button>
           </div>
         </div>

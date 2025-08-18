@@ -750,7 +750,12 @@ export default function HomePage() {
           )}
           
           {activeView === "home" && (
-            <Dashboard onStartResearch={() => setIsSearchExpanded(true)} />
+            <Dashboard 
+              onStartResearch={() => setIsSearchExpanded(true)}
+              onNavigateToAnalytics={() => handleNavClick("analytics")}
+              onNavigateToEmailHistory={() => handleNavClick("email")}
+              onNavigateToLinkedInHistory={() => handleNavClick("linkedin")}
+            />
           )}
           
           {activeView === "research" && (

@@ -24,16 +24,16 @@ ALTER TABLE public.linkedin_messages ENABLE ROW LEVEL SECURITY;
 
 -- Create policies
 CREATE POLICY "Users can view their own cold emails" ON public.cold_emails
-  FOR SELECT USING (auth.uid() = user_id);
+  FOR SELECT USING ((select auth.uid()) = user_id);
 
 CREATE POLICY "Users can insert their own cold emails" ON public.cold_emails
-  FOR INSERT WITH CHECK (auth.uid() = user_id);
+  FOR INSERT WITH CHECK ((select auth.uid()) = user_id);
 
 CREATE POLICY "Users can view their own LinkedIn messages" ON public.linkedin_messages
-  FOR SELECT USING (auth.uid() = user_id);
+  FOR SELECT USING ((select auth.uid()) = user_id);
 
 CREATE POLICY "Users can insert their own LinkedIn messages" ON public.linkedin_messages
-  FOR INSERT WITH CHECK (auth.uid() = user_id);
+  FOR INSERT WITH CHECK ((select auth.uid()) = user_id);
 
 -- Create indexes
 CREATE INDEX IF NOT EXISTS cold_emails_user_id_created_at_idx ON public.cold_emails(user_id, created_at DESC);

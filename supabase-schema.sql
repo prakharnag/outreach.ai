@@ -25,17 +25,17 @@ ALTER TABLE linkedin_history ENABLE ROW LEVEL SECURITY;
 
 -- Create policies for email_history
 CREATE POLICY "Users can view their own email history" ON email_history
-  FOR SELECT USING (auth.uid() = user_id);
+  FOR SELECT USING ((select auth.uid()) = user_id);
 
 CREATE POLICY "Users can insert their own email history" ON email_history
-  FOR INSERT WITH CHECK (auth.uid() = user_id);
+  FOR INSERT WITH CHECK ((select auth.uid()) = user_id);
 
 -- Create policies for linkedin_history
 CREATE POLICY "Users can view their own linkedin history" ON linkedin_history
-  FOR SELECT USING (auth.uid() = user_id);
+  FOR SELECT USING ((select auth.uid()) = user_id);
 
 CREATE POLICY "Users can insert their own linkedin history" ON linkedin_history
-  FOR INSERT WITH CHECK (auth.uid() = user_id);
+  FOR INSERT WITH CHECK ((select auth.uid()) = user_id);
 
 -- Create indexes for better performance
 CREATE INDEX IF NOT EXISTS email_history_user_id_idx ON email_history(user_id);

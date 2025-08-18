@@ -1,5 +1,32 @@
--- Create RPC function to upsert contact results with proper user context
-CREATE OR REPLACE FUNCTION insert_contact_result(
+-- Fix function search path security vulnerabilities
+-- Add SECURITY DEFINER and SET search_path to prevent SQL injection via search_path manipulation
+
+-- Drop the trigger first before dropping the function
+DROP TRIGGER IF EXISTS update_contact_results_updated_at ON public.contact_results;
+
+-- Drop and recreate update_updated_at_column with secure search_path
+DROP FUNCTION IF EXISTS public.update_updated_at_column();
+CREATE OR REPLACE FUNCTION public.update_updated_at_column()
+RETURNS TRIGGER 
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+  NEW.updated_at = NOW();
+  RETURN NEW;
+END;
+$$;
+
+-- Recreate the trigger
+CREATE TRIGGER update_contact_results_updated_at 
+  BEFORE UPDATE ON public.contact_results 
+  FOR EACH ROW 
+  EXECUTE FUNCTION public.update_updated_at_column();
+
+-- Drop and recreate insert_contact_result with secure search_path
+DROP FUNCTION IF EXISTS public.insert_contact_result(UUID, TEXT, JSONB);
+CREATE OR REPLACE FUNCTION public.insert_contact_result(
   p_user_id UUID,
   p_company_name TEXT,
   p_research_data JSONB
@@ -54,8 +81,9 @@ BEGIN
 END;
 $$;
 
--- Create a function to clean up duplicate entries
-CREATE OR REPLACE FUNCTION cleanup_duplicate_contacts()
+-- Drop and recreate cleanup_duplicate_contacts with secure search_path
+DROP FUNCTION IF EXISTS public.cleanup_duplicate_contacts();
+CREATE OR REPLACE FUNCTION public.cleanup_duplicate_contacts()
 RETURNS TEXT
 LANGUAGE plpgsql
 SECURITY DEFINER
@@ -97,5 +125,10 @@ END;
 $$;
 
 -- Grant execute permission to authenticated users
-GRANT EXECUTE ON FUNCTION insert_contact_result(UUID, TEXT, JSONB) TO authenticated;
-GRANT EXECUTE ON FUNCTION insert_contact_result(UUID, TEXT, JSONB) TO service_role;
+GRANT EXECUTE ON FUNCTION public.insert_contact_result(UUID, TEXT, JSONB) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.insert_contact_result(UUID, TEXT, JSONB) TO service_role;
+GRANT EXECUTE ON FUNCTION public.cleanup_duplicate_contacts() TO service_role;
+
+-- Note: Leaked password protection must be enabled in Supabase Dashboard
+-- Go to Project Settings > Authentication > Password Protection
+-- Enable "Prevent sign ups with leaked passwords"
