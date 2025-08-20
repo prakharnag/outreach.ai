@@ -17,15 +17,29 @@ export default function HomePage() {
     const urlParams = new URLSearchParams(window.location.search);
     if (urlParams.get('auth') === 'true' || window.location.pathname === '/auth') {
       setShowAuth(true);
+    } else {
+      // Reset showAuth if we're not on auth page
+      setShowAuth(false);
     }
   }, []);
 
   useEffect(() => {
-    // Only check URL on mount, not on every change
-    const urlParams = new URLSearchParams(window.location.search);
-    if (urlParams.get('auth') === 'true' || window.location.pathname === '/auth') {
-      setShowAuth(true);
-    }
+    // Listen for route changes to update showAuth state
+    const handleRouteChange = () => {
+      const urlParams = new URLSearchParams(window.location.search);
+      if (urlParams.get('auth') === 'true' || window.location.pathname === '/auth') {
+        setShowAuth(true);
+      } else {
+        setShowAuth(false);
+      }
+    };
+
+    // Listen for popstate events (back/forward navigation)
+    window.addEventListener('popstate', handleRouteChange);
+    
+    return () => {
+      window.removeEventListener('popstate', handleRouteChange);
+    };
   }, []);
 
   if (loading) {
