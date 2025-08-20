@@ -751,6 +751,7 @@ export default function HomePage() {
                     onToneChange={setSelectedTone}
                     disabled={loading}
                     variant="outline"
+                    size="sm"
                     className="w-full justify-start h-9 sm:h-10 text-xs sm:text-sm"
                   />
                 </div>

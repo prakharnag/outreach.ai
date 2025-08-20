@@ -31,10 +31,6 @@ export function ResearchOutput({ content, contact, onCopyEmail }: ResearchOutput
       return (
         <Card className="shadow-lg bg-gradient-to-br from-blue-50/50 to-indigo-50/50">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-blue-900 text-lg sm:text-xl">
-              <Building2 className="h-4 w-4 sm:h-5 sm:w-5" />
-              Company Research
-            </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-4 sm:space-y-6">
