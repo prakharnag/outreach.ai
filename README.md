@@ -41,6 +41,52 @@ Outreach.ai is an intelligent cold outreach automation platform that combines AI
 - Industry-specific customization
 - Advanced filtering capabilities
 
+### 📱 **Mobile-First Design**
+- Fully responsive interface across all devices
+- Touch-friendly interactions and navigation
+- Adaptive layouts for mobile, tablet, and desktop
+- Optimized performance on all screen sizes
+
+### 🗂️ **Advanced History Management**
+- **Smart Company Grouping** - Automatically groups emails and LinkedIn messages by company
+- **Individual Item Management** - Delete specific messages within grouped company history
+- **Group Operations** - Bulk delete all messages for a specific company
+- **Real-time Updates** - History automatically refreshes after new research
+- **Expandable Interface** - Clean, organized view of all historical outreach
+
+## 🆕 Recent Updates & Improvements
+
+### **V2.1.0 - History Management & Mobile Experience**
+
+#### 🔧 **Fixed Issues**
+- **Eliminated Duplicate Entries** - Resolved issue where email and LinkedIn history was being saved twice
+- **Restored Company Grouping** - Fixed broken grouping functionality for same-company research
+- **Syntax Errors** - Corrected compilation issues in dashboard components
+
+#### ✨ **New Features**
+- **Smart History Refresh** - Automatic history updates after research completion
+- **Enhanced Mobile Responsiveness** - Complete UI overhaul for mobile devices
+  - Adaptive navigation with collapsible sidebar
+  - Touch-optimized buttons and interactions
+  - Responsive typography and spacing
+  - Mobile-friendly search panels
+- **Improved Delete Functionality** - Enhanced individual and group delete operations
+  - Visual feedback during deletion process
+  - Confirmation dialogs for bulk operations
+  - Real-time UI updates after deletions
+
+#### 🎨 **UI/UX Improvements**
+- **Mobile-First Design** - Rebuilt all components with mobile responsiveness
+- **Consistent Spacing** - Standardized margins and padding across breakpoints
+- **Better Navigation** - Adaptive sidebar that works seamlessly on all devices
+- **Enhanced Icons** - Properly sized icons that scale with screen size
+- **Improved Forms** - Mobile-optimized input fields and search functionality
+
+#### 🔄 **Backend Optimizations**
+- **Streamlined History Saving** - Removed redundant frontend history API calls
+- **Server-Side Integration** - Centralized history management in orchestrator
+- **Database Efficiency** - Optimized grouping queries for better performance
+
 ## 🛠️ Technology Stack
 
 ### **Frontend**
@@ -211,9 +257,15 @@ graph TD
 
 Key tables:
 - `contact_results` - Research and contact data
-- `email_history` - Generated email campaigns
-- `linkedin_history` - LinkedIn message history
+- `email_history` - Generated email campaigns (with smart company grouping)
+- `linkedin_history` - LinkedIn message history (with smart company grouping)
 - User authentication managed by Supabase Auth
+
+#### **History Management Architecture**
+- **Company Grouping Logic** - Database-level grouping by company name
+- **Automatic Aggregation** - API endpoints provide grouped data with total counts
+- **Efficient Queries** - Optimized SQL for fast history retrieval
+- **Real-time Updates** - Immediate UI refresh after data changes
 
 ## 🚀 Deployment
 
@@ -339,6 +391,18 @@ npm run drizzle:push
 - Monitor usage quotas
 - Implement exponential backoff
 - Consider API key rotation
+
+**History Grouping Issues**
+- Ensure company names are consistent in research
+- Check if history refresh is working after research completion
+- Verify database policies are properly configured
+- Clear browser cache if grouping appears incorrect
+
+**Mobile Responsiveness**
+- Check viewport meta tag is present
+- Verify Tailwind CSS breakpoints are loading
+- Test on multiple device sizes
+- Ensure touch interactions work properly
 
 ## 📄 License
 
