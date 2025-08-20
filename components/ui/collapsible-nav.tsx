@@ -149,35 +149,35 @@ export function CollapsibleNav({ onSearch, isLoading }: CollapsibleNavProps) {
       <div
         className={cn(
           "fixed left-0 top-0 h-full bg-white/95 backdrop-blur-md border-r border-slate-200/50 shadow-xl transition-all duration-300 z-50",
-          isExpanded ? "w-80" : "w-16",
+          isExpanded ? "w-72 sm:w-80" : "w-12 sm:w-16",
           isMobile && !isExpanded && "-translate-x-full"
         )}
         onMouseEnter={() => !isPinned && !isMobile && setIsExpanded(true)}
         onMouseLeave={() => !isPinned && !isMobile && activePanel === null && setIsExpanded(false)}
       >
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-slate-200/50">
+        <div className="flex items-center justify-between p-3 sm:p-4 border-b border-slate-200/50">
           {isExpanded ? (
             <>
-              <h2 className="font-semibold text-slate-800">Navigation</h2>
-              <div className="flex items-center gap-2">
+              <h2 className="font-semibold text-slate-800 text-sm sm:text-base">Navigation</h2>
+              <div className="flex items-center gap-1 sm:gap-2">
                 {!isMobile && (
                   <Button
                     variant="ghost"
                     size="sm"
                     onClick={() => setIsPinned(!isPinned)}
-                    className="h-8 w-8 p-0"
+                    className="h-7 w-7 sm:h-8 sm:w-8 p-0"
                   >
-                    {isPinned ? <PinOff className="h-4 w-4" /> : <Pin className="h-4 w-4" />}
+                    {isPinned ? <PinOff className="h-3 w-3 sm:h-4 sm:w-4" /> : <Pin className="h-3 w-3 sm:h-4 sm:w-4" />}
                   </Button>
                 )}
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={() => setIsExpanded(false)}
-                  className="h-8 w-8 p-0"
+                  className="h-7 w-7 sm:h-8 sm:w-8 p-0"
                 >
-                  <X className="h-4 w-4" />
+                  <X className="h-3 w-3 sm:h-4 sm:w-4" />
                 </Button>
               </div>
             </>
@@ -198,94 +198,97 @@ export function CollapsibleNav({ onSearch, isLoading }: CollapsibleNavProps) {
           {/* Search Button */}
           <Button
             variant={activePanel === "search" ? "default" : "ghost"}
+            size="sm"
             className={cn(
-              "w-full justify-start mb-2",
+              "w-full justify-start mb-2 text-sm",
               !isExpanded && "justify-center px-0"
             )}
             onClick={() => handlePanelClick("search")}
           >
-            <Search className="h-4 w-4" />
+            <Search className="h-3 w-3 sm:h-4 sm:w-4" />
             {isExpanded && <span className="ml-2">Search</span>}
           </Button>
 
           {/* Email History Button */}
           <Button
             variant={activePanel === "email" ? "default" : "ghost"}
+            size="sm"
             className={cn(
-              "w-full justify-start mb-2",
+              "w-full justify-start mb-2 text-sm",
               !isExpanded && "justify-center px-0"
             )}
             onClick={() => handlePanelClick("email")}
           >
-            <Mail className="h-4 w-4" />
+            <Mail className="h-3 w-3 sm:h-4 sm:w-4" />
             {isExpanded && <span className="ml-2">Email History</span>}
           </Button>
 
           {/* LinkedIn History Button */}
           <Button
             variant={activePanel === "linkedin" ? "default" : "ghost"}
+            size="sm"
             className={cn(
-              "w-full justify-start mb-2",
+              "w-full justify-start mb-2 text-sm",
               !isExpanded && "justify-center px-0"
             )}
             onClick={() => handlePanelClick("linkedin")}
           >
-            <MessageSquare className="h-4 w-4" />
+            <MessageSquare className="h-3 w-3 sm:h-4 sm:w-4" />
             {isExpanded && <span className="ml-2">LinkedIn History</span>}
           </Button>
         </div>
 
         {/* Panel Content */}
         {isExpanded && activePanel && (
-          <div className="flex-1 p-4 overflow-y-auto">
+          <div className="flex-1 p-3 sm:p-4 overflow-y-auto">
             {/* Search Panel */}
             {activePanel === "search" && (
               <Card>
-                <CardHeader>
-                  <CardTitle className="text-sm">Company Research</CardTitle>
+                <CardHeader className="pb-3 sm:pb-4">
+                  <CardTitle className="text-sm sm:text-base">Company Research</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <form onSubmit={handleSubmit} className="space-y-4">
+                  <form onSubmit={handleSubmit} className="space-y-3 sm:space-y-4">
                     <div>
-                      <label className="block text-xs font-medium text-slate-700 mb-1">
+                      <label className="block text-xs sm:text-sm font-medium text-slate-700 mb-1 sm:mb-2">
                         Company Name
                       </label>
                       <Input
                         value={company}
                         onChange={(e) => setCompany(e.target.value)}
                         placeholder="Company name or URL"
-                        className="text-sm"
+                        className="text-sm h-9 sm:h-10"
                       />
                     </div>
                     
                     <div>
-                      <label className="block text-xs font-medium text-slate-700 mb-1">
+                      <label className="block text-xs sm:text-sm font-medium text-slate-700 mb-1 sm:mb-2">
                         Role
                       </label>
                       <Input
                         value={role}
                         onChange={(e) => setRole(e.target.value)}
                         placeholder="Target role"
-                        className="text-sm"
+                        className="text-sm h-9 sm:h-10"
                       />
                     </div>
                     
                     <div>
-                      <label className="block text-xs font-medium text-slate-700 mb-1">
+                      <label className="block text-xs sm:text-sm font-medium text-slate-700 mb-1 sm:mb-2">
                         Key Highlights
                       </label>
                       <Textarea
                         value={highlights}
                         onChange={(e) => setHighlights(e.target.value)}
                         placeholder="Your key skills and experience"
-                        className="text-sm min-h-[80px]"
+                        className="text-xs sm:text-sm min-h-[70px] sm:min-h-[80px]"
                       />
                     </div>
                     
                     <Button
                       type="submit"
                       disabled={isLoading || !canRun}
-                      className="w-full text-sm"
+                      className="w-full text-sm sm:text-base h-9 sm:h-10"
                     >
                       {isLoading ? "Running..." : "Run AI Agents"}
                     </Button>
@@ -297,22 +300,22 @@ export function CollapsibleNav({ onSearch, isLoading }: CollapsibleNavProps) {
             {/* Email History Panel */}
             {activePanel === "email" && (
               <div className="space-y-2">
-                <h3 className="font-medium text-sm text-slate-800 mb-3">Cold Email History</h3>
+                <h3 className="font-medium text-sm sm:text-base text-slate-800 mb-2 sm:mb-3">Cold Email History</h3>
                 {emailHistory.length === 0 ? (
-                  <p className="text-xs text-slate-500 text-center py-8">No emails generated yet</p>
+                  <p className="text-xs sm:text-sm text-slate-500 text-center py-6 sm:py-8">No emails generated yet</p>
                 ) : (
                   <Accordion type="single">
                     {emailHistory.map((email) => (
                       <AccordionItem key={email.id} value={email.id}>
                         <AccordionTrigger value={email.id} className="text-left">
                           <div className="flex-1 min-w-0">
-                            <div className="font-medium text-xs truncate">{email.subject_line}</div>
+                            <div className="font-medium text-xs sm:text-sm truncate">{email.subject_line}</div>
                             <div className="text-xs text-slate-500">{email.company_name}</div>
                             <div className="text-xs text-slate-400">{formatDate(email.created_at)}</div>
                           </div>
                         </AccordionTrigger>
                         <AccordionContent value={email.id}>
-                          <div className="text-xs text-slate-600 whitespace-pre-wrap p-2 bg-slate-50 rounded">
+                          <div className="text-xs sm:text-sm text-slate-600 whitespace-pre-wrap p-2 sm:p-3 bg-slate-50 rounded">
                             {email.email_content}
                           </div>
                         </AccordionContent>
@@ -326,21 +329,21 @@ export function CollapsibleNav({ onSearch, isLoading }: CollapsibleNavProps) {
             {/* LinkedIn History Panel */}
             {activePanel === "linkedin" && (
               <div className="space-y-2">
-                <h3 className="font-medium text-sm text-slate-800 mb-3">LinkedIn Message History</h3>
+                <h3 className="font-medium text-sm sm:text-base text-slate-800 mb-2 sm:mb-3">LinkedIn Message History</h3>
                 {linkedinHistory.length === 0 ? (
-                  <p className="text-xs text-slate-500 text-center py-8">No messages generated yet</p>
+                  <p className="text-xs sm:text-sm text-slate-500 text-center py-6 sm:py-8">No messages generated yet</p>
                 ) : (
                   <Accordion type="single">
                     {linkedinHistory.map((message) => (
                       <AccordionItem key={message.id} value={message.id}>
                         <AccordionTrigger value={message.id} className="text-left">
                           <div className="flex-1 min-w-0">
-                            <div className="font-medium text-xs">{message.company_name}</div>
+                            <div className="font-medium text-xs sm:text-sm">{message.company_name}</div>
                             <div className="text-xs text-slate-400">{formatDate(message.created_at)}</div>
                           </div>
                         </AccordionTrigger>
                         <AccordionContent value={message.id}>
-                          <div className="text-xs text-slate-600 whitespace-pre-wrap p-2 bg-slate-50 rounded">
+                          <div className="text-xs sm:text-sm text-slate-600 whitespace-pre-wrap p-2 sm:p-3 bg-slate-50 rounded">
                             {message.message_content}
                           </div>
                         </AccordionContent>

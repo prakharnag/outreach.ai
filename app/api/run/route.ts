@@ -47,7 +47,7 @@ export async function POST(req: NextRequest) {
 
     console.log('[API Run] Authenticated user:', user.id);
 
-    const { company, domain, role, highlights } = await req.json();
+    const { company, domain, role, highlights, tone } = await req.json();
     if (!company || !role || !highlights) {
       return new Response(JSON.stringify({ error: "Missing company, role or highlights" }), { status: 400 });
     }
@@ -62,6 +62,7 @@ export async function POST(req: NextRequest) {
               domain: domain ? String(domain) : undefined, 
               role: String(role), 
               highlights: String(highlights),
+              tone: tone || undefined,
               userId: user.id 
             },
             {

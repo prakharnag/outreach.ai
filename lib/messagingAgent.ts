@@ -1,4 +1,5 @@
 import { callGroq } from "./api";
+import { WritingTone, getToneConfig, getDefaultTone } from "./tones";
 
 export type MessagingAgentInput = {
   verified: {
@@ -9,6 +10,7 @@ export type MessagingAgentInput = {
   company: string;
   role: string;
   highlights: string; // user-provided
+  tone?: WritingTone; // optional tone, defaults to formal
 };
 
 export type MessagingAgentOutput = {
@@ -17,7 +19,19 @@ export type MessagingAgentOutput = {
 };
 
 export async function messagingAgent(input: MessagingAgentInput): Promise<MessagingAgentOutput> {
+  const tone = input.tone || getDefaultTone();
+  const toneConfig = getToneConfig(tone);
+  
   const system = `You are a master of warm, high-conversion outreach. Return ONLY valid JSON: {"linkedin":"string","email":"string"}.
+
+TONE INSTRUCTION: ${toneConfig.systemPrompt}
+
+STYLE EXAMPLES for ${toneConfig.label.toUpperCase()} tone:
+
+LinkedIn Example: ${toneConfig.exampleLinkedIn}
+
+Email Example: ${toneConfig.exampleEmail}
+
 Rules:
 - Cold Email (90–100 words): natural, human, and value-driven. Personalize with company-specific insights and key highlights from user input. 
   Structure:
@@ -27,8 +41,8 @@ Rules:
     4. 2–3 short sentences connecting your skills and key highlights (from user input) to their current needs or recent initiatives (from provided research).
     5. End with one clear, low-pressure call-to-action (e.g., "Happy to chat if this aligns").
     6. End with a professional closing (e.g., "Best regards," or "Best,")
-  Tone: friendly-professional, confident, and conversational — avoid jargon, hype, or hard-sell language.
-- LinkedIn (exactly 44 words): casual-professional, connection-oriented, same personalization style as the email, no greetings or sign-offs, written in one smooth sentence.
+  Tone: Apply the ${toneConfig.label.toLowerCase()} writing style while maintaining professionalism.
+- LinkedIn (exactly 44 words): connection-oriented, same personalization style as the email, no greetings or sign-offs, written in one smooth sentence using ${toneConfig.label.toLowerCase()} tone.
 
 CRITICAL RULES:
 - Return ONLY the JSON object. Do not include any extra text, explanations, or additional properties.
@@ -36,7 +50,9 @@ CRITICAL RULES:
 - Use the contact name for personalization but do not add their email to the message text.
 - MAINTAIN PERFECT spelling and grammar - double-check every word before responding.
 - When referencing the user's key highlights, use them EXACTLY as provided for accuracy - do not paraphrase or modify their content.
-- The email content should be complete and professional without requiring additional contact information.`;
+- The email content should be complete and professional without requiring additional contact information.
+- APPLY THE SPECIFIED TONE: ${toneConfig.description}
+- USE THE PROVIDED EXAMPLES AS STYLE REFERENCE while adapting content to the specific context.`;
 
 const user = `Company: ${input.company}
 Role: ${input.role}
@@ -82,10 +98,52 @@ Output must be strictly valid JSON with ONLY "linkedin" and "email" properties �
   }
 }
 
-export async function rephraseLinkedInTo22Words(linkedin: string): Promise<string> {
+export async function rephraseLinkedInTo22Words(linkedin: string, tone?: WritingTone): Promise<string> {
+  const toneConfig = getToneConfig(tone || getDefaultTone());
   const { content } = await callGroq(
     [
-      { role: "system", content: "Rewrite to exactly 22 words, preserving core value, concise and friendly. Return plain text only." },
+      { 
+        role: "system", 
+        content: `Rewrite to exactly 22 words, preserving core value, concise and engaging. Apply ${toneConfig.label.toLowerCase()} tone: ${toneConfig.systemPrompt}. Return plain text only.` 
+      },
+      { role: "user", content: linkedin },
+    ],
+    { model: "llama3-70b-8192", temperature: 0.5 }
+  );
+  return content.trim();
+}
+
+export async function rephraseEmailWithTone(email: string, tone: WritingTone): Promise<string> {
+  const toneConfig = getToneConfig(tone);
+  const { content } = await callGroq(
+    [
+      { 
+        role: "system", 
+        content: `Rewrite this email maintaining the same structure and core message but applying ${toneConfig.label.toLowerCase()} tone: ${toneConfig.systemPrompt}. 
+
+Style Reference: ${toneConfig.exampleEmail}
+
+Keep it 90-100 words and maintain the Subject line format. Return plain text only.` 
+      },
+      { role: "user", content: email },
+    ],
+    { model: "llama3-70b-8192", temperature: 0.5 }
+  );
+  return content.trim();
+}
+
+export async function rephraseLinkedInWithTone(linkedin: string, tone: WritingTone): Promise<string> {
+  const toneConfig = getToneConfig(tone);
+  const { content } = await callGroq(
+    [
+      { 
+        role: "system", 
+        content: `Rewrite this LinkedIn message maintaining the same core message but applying ${toneConfig.label.toLowerCase()} tone: ${toneConfig.systemPrompt}. 
+
+Style Reference: ${toneConfig.exampleLinkedIn}
+
+Keep it around 44 words, concise and engaging. Return plain text only.` 
+      },
       { role: "user", content: linkedin },
     ],
     { model: "llama3-70b-8192", temperature: 0.5 }

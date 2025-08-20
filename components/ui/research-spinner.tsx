@@ -53,21 +53,21 @@ export function ResearchSpinner({ status, loading }: ResearchSpinnerProps) {
 
   return (
     <Card className="shadow-lg bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-200">
-      <CardContent className="pt-6">
-        <div className="space-y-6">
+      <CardContent className="pt-4 sm:pt-6">
+        <div className="space-y-4 sm:space-y-6">
           <div className="text-center">
-            <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-100 rounded-full mb-4">
-              <Loader2 className="h-8 w-8 text-blue-600 animate-spin" />
+            <div className="inline-flex items-center justify-center w-12 h-12 sm:w-16 sm:h-16 bg-blue-100 rounded-full mb-3 sm:mb-4">
+              <Loader2 className="h-6 w-6 sm:h-8 sm:w-8 text-blue-600 animate-spin" />
             </div>
-            <h3 className="text-lg font-semibold text-blue-900 mb-2">
+            <h3 className="text-base sm:text-lg font-semibold text-blue-900 mb-2">
               AI Agents Working
             </h3>
-            <p className="text-blue-700">
+            <p className="text-sm sm:text-base text-blue-700">
               Please wait while we research and generate your outreach materials
             </p>
           </div>
 
-          <div className="space-y-4">
+          <div className="space-y-3 sm:space-y-4">
             {steps.map((step, index) => {
               const isActive = currentStep === index;
               const isCompleted = currentStep > index;
@@ -76,7 +76,7 @@ export function ResearchSpinner({ status, loading }: ResearchSpinnerProps) {
               return (
                 <div
                   key={step.key}
-                  className={`flex items-center gap-4 p-4 rounded-lg transition-all duration-300 ${
+                  className={`flex items-center gap-3 sm:gap-4 p-3 sm:p-4 rounded-lg transition-all duration-300 ${
                     isActive 
                       ? 'bg-blue-100 border-2 border-blue-300' 
                       : isCompleted 
@@ -84,7 +84,7 @@ export function ResearchSpinner({ status, loading }: ResearchSpinnerProps) {
                         : 'bg-slate-50 border-2 border-slate-200'
                   }`}
                 >
-                  <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${
+                  <div className={`flex-shrink-0 w-6 h-6 sm:w-8 sm:h-8 rounded-full flex items-center justify-center ${
                     isCompleted 
                       ? 'bg-green-500' 
                       : isActive 
@@ -92,16 +92,16 @@ export function ResearchSpinner({ status, loading }: ResearchSpinnerProps) {
                         : 'bg-slate-300'
                   }`}>
                     {isCompleted ? (
-                      <CheckCircle className="h-5 w-5 text-white" />
+                      <CheckCircle className="h-3 w-3 sm:h-5 sm:w-5 text-white" />
                     ) : isActive ? (
-                      <Loader2 className="h-5 w-5 text-white animate-spin" />
+                      <Loader2 className="h-3 w-3 sm:h-5 sm:w-5 text-white animate-spin" />
                     ) : (
-                      <step.icon className="h-5 w-5 text-white" />
+                      <step.icon className="h-3 w-3 sm:h-5 sm:w-5 text-white" />
                     )}
                   </div>
                   
-                  <div className="flex-1">
-                    <div className={`font-medium ${
+                  <div className="flex-1 min-w-0">
+                    <div className={`text-sm sm:text-base font-medium ${
                       isCompleted 
                         ? 'text-green-800' 
                         : isActive 
@@ -110,12 +110,12 @@ export function ResearchSpinner({ status, loading }: ResearchSpinnerProps) {
                     }`}>
                       {step.label}
                       {stepStatus && (
-                        <span className="ml-2 text-sm font-normal">
+                        <span className="ml-2 text-xs sm:text-sm font-normal">
                           ({stepStatus})
                         </span>
                       )}
                     </div>
-                    <div className={`text-sm ${
+                    <div className={`text-xs sm:text-sm ${
                       isCompleted 
                         ? 'text-green-600' 
                         : isActive 
@@ -131,13 +131,13 @@ export function ResearchSpinner({ status, loading }: ResearchSpinnerProps) {
           </div>
 
           <div className="bg-blue-100 rounded-lg p-3">
-            <div className="flex items-center justify-between text-sm text-blue-800">
+            <div className="flex items-center justify-between text-xs sm:text-sm text-blue-800">
               <span>Progress</span>
               <span>{Math.round((currentStep / steps.length) * 100)}%</span>
             </div>
-            <div className="mt-2 bg-blue-200 rounded-full h-2">
+            <div className="mt-2 bg-blue-200 rounded-full h-1.5 sm:h-2">
               <div 
-                className="bg-blue-600 h-2 rounded-full transition-all duration-500"
+                className="bg-blue-600 h-1.5 sm:h-2 rounded-full transition-all duration-500"
                 style={{ width: `${(currentStep / steps.length) * 100}%` }}
               />
             </div>

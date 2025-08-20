@@ -15,12 +15,15 @@ import { cn } from "../../lib/utils";
 import { CompanyAutocomplete } from "../../components/ui/company-autocomplete";
 import { Settings } from "../../components/ui/settings";
 import { AnalyticsDashboard } from "../../components/ui/analytics-dashboard";
+import { ToneSelector } from "../../components/ui/tone-selector";
+import { WritingTone, getDefaultTone } from "../../lib/tones";
 import { KPIDashboard } from "../../components/ui/kpi-dashboard";
 import { ExpandableHistory } from "../../components/ui/expandable-history";
 import { ContactResultsTable } from "../../components/ui/contact-results-table";
 import { DynamicHeader } from "../../components/ui/dynamic-header";
 import { Dashboard } from "../../components/ui/dashboard";
 import { useUser } from "../../hooks/useUser";
+import { ToastProvider } from "../../components/ui/toast";
 import { ResearchSpinner } from "../../components/ui/research-spinner";
 import { CompanyLink } from "../../components/ui/company-link";
 import { ResearchOutput } from "../../components/ui/research-output";
@@ -54,6 +57,8 @@ interface EmailHistory {
   subject_line: string;
   content: string;
   created_at: string;
+  total_count?: number;
+  all_emails?: EmailHistory[];
 }
 
 interface LinkedInHistory {
@@ -62,6 +67,8 @@ interface LinkedInHistory {
   role: string;
   content: string;
   created_at: string;
+  total_count?: number;
+  all_messages?: LinkedInHistory[];
 }
 
 export default function HomePage() {
@@ -95,6 +102,9 @@ export default function HomePage() {
   const [linkedinHistory, setLinkedinHistory] = useState<LinkedInHistory[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [contactResults, setContactResults] = useState<any[]>([]);
+  
+  // Tone settings
+  const [selectedTone, setSelectedTone] = useState<WritingTone>(getDefaultTone());
   
   const canRun = useMemo(() => hasValidCompany && !!role && !!highlights, [hasValidCompany, role, highlights]);
   const abortRef = useRef<AbortController | null>(null);
@@ -209,6 +219,60 @@ export default function HomePage() {
     }
   };
 
+  const handleEmailDeleted = (deletedId: string) => {
+    setEmailHistory(prev => {
+      return prev.map(group => {
+        if (group.all_emails) {
+          // This is a grouped item - remove the deleted email from the group
+          const updatedEmails = group.all_emails.filter(email => email.id !== deletedId);
+          
+          if (updatedEmails.length === 0) {
+            // If no emails left, this group should be removed
+            return null;
+          }
+          
+          // Update the group with the remaining emails
+          const latestEmail = updatedEmails[0]; // Already sorted by date desc
+          return {
+            ...latestEmail,
+            total_count: updatedEmails.length,
+            all_emails: updatedEmails,
+          };
+        } else {
+          // This is a single item - remove if it matches the deleted ID
+          return group.id === deletedId ? null : group;
+        }
+      }).filter(Boolean) as typeof prev; // Remove null entries
+    });
+  };
+
+  const handleLinkedInDeleted = (deletedId: string) => {
+    setLinkedinHistory(prev => {
+      return prev.map(group => {
+        if (group.all_messages) {
+          // This is a grouped item - remove the deleted message from the group
+          const updatedMessages = group.all_messages.filter(message => message.id !== deletedId);
+          
+          if (updatedMessages.length === 0) {
+            // If no messages left, this group should be removed
+            return null;
+          }
+          
+          // Update the group with the remaining messages
+          const latestMessage = updatedMessages[0]; // Already sorted by date desc
+          return {
+            ...latestMessage,
+            total_count: updatedMessages.length,
+            all_messages: updatedMessages,
+          };
+        } else {
+          // This is a single item - remove if it matches the deleted ID
+          return group.id === deletedId ? null : group;
+        }
+      }).filter(Boolean) as typeof prev; // Remove null entries
+    });
+  };
+
   const loadEmailHistory = useCallback(async () => {
     if (emailHistory.length > 0) return;
     setHistoryLoading(true);
@@ -225,6 +289,18 @@ export default function HomePage() {
     }
   }, [emailHistory.length]);
   
+  const refreshEmailHistory = useCallback(async () => {
+    try {
+      const res = await fetch('/api/history/emails');
+      if (res.ok) {
+        const data = await res.json();
+        setEmailHistory(data);
+      }
+    } catch (error) {
+      console.error('Failed to refresh email history:', error);
+    }
+  }, []);
+  
   const loadLinkedInHistory = useCallback(async () => {
     if (linkedinHistory.length > 0) return;
     setHistoryLoading(true);
@@ -240,6 +316,18 @@ export default function HomePage() {
       setHistoryLoading(false);
     }
   }, [linkedinHistory.length]);
+
+  const refreshLinkedInHistory = useCallback(async () => {
+    try {
+      const res = await fetch('/api/history/linkedin');
+      if (res.ok) {
+        const data = await res.json();
+        setLinkedinHistory(data);
+      }
+    } catch (error) {
+      console.error('Failed to refresh LinkedIn history:', error);
+    }
+  }, []);
   
   const loadContactResults = useCallback(async () => {
     try {
@@ -292,7 +380,7 @@ export default function HomePage() {
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     if (canRun && !loading) {
-      runChain({ company, domain: selectedDomain, role, highlights });
+      runChain({ company, domain: selectedDomain, role, highlights, tone: selectedTone });
       setActiveView("research");
       setIsSearchExpanded(false);
     }
@@ -315,7 +403,7 @@ export default function HomePage() {
     }
   };
 
-  const runChain = useCallback(async (data: { company: string; domain?: string; role: string; highlights: string }) => {
+  const runChain = useCallback(async (data: { company: string; domain?: string; role: string; highlights: string; tone?: WritingTone }) => {
     setSearchData({ ...data, domain: data.domain || "" });
     setLoading(true);
     setError(null);
@@ -408,7 +496,12 @@ export default function HomePage() {
                 setEditableEmail(evt.data.outputs.email);
                 setEditableLinkedin(evt.data.outputs.linkedin);
                 
-                await saveToHistory(data, evt.data.outputs);
+                // History is automatically saved by the orchestrator
+                // Refresh history to show updated groupings after a short delay
+                setTimeout(() => {
+                  refreshEmailHistory();
+                  refreshLinkedInHistory();
+                }, 1000);
               } else {
                 setError("Company not found. Unable to do research and generate cold email or LinkedIn message.");
               }
@@ -466,41 +559,6 @@ export default function HomePage() {
     loadContactResults();
   }, [loadContactResults]);
 
-  const saveToHistory = async (searchData: { company: string; role: string; highlights: string }, outputs: { email: string; linkedin: string }) => {
-    try {
-      const emailLines = outputs.email.split('\n');
-      const subjectLine = emailLines.find(line => line.toLowerCase().includes('subject:'))?.replace(/subject:\s*/i, '') || `Outreach to ${searchData.company}`;
-      
-      const [emailRes, linkedinRes] = await Promise.all([
-        fetch('/api/history/emails', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            company_name: searchData.company,
-            role: searchData.role,
-            subject_line: subjectLine,
-            email_content: outputs.email
-          })
-        }),
-        fetch('/api/history/linkedin', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            company_name: searchData.company,
-            role: searchData.role,
-            message_content: outputs.linkedin
-          })
-        })
-      ]);
-      
-      if (!emailRes.ok || !linkedinRes.ok) {
-        console.error('Failed to save history');
-      }
-    } catch (error) {
-      console.error('Failed to save to history:', error);
-    }
-  };
-
   const regenerateEmail = useCallback(async () => {
     try {
       const res = await fetch("/api/messaging", {
@@ -510,6 +568,7 @@ export default function HomePage() {
           company: searchData.company, 
           role: searchData.role, 
           highlights: searchData.highlights,
+          tone: selectedTone,
           existingEmail: editableEmail 
         }),
       });
@@ -520,14 +579,19 @@ export default function HomePage() {
     } catch (e: any) {
       setError(e?.message || "Failed to regenerate email");
     }
-  }, [searchData, editableEmail]);
+  }, [searchData, selectedTone, editableEmail]);
 
   const regenerateLinkedin = useCallback(async () => {
     try {
       const res = await fetch("/api/messaging", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ company: searchData.company, role: searchData.role, highlights: searchData.highlights }),
+        body: JSON.stringify({ 
+          company: searchData.company, 
+          role: searchData.role, 
+          highlights: searchData.highlights,
+          tone: selectedTone
+        }),
       });
       if (!res.ok) throw new Error("Failed to regenerate");
       const data = await res.json();
@@ -536,7 +600,7 @@ export default function HomePage() {
     } catch (e: any) {
       setError(e?.message || "Failed to regenerate");
     }
-  }, [searchData]);
+  }, [searchData, selectedTone]);
 
   if (userLoading) {
     return (
@@ -550,352 +614,404 @@ export default function HomePage() {
   }
 
   return (
-    <div className="min-h-screen gradient-blue">
-      <div className="fixed left-0 top-0 h-full w-16 bg-white/95 backdrop-blur-md border-r border-slate-200/50 shadow-xl z-50">
-        <div className="flex flex-col items-center py-4 space-y-3">
-          <div className="mb-4 p-2">
-            <div className="text-xs font-bold text-primary text-center leading-tight">
-              Outreach
+    <ToastProvider>
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
+        <div className="fixed left-0 top-0 h-full w-12 sm:w-16 bg-white/95 backdrop-blur-md border-r border-slate-200/50 shadow-xl z-50">
+          <div className="flex flex-col items-center py-2 sm:py-4 space-y-2 sm:space-y-3">
+            <div className="mb-2 sm:mb-4 p-1 sm:p-2">
+              <div className="text-xs sm:text-xs font-bold text-primary text-center leading-tight">
+                Outreach
+              </div>
             </div>
-          </div>
-          
-          <Button
-            variant={activeView === "home" ? "default" : "ghost"}
-            size="sm"
-            onClick={() => handleNavClick("home")}
-            className="h-10 w-10 p-0"
-            title="Home"
-          >
-            <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-            </svg>
-          </Button>
-          
-          <Button
-            variant={activeView === "search" ? "default" : "ghost"}
-            size="sm"
-            onClick={() => handleNavClick("search")}
-            className="h-10 w-10 p-0"
-            title="Research"
-          >
-            <Search className="h-5 w-5" />
-          </Button>
-          
-          <Button
-            variant={activeView === "email" ? "default" : "ghost"}
-            size="sm"
-            onClick={() => handleNavClick("email")}
-            className="h-10 w-10 p-0"
-            title="Email History"
-          >
-            <Mail className="h-5 w-5" />
-          </Button>
-          
-          <Button
-            variant={activeView === "linkedin" ? "default" : "ghost"}
-            size="sm"
-            onClick={() => handleNavClick("linkedin")}
-            className="h-10 w-10 p-0"
-            title="LinkedIn History"
-          >
-            <MessageSquare className="h-5 w-5" />
-          </Button>
-          
-          <Button
-            variant={activeView === "analytics" ? "default" : "ghost"}
-            size="sm"
-            onClick={() => handleNavClick("analytics")}
-            className="h-10 w-10 p-0"
-            title="Analytics"
-          >
-            <BarChart3 className="h-5 w-5" />
-          </Button>
-          
-          <Button
-            variant={activeView === "settings" ? "default" : "ghost"}
-            size="sm"
-            onClick={() => handleNavClick("settings")}
-            className="h-10 w-10 p-0"
-            title="Settings"
-          >
-            <SettingsIcon className="h-5 w-5" />
-          </Button>
-        </div>
-      </div>
-
-      {isSearchExpanded && (
-        <div className="fixed left-16 top-0 h-full w-80 bg-white/95 backdrop-blur-md border-r border-slate-200/50 shadow-xl z-40">
-          <div className="p-6">
-            <form onSubmit={handleSearch} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">
-                  Company Name
-                </label>
-                <CompanyAutocomplete
-                  value={company}
-                  onChange={handleCompanyChange}
-                  onSelect={handleCompanySuggestionSelect}
-                  placeholder="Search for a company..."
-                  disabled={loading}
-                />
-                {selectedDomain && (
-                  <div className="mt-2 text-sm text-slate-600">
-                    Selected: <span className="font-medium">{company}</span> ({selectedDomain})
-                  </div>
-                )}
-                {company && !selectedDomain && (
-                  <div className="mt-2 text-sm text-blue-600">
-                    Using manual entry: <span className="font-medium">{company}</span>
-                  </div>
-                )}
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">
-                  Role
-                </label>
-                <input
-                  type="text"
-                  value={role}
-                  onChange={(e) => setRole(e.target.value)}
-                  placeholder="Target role"
-                  className="w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">
-                  Key Highlights
-                </label>
-                <textarea
-                  value={highlights}
-                  onChange={(e) => setHighlights(e.target.value)}
-                  placeholder="Your key skills and experience"
-                  rows={4}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
-                />
-              </div>
-              
-              <Button
-                type="submit"
-                disabled={loading || !canRun}
-                className="w-full"
-              >
-                {loading ? "Running..." : "Run AI Agents"}
-              </Button>
-            </form>
+            
+            <Button
+              variant={activeView === "home" ? "default" : "ghost"}
+              size="sm"
+              onClick={() => handleNavClick("home")}
+              className="h-8 w-8 sm:h-10 sm:w-10 p-0"
+              title="Home"
+            >
+              <svg className="h-4 w-4 sm:h-5 sm:w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+              </svg>
+            </Button>
+            
+            <Button
+              variant={activeView === "search" ? "default" : "ghost"}
+              size="sm"
+              onClick={() => handleNavClick("search")}
+              className="h-8 w-8 sm:h-10 sm:w-10 p-0"
+              title="Research"
+            >
+              <Search className="h-4 w-4 sm:h-5 sm:w-5" />
+            </Button>
+            
+            <Button
+              variant={activeView === "email" ? "default" : "ghost"}
+              size="sm"
+              onClick={() => handleNavClick("email")}
+              className="h-8 w-8 sm:h-10 sm:w-10 p-0"
+              title="Email History"
+            >
+              <Mail className="h-4 w-4 sm:h-5 sm:w-5" />
+            </Button>
+            
+            <Button
+              variant={activeView === "linkedin" ? "default" : "ghost"}
+              size="sm"
+              onClick={() => handleNavClick("linkedin")}
+              className="h-8 w-8 sm:h-10 sm:w-10 p-0"
+              title="LinkedIn History"
+            >
+              <MessageSquare className="h-4 w-4 sm:h-5 sm:w-5" />
+            </Button>
+            
+            <Button
+              variant={activeView === "analytics" ? "default" : "ghost"}
+              size="sm"
+              onClick={() => handleNavClick("analytics")}
+              className="h-8 w-8 sm:h-10 sm:w-10 p-0"
+              title="Analytics"
+            >
+              <BarChart3 className="h-4 w-4 sm:h-5 sm:w-5" />
+            </Button>
+            
+            <Button
+              variant={activeView === "settings" ? "default" : "ghost"}
+              size="sm"
+              onClick={() => handleNavClick("settings")}
+              className="h-8 w-8 sm:h-10 sm:w-10 p-0"
+              title="Settings"
+            >
+              <SettingsIcon className="h-4 w-4 sm:h-5 sm:w-5" />
+            </Button>
           </div>
         </div>
-      )}
 
-      <div className={cn("ml-16 layout-transition", isSearchExpanded && "ml-96")}>
-        <div className="header-transition">
-          <DynamicHeader 
-            currentView={activeView}
-            userName={user?.user_metadata?.full_name || user?.email?.split('@')[0]}
-            onOpenSearch={() => setIsSearchExpanded(true)}
-          />
-        </div>
-
-        <div className="p-6 max-w-6xl mx-auto content-transition min-height-screen">
-          {activeView === "email" && (
-            <div className="space-y-6">
-              <div className="text-center">
-                <h2 className="text-2xl font-bold text-slate-800 mb-2">Email History</h2>
-                <p className="text-slate-600">Your generated cold emails ({emailHistory.length})</p>
-              </div>
-              <ExpandableHistory 
-                items={emailHistory.map(email => ({
-                  ...email,
-                  type: 'email' as const
-                }))}
-                type="email"
-                loading={historyLoading}
-                emptyMessage="No emails generated yet"
-              />
-            </div>
-          )}
-          
-          {activeView === "linkedin" && (
-            <div className="space-y-6">
-              <div className="text-center">
-                <h2 className="text-2xl font-bold text-slate-800 mb-2">LinkedIn History</h2>
-                <p className="text-slate-600">Your generated LinkedIn messages ({linkedinHistory.length})</p>
-              </div>
-              <ExpandableHistory 
-                items={linkedinHistory.map(message => ({
-                  ...message,
-                  type: 'linkedin' as const
-                }))}
-                type="linkedin"
-                loading={historyLoading}
-                emptyMessage="No LinkedIn messages generated yet"
-              />
-            </div>
-          )}
-          
-          {activeView === "analytics" && (
-            <div className="space-y-6">
-              <div className="text-center mb-8">
-                <h2 className="text-2xl font-bold text-slate-800 mb-2">Outreach Analytics</h2>
-                <p className="text-slate-600">Track your outreach performance and activity</p>
-              </div>
-              <AnalyticsDashboard />
-            </div>
-          )}
-          
-          {activeView === "settings" && (
-            <div className="max-w-md mx-auto py-8">
-              <Settings />
-            </div>
-          )}
-          
-          {activeView === "home" && (
-            <Dashboard 
-              onStartResearch={() => setIsSearchExpanded(true)}
-              onNavigateToAnalytics={() => handleNavClick("analytics")}
-              onNavigateToEmailHistory={() => handleNavClick("email")}
-              onNavigateToLinkedInHistory={() => handleNavClick("linkedin")}
-            />
-          )}
-          
-          {activeView === "research" && (
-            <div className="space-y-6">
-              {loading && (
-                <ResearchSpinner status={status} loading={loading} />
-              )}
-              
-              {(intermediate.research || verifiedPoints.length > 0 || contact || result) ? (
-                <div className="space-y-6">
-                  {error && (
-                    <Alert variant="destructive">
-                      <AlertDescription>
-                        <strong>Error:</strong> {error}
-                      </AlertDescription>
-                    </Alert>
+        {isSearchExpanded && (
+          <div className="fixed left-12 sm:left-16 top-0 h-full w-64 sm:w-80 bg-white/95 backdrop-blur-md border-r border-slate-200/50 shadow-xl z-40">
+            <div className="p-3 sm:p-6">
+              <form onSubmit={handleSearch} className="space-y-3 sm:space-y-4">
+                <div>
+                  <label className="block text-xs sm:text-sm font-medium text-slate-700 mb-1 sm:mb-2">
+                    Company Name
+                  </label>
+                  <CompanyAutocomplete
+                    value={company}
+                    onChange={handleCompanyChange}
+                    onSelect={handleCompanySuggestionSelect}
+                    placeholder="Search for a company..."
+                    disabled={loading}
+                    className="text-sm"
+                  />
+                  {selectedDomain && (
+                    <div className="mt-1 sm:mt-2 text-xs sm:text-sm text-slate-600">
+                      Selected: <span className="font-medium">{company}</span> ({selectedDomain})
+                    </div>
                   )}
-
-                  {intermediate.research && (
-                    <ResearchOutput
-                      content={intermediate.research}
-                      contact={contact || undefined}
-                      onCopyEmail={copyToClipboard}
-                    />
-                  )}
-
-                  {(email || (loading && status.messaging)) && (
-                    <Card className="shadow-lg bg-gradient-to-br from-blue-50/50 to-purple-50/50">
-                      <CardHeader>
-                        <CardTitle className="flex items-center gap-2 text-blue-900">
-                          <Mail className="h-5 w-5" />
-                          Cold Email
-                        </CardTitle>
-                        <CardDescription>
-                          AI-generated personalized email ready to send
-                        </CardDescription>
-                        {email && (
-                          <CardAction>
-                            <Button
-                              onClick={regenerateEmail}
-                              disabled={loading || !canRun}
-                              variant="outline"
-                              size="sm"
-                              className="ml-auto bg-gradient-to-r from-blue-100 to-indigo-100 hover:from-blue-200 hover:to-indigo-200 text-blue-800 shadow-md hover:shadow-lg"
-                            >
-                              <RefreshCw className="h-4 w-4 mr-2" />
-                              Regenerate
-                            </Button>
-                          </CardAction>
-                        )}
-                      </CardHeader>
-                      <CardContent>
-                      {email ? (
-                        <Textarea
-                          value={editableEmail}
-                          onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setEditableEmail(e.target.value)}
-                          placeholder="Your personalized cold email will appear here..."
-                          className="min-h-[200px] border-blue-200 focus:border-blue-400"
-                        />
-                      ) : (
-                        <div className="text-center p-8 text-muted-foreground italic">
-                          Generating personalized email...
-                        </div>
-                      )}
-                      </CardContent>
-                    </Card>
-                  )}
-
-                  {(linkedin || (loading && status.messaging && email)) && (
-                    <Card className="shadow-lg bg-gradient-to-br from-purple-50/50 to-indigo-50/50">
-                      <CardHeader>
-                        <CardTitle className="flex items-center gap-2 text-purple-900">
-                          <MessageSquare className="h-5 w-5" />
-                          LinkedIn Message
-                        </CardTitle>
-                        <CardDescription>
-                          Professional networking message optimized for LinkedIn
-                        </CardDescription>
-                        {linkedin && (
-                          <CardAction className="gap-2">
-                            <Button
-                              onClick={regenerateLinkedin}
-                              disabled={loading || !canRun}
-                              variant="outline"
-                              size="sm"
-                              className="bg-gradient-to-r from-purple-100 to-indigo-100 hover:from-purple-200 hover:to-indigo-200 text-purple-800 shadow-md hover:shadow-lg"
-                            >
-                              <RefreshCw className="h-4 w-4 mr-2" />
-                              Regenerate
-                            </Button>
-                            <Button
-                              onClick={async () => {
-                                try {
-                                  const res = await fetch("/api/rephrase", {
-                                    method: "POST",
-                                    headers: { "Content-Type": "application/json" },
-                                    body: JSON.stringify({ linkedin: editableLinkedin }),
-                                  });
-                                  if (!res.ok) throw new Error("Failed to rephrase");
-                                  const data = await res.json();
-                                  setLinkedin(data.linkedin);
-                                  setEditableLinkedin(data.linkedin);
-                                } catch (e: any) {
-                                  setError(e?.message || "Failed to rephrase");
-                                }
-                              }}
-                              disabled={loading || !linkedin}
-                              variant="outline"
-                              size="sm"
-                              className="bg-gradient-to-r from-indigo-100 to-purple-100 hover:from-indigo-200 hover:to-purple-200 text-indigo-800 shadow-md hover:shadow-lg"
-                            >
-                              <Scissors className="h-4 w-4 mr-2" />
-                              22 words Rephrase
-                            </Button>
-                          </CardAction>
-                        )}
-                      </CardHeader>
-                      <CardContent>
-                      {linkedin ? (
-                        <Textarea
-                          value={editableLinkedin}
-                          onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setEditableLinkedin(e.target.value)}
-                          placeholder="Your LinkedIn message will appear here..."
-                          className="min-h-[150px] border-purple-200 focus:border-purple-400"
-                        />
-                      ) : (
-                        <div className="text-center p-8 text-muted-foreground italic">
-                          Generating LinkedIn message...
-                        </div>
-                      )}
-                      </CardContent>
-                    </Card>
+                  {company && !selectedDomain && (
+                    <div className="mt-1 sm:mt-2 text-xs sm:text-sm text-blue-600">
+                      Using manual entry: <span className="font-medium">{company}</span>
+                    </div>
                   )}
                 </div>
-              ) : null}
+                
+                <div>
+                  <label className="block text-xs sm:text-sm font-medium text-slate-700 mb-1 sm:mb-2">
+                    Role
+                  </label>
+                  <input
+                    type="text"
+                    value={role}
+                    onChange={(e) => setRole(e.target.value)}
+                    placeholder="Target role"
+                    className="w-full px-2 sm:px-3 py-2 text-sm border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 h-9 sm:h-10"
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-xs sm:text-sm font-medium text-slate-700 mb-1 sm:mb-2">
+                    Key Highlights
+                  </label>
+                  <textarea
+                    value={highlights}
+                    onChange={(e) => setHighlights(e.target.value)}
+                    placeholder="Your key skills and experience"
+                    rows={3}
+                    className="w-full px-2 sm:px-3 py-2 text-xs sm:text-sm border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none min-h-[60px] sm:min-h-[80px]"
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-xs sm:text-sm font-medium text-slate-700 mb-1 sm:mb-2">
+                    Writing Tone
+                  </label>
+                  <ToneSelector
+                    selectedTone={selectedTone}
+                    onToneChange={setSelectedTone}
+                    disabled={loading}
+                    variant="outline"
+                    size="sm"
+                    className="w-full justify-start h-9 sm:h-10 text-xs sm:text-sm"
+                  />
+                </div>
+                
+                <Button
+                  type="submit"
+                  disabled={loading || !canRun}
+                  className="w-full h-9 sm:h-10 text-sm sm:text-base"
+                >
+                  {loading ? "Running..." : "Run AI Agents"}
+                </Button>
+              </form>
             </div>
-          )}
+          </div>
+        )}
+
+        <div className={cn(
+          "transition-all duration-300 ease-in-out",
+          "ml-12 sm:ml-16",
+          isSearchExpanded && "ml-76 sm:ml-96"
+        )}>
+          <div className="header-transition">
+            <DynamicHeader 
+              currentView={activeView}
+              userName={user?.user_metadata?.full_name || user?.email?.split('@')[0]}
+              onOpenSearch={() => setIsSearchExpanded(true)}
+            />
+          </div>
+
+          <div className="p-3 sm:p-4 md:p-6 max-w-7xl mx-auto content-transition min-height-screen">
+            {activeView === "email" && (
+              <div className="space-y-4 sm:space-y-6">
+                <div className="text-center">
+                  <h2 className="text-xl sm:text-2xl font-bold text-slate-800 mb-2">Email History</h2>
+                  <p className="text-sm sm:text-base text-slate-600">Your generated cold emails ({emailHistory.length})</p>
+                </div>
+                <ExpandableHistory 
+                  items={emailHistory.map(email => ({
+                    ...email,
+                    type: 'email' as const,
+                    all_emails: email.all_emails?.map(subEmail => ({
+                      ...subEmail,
+                      type: 'email' as const
+                    })) as any
+                  }))}
+                  type="email"
+                  loading={historyLoading}
+                  emptyMessage="No emails generated yet"
+                  onItemDeleted={handleEmailDeleted}
+                />
+              </div>
+            )}
+            
+            {activeView === "linkedin" && (
+              <div className="space-y-4 sm:space-y-6">
+                <div className="text-center">
+                  <h2 className="text-xl sm:text-2xl font-bold text-slate-800 mb-2">LinkedIn History</h2>
+                  <p className="text-sm sm:text-base text-slate-600">Your generated LinkedIn messages ({linkedinHistory.length})</p>
+                </div>
+                <ExpandableHistory 
+                  items={linkedinHistory.map(message => ({
+                    ...message,
+                    type: 'linkedin' as const,
+                    all_messages: message.all_messages?.map(subMessage => ({
+                      ...subMessage,
+                      type: 'linkedin' as const
+                    })) as any
+                  }))}
+                  type="linkedin"
+                  loading={historyLoading}
+                  emptyMessage="No LinkedIn messages generated yet"
+                  onItemDeleted={handleLinkedInDeleted}
+                />
+              </div>
+            )}
+            
+            {activeView === "analytics" && (
+              <div className="space-y-4 sm:space-y-6">
+                <div className="text-center mb-6 sm:mb-8">
+                  <h2 className="text-xl sm:text-2xl font-bold text-slate-800 mb-2">Outreach Analytics</h2>
+                  <p className="text-sm sm:text-base text-slate-600">Track your outreach performance and activity</p>
+                </div>
+                <AnalyticsDashboard />
+              </div>
+            )}
+            
+            {activeView === "settings" && (
+              <div className="max-w-sm sm:max-w-md mx-auto py-6 sm:py-8">
+                <Settings />
+              </div>
+            )}
+            
+            {activeView === "home" && (
+              <Dashboard 
+                onStartResearch={() => setIsSearchExpanded(true)}
+                onNavigateToAnalytics={() => handleNavClick("analytics")}
+                onNavigateToEmailHistory={() => handleNavClick("email")}
+                onNavigateToLinkedInHistory={() => handleNavClick("linkedin")}
+              />
+            )}
+            
+            {activeView === "research" && (
+              <div className="space-y-4 sm:space-y-6">
+                {loading && (
+                  <ResearchSpinner status={status} loading={loading} />
+                )}
+                
+                {(intermediate.research || verifiedPoints.length > 0 || contact || result) ? (
+                  <div className="space-y-4 sm:space-y-6">
+                    {error && (
+                      <Alert variant="destructive">
+                        <AlertDescription>
+                          <strong>Error:</strong> {error}
+                        </AlertDescription>
+                      </Alert>
+                    )}
+
+                    {intermediate.research && (
+                      <ResearchOutput
+                        content={intermediate.research}
+                        contact={contact || undefined}
+                        onCopyEmail={copyToClipboard}
+                      />
+                    )}
+
+                    {(email || (loading && status.messaging)) && (
+                      <Card className="shadow-lg bg-gradient-to-br from-blue-50/50 to-purple-50/50">
+                        <CardHeader>
+                          <CardTitle className="flex items-center gap-2 text-blue-900 text-lg sm:text-xl">
+                            <Mail className="h-4 w-4 sm:h-5 sm:w-5" />
+                            Cold Email
+                          </CardTitle>
+                          <CardDescription className="text-sm">
+                            AI-generated personalized email ready to send
+                          </CardDescription>
+                          {email && (
+                            <CardAction className="gap-2 flex-col sm:flex-row">
+                              <ToneSelector
+                                selectedTone={selectedTone}
+                                onToneChange={setSelectedTone}
+                                disabled={loading}
+                                size="sm"
+                                variant="outline"
+                              />
+                              <Button
+                                onClick={regenerateEmail}
+                                disabled={loading || !canRun}
+                                variant="outline"
+                                size="sm"
+                                className="bg-gradient-to-r from-blue-100 to-indigo-100 hover:from-blue-200 hover:to-indigo-200 text-blue-800 shadow-md hover:shadow-lg text-xs sm:text-sm h-8 sm:h-9"
+                              >
+                                <RefreshCw className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                                <span className="hidden sm:inline">Regenerate</span>
+                                <span className="sm:hidden">Regen</span>
+                              </Button>
+                            </CardAction>
+                          )}
+                        </CardHeader>
+                        <CardContent>
+                        {email ? (
+                          <Textarea
+                            value={editableEmail}
+                            onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setEditableEmail(e.target.value)}
+                            placeholder="Your personalized cold email will appear here..."
+                            className="min-h-[200px] border-blue-200 focus:border-blue-400"
+                          />
+                        ) : (
+                          <div className="text-center p-8 text-muted-foreground italic">
+                            Generating personalized email...
+                          </div>
+                        )}
+                        </CardContent>
+                      </Card>
+                    )}
+
+                    {(linkedin || (loading && status.messaging && email)) && (
+                      <Card className="shadow-lg bg-gradient-to-br from-purple-50/50 to-indigo-50/50">
+                        <CardHeader>
+                          <CardTitle className="flex items-center gap-2 text-purple-900">
+                            <MessageSquare className="h-5 w-5" />
+                            LinkedIn Message
+                          </CardTitle>
+                          <CardDescription>
+                            Professional networking message optimized for LinkedIn
+                          </CardDescription>
+                          {linkedin && (
+                            <CardAction className="gap-2">
+                              <ToneSelector
+                                selectedTone={selectedTone}
+                                onToneChange={setSelectedTone}
+                                disabled={loading}
+                                size="sm"
+                                variant="outline"
+                              />
+                              <Button
+                                onClick={regenerateLinkedin}
+                                disabled={loading || !canRun}
+                                variant="outline"
+                                size="sm"
+                                className="bg-gradient-to-r from-purple-100 to-indigo-100 hover:from-purple-200 hover:to-indigo-200 text-purple-800 shadow-md hover:shadow-lg text-xs sm:text-sm h-8 sm:h-9"
+                              >
+                                <RefreshCw className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                                <span className="hidden sm:inline">Regenerate</span>
+                                <span className="sm:hidden">Regen</span>
+                              </Button>
+                              <Button
+                                onClick={async () => {
+                                  try {
+                                    const res = await fetch("/api/rephrase", {
+                                      method: "POST",
+                                      headers: { "Content-Type": "application/json" },
+                                      body: JSON.stringify({ 
+                                        linkedin: editableLinkedin, 
+                                        tone: selectedTone,
+                                        type: "22words"
+                                      }),
+                                    });
+                                    if (!res.ok) throw new Error("Failed to rephrase");
+                                    const data = await res.json();
+                                    setLinkedin(data.linkedin);
+                                    setEditableLinkedin(data.linkedin);
+                                  } catch (e: any) {
+                                    setError(e?.message || "Failed to rephrase");
+                                  }
+                                }}
+                                disabled={loading || !linkedin}
+                                variant="outline"
+                                size="sm"
+                                className="bg-gradient-to-r from-indigo-100 to-purple-100 hover:from-indigo-200 hover:to-purple-200 text-indigo-800 shadow-md hover:shadow-lg text-xs sm:text-sm h-8 sm:h-9"
+                              >
+                                <Scissors className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                                <span className="hidden sm:inline">22 words Rephrase</span>
+                                <span className="sm:hidden">22w</span>
+                              </Button>
+                            </CardAction>
+                          )}
+                        </CardHeader>
+                        <CardContent>
+                        {linkedin ? (
+                          <Textarea
+                            value={editableLinkedin}
+                            onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setEditableLinkedin(e.target.value)}
+                            placeholder="Your LinkedIn message will appear here..."
+                            className="min-h-[150px] border-purple-200 focus:border-purple-400"
+                          />
+                        ) : (
+                          <div className="text-center p-8 text-muted-foreground italic">
+                            Generating LinkedIn message...
+                          </div>
+                        )}
+                        </CardContent>
+                      </Card>
+                    )}
+                  </div>
+                ) : null}
+              </div>
+            )}
+          </div>
         </div>
       </div>
-    </div>
+    </ToastProvider>
   );
 }

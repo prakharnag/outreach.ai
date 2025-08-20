@@ -24,10 +24,16 @@ export const createClient = () => {
 export const supabase = createClient()
 
 export const signInWithGoogle = async () => {
+  // Force localhost for development
+  const isDevelopment = process.env.NODE_ENV === 'development'
+  const redirectUrl = isDevelopment 
+    ? 'http://localhost:3000/dashboard' 
+    : `${window.location.origin}/dashboard`
+    
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: 'google',
     options: {
-      redirectTo: `${window.location.origin}/dashboard`
+      redirectTo: redirectUrl
     }
   })
   return { data, error }
