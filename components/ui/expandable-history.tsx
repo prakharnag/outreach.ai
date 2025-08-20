@@ -399,22 +399,6 @@ export function ExpandableHistory({ items, type, loading, emptyMessage, onItemDe
                         <Copy className="h-3 w-3 mr-1" />
                         Copy Latest {type === 'email' ? 'Email' : 'Message'}
                       </Button>
-                      
-                      {type === 'email' && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            const subject = item.subject_line || `Outreach to ${item.company_name}`;
-                            const mailtoUrl = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(item.content)}`;
-                            window.open(mailtoUrl);
-                          }}
-                          className="text-xs w-full sm:w-auto"
-                        >
-                          <ExternalLink className="h-3 w-3 mr-1" />
-                          Open in Email Client
-                        </Button>
-                      )}
                     </div>
                   </div>
                 </div>
