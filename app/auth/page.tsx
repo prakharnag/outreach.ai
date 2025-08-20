@@ -219,13 +219,6 @@ export default function AuthPage() {
                 </Button>
               </TabsContent>
             </Tabs>
-
-            {/* Free Trial Callout */}
-            <div className="mt-6 p-4 bg-blue-50 rounded-lg text-center">
-              <p className="text-sm text-blue-800">
-                🎉 <strong>Free Trial:</strong> 5 research credits • No credit card required
-              </p>
-            </div>
           </CardContent>
         </Card>
       </div>
