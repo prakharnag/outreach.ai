@@ -289,6 +289,18 @@ export default function HomePage() {
     }
   }, [emailHistory.length]);
   
+  const refreshEmailHistory = useCallback(async () => {
+    try {
+      const res = await fetch('/api/history/emails');
+      if (res.ok) {
+        const data = await res.json();
+        setEmailHistory(data);
+      }
+    } catch (error) {
+      console.error('Failed to refresh email history:', error);
+    }
+  }, []);
+  
   const loadLinkedInHistory = useCallback(async () => {
     if (linkedinHistory.length > 0) return;
     setHistoryLoading(true);
@@ -304,6 +316,18 @@ export default function HomePage() {
       setHistoryLoading(false);
     }
   }, [linkedinHistory.length]);
+
+  const refreshLinkedInHistory = useCallback(async () => {
+    try {
+      const res = await fetch('/api/history/linkedin');
+      if (res.ok) {
+        const data = await res.json();
+        setLinkedinHistory(data);
+      }
+    } catch (error) {
+      console.error('Failed to refresh LinkedIn history:', error);
+    }
+  }, []);
   
   const loadContactResults = useCallback(async () => {
     try {
@@ -472,7 +496,12 @@ export default function HomePage() {
                 setEditableEmail(evt.data.outputs.email);
                 setEditableLinkedin(evt.data.outputs.linkedin);
                 
-                await saveToHistory(data, evt.data.outputs);
+                // History is automatically saved by the orchestrator
+                // Refresh history to show updated groupings after a short delay
+                setTimeout(() => {
+                  refreshEmailHistory();
+                  refreshLinkedInHistory();
+                }, 1000);
               } else {
                 setError("Company not found. Unable to do research and generate cold email or LinkedIn message.");
               }
@@ -529,41 +558,6 @@ export default function HomePage() {
   useEffect(() => {
     loadContactResults();
   }, [loadContactResults]);
-
-  const saveToHistory = async (searchData: { company: string; role: string; highlights: string }, outputs: { email: string; linkedin: string }) => {
-    try {
-      const emailLines = outputs.email.split('\n');
-      const subjectLine = emailLines.find(line => line.toLowerCase().includes('subject:'))?.replace(/subject:\s*/i, '') || `Outreach to ${searchData.company}`;
-      
-      const [emailRes, linkedinRes] = await Promise.all([
-        fetch('/api/history/emails', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            company_name: searchData.company,
-            role: searchData.role,
-            subject_line: subjectLine,
-            email_content: outputs.email
-          })
-        }),
-        fetch('/api/history/linkedin', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            company_name: searchData.company,
-            role: searchData.role,
-            message_content: outputs.linkedin
-          })
-        })
-      ]);
-      
-      if (!emailRes.ok || !linkedinRes.ok) {
-        console.error('Failed to save history');
-      }
-    } catch (error) {
-      console.error('Failed to save to history:', error);
-    }
-  };
 
   const regenerateEmail = useCallback(async () => {
     try {
@@ -622,10 +616,10 @@ export default function HomePage() {
   return (
     <ToastProvider>
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
-        <div className="fixed left-0 top-0 h-full w-16 bg-white/95 backdrop-blur-md border-r border-slate-200/50 shadow-xl z-50">
-          <div className="flex flex-col items-center py-4 space-y-3">
-            <div className="mb-4 p-2">
-              <div className="text-xs font-bold text-primary text-center leading-tight">
+        <div className="fixed left-0 top-0 h-full w-12 sm:w-16 bg-white/95 backdrop-blur-md border-r border-slate-200/50 shadow-xl z-50">
+          <div className="flex flex-col items-center py-2 sm:py-4 space-y-2 sm:space-y-3">
+            <div className="mb-2 sm:mb-4 p-1 sm:p-2">
+              <div className="text-xs sm:text-xs font-bold text-primary text-center leading-tight">
                 Outreach
               </div>
             </div>
@@ -634,10 +628,10 @@ export default function HomePage() {
               variant={activeView === "home" ? "default" : "ghost"}
               size="sm"
               onClick={() => handleNavClick("home")}
-              className="h-10 w-10 p-0"
+              className="h-8 w-8 sm:h-10 sm:w-10 p-0"
               title="Home"
             >
-              <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="h-4 w-4 sm:h-5 sm:w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
               </svg>
             </Button>
@@ -646,60 +640,60 @@ export default function HomePage() {
               variant={activeView === "search" ? "default" : "ghost"}
               size="sm"
               onClick={() => handleNavClick("search")}
-              className="h-10 w-10 p-0"
+              className="h-8 w-8 sm:h-10 sm:w-10 p-0"
               title="Research"
             >
-              <Search className="h-5 w-5" />
+              <Search className="h-4 w-4 sm:h-5 sm:w-5" />
             </Button>
             
             <Button
               variant={activeView === "email" ? "default" : "ghost"}
               size="sm"
               onClick={() => handleNavClick("email")}
-              className="h-10 w-10 p-0"
+              className="h-8 w-8 sm:h-10 sm:w-10 p-0"
               title="Email History"
             >
-              <Mail className="h-5 w-5" />
+              <Mail className="h-4 w-4 sm:h-5 sm:w-5" />
             </Button>
             
             <Button
               variant={activeView === "linkedin" ? "default" : "ghost"}
               size="sm"
               onClick={() => handleNavClick("linkedin")}
-              className="h-10 w-10 p-0"
+              className="h-8 w-8 sm:h-10 sm:w-10 p-0"
               title="LinkedIn History"
             >
-              <MessageSquare className="h-5 w-5" />
+              <MessageSquare className="h-4 w-4 sm:h-5 sm:w-5" />
             </Button>
             
             <Button
               variant={activeView === "analytics" ? "default" : "ghost"}
               size="sm"
               onClick={() => handleNavClick("analytics")}
-              className="h-10 w-10 p-0"
+              className="h-8 w-8 sm:h-10 sm:w-10 p-0"
               title="Analytics"
             >
-              <BarChart3 className="h-5 w-5" />
+              <BarChart3 className="h-4 w-4 sm:h-5 sm:w-5" />
             </Button>
             
             <Button
               variant={activeView === "settings" ? "default" : "ghost"}
               size="sm"
               onClick={() => handleNavClick("settings")}
-              className="h-10 w-10 p-0"
+              className="h-8 w-8 sm:h-10 sm:w-10 p-0"
               title="Settings"
             >
-              <SettingsIcon className="h-5 w-5" />
+              <SettingsIcon className="h-4 w-4 sm:h-5 sm:w-5" />
             </Button>
           </div>
         </div>
 
         {isSearchExpanded && (
-          <div className="fixed left-16 top-0 h-full w-80 bg-white/95 backdrop-blur-md border-r border-slate-200/50 shadow-xl z-40">
-            <div className="p-6">
-              <form onSubmit={handleSearch} className="space-y-4">
+          <div className="fixed left-12 sm:left-16 top-0 h-full w-64 sm:w-80 bg-white/95 backdrop-blur-md border-r border-slate-200/50 shadow-xl z-40">
+            <div className="p-3 sm:p-6">
+              <form onSubmit={handleSearch} className="space-y-3 sm:space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">
+                  <label className="block text-xs sm:text-sm font-medium text-slate-700 mb-1 sm:mb-2">
                     Company Name
                   </label>
                   <CompanyAutocomplete
@@ -708,21 +702,22 @@ export default function HomePage() {
                     onSelect={handleCompanySuggestionSelect}
                     placeholder="Search for a company..."
                     disabled={loading}
+                    className="text-sm"
                   />
                   {selectedDomain && (
-                    <div className="mt-2 text-sm text-slate-600">
+                    <div className="mt-1 sm:mt-2 text-xs sm:text-sm text-slate-600">
                       Selected: <span className="font-medium">{company}</span> ({selectedDomain})
                     </div>
                   )}
                   {company && !selectedDomain && (
-                    <div className="mt-2 text-sm text-blue-600">
+                    <div className="mt-1 sm:mt-2 text-xs sm:text-sm text-blue-600">
                       Using manual entry: <span className="font-medium">{company}</span>
                     </div>
                   )}
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">
+                  <label className="block text-xs sm:text-sm font-medium text-slate-700 mb-1 sm:mb-2">
                     Role
                   </label>
                   <input
@@ -730,25 +725,25 @@ export default function HomePage() {
                     value={role}
                     onChange={(e) => setRole(e.target.value)}
                     placeholder="Target role"
-                    className="w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-2 sm:px-3 py-2 text-sm border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 h-9 sm:h-10"
                   />
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">
+                  <label className="block text-xs sm:text-sm font-medium text-slate-700 mb-1 sm:mb-2">
                     Key Highlights
                   </label>
                   <textarea
                     value={highlights}
                     onChange={(e) => setHighlights(e.target.value)}
                     placeholder="Your key skills and experience"
-                    rows={4}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                    rows={3}
+                    className="w-full px-2 sm:px-3 py-2 text-xs sm:text-sm border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none min-h-[60px] sm:min-h-[80px]"
                   />
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">
+                  <label className="block text-xs sm:text-sm font-medium text-slate-700 mb-1 sm:mb-2">
                     Writing Tone
                   </label>
                   <ToneSelector
@@ -756,14 +751,14 @@ export default function HomePage() {
                     onToneChange={setSelectedTone}
                     disabled={loading}
                     variant="outline"
-                    className="w-full justify-start"
+                    className="w-full justify-start h-9 sm:h-10 text-xs sm:text-sm"
                   />
                 </div>
                 
                 <Button
                   type="submit"
                   disabled={loading || !canRun}
-                  className="w-full"
+                  className="w-full h-9 sm:h-10 text-sm sm:text-base"
                 >
                   {loading ? "Running..." : "Run AI Agents"}
                 </Button>
@@ -772,7 +767,11 @@ export default function HomePage() {
           </div>
         )}
 
-        <div className={cn("ml-16 layout-transition", isSearchExpanded && "ml-96")}>
+        <div className={cn(
+          "transition-all duration-300 ease-in-out",
+          "ml-12 sm:ml-16",
+          isSearchExpanded && "ml-76 sm:ml-96"
+        )}>
           <div className="header-transition">
             <DynamicHeader 
               currentView={activeView}
@@ -781,12 +780,12 @@ export default function HomePage() {
             />
           </div>
 
-          <div className="p-6 max-w-6xl mx-auto content-transition min-height-screen">
+          <div className="p-3 sm:p-4 md:p-6 max-w-7xl mx-auto content-transition min-height-screen">
             {activeView === "email" && (
-              <div className="space-y-6">
+              <div className="space-y-4 sm:space-y-6">
                 <div className="text-center">
-                  <h2 className="text-2xl font-bold text-slate-800 mb-2">Email History</h2>
-                  <p className="text-slate-600">Your generated cold emails ({emailHistory.length})</p>
+                  <h2 className="text-xl sm:text-2xl font-bold text-slate-800 mb-2">Email History</h2>
+                  <p className="text-sm sm:text-base text-slate-600">Your generated cold emails ({emailHistory.length})</p>
                 </div>
                 <ExpandableHistory 
                   items={emailHistory.map(email => ({
@@ -806,10 +805,10 @@ export default function HomePage() {
             )}
             
             {activeView === "linkedin" && (
-              <div className="space-y-6">
+              <div className="space-y-4 sm:space-y-6">
                 <div className="text-center">
-                  <h2 className="text-2xl font-bold text-slate-800 mb-2">LinkedIn History</h2>
-                  <p className="text-slate-600">Your generated LinkedIn messages ({linkedinHistory.length})</p>
+                  <h2 className="text-xl sm:text-2xl font-bold text-slate-800 mb-2">LinkedIn History</h2>
+                  <p className="text-sm sm:text-base text-slate-600">Your generated LinkedIn messages ({linkedinHistory.length})</p>
                 </div>
                 <ExpandableHistory 
                   items={linkedinHistory.map(message => ({
@@ -829,17 +828,17 @@ export default function HomePage() {
             )}
             
             {activeView === "analytics" && (
-              <div className="space-y-6">
-                <div className="text-center mb-8">
-                  <h2 className="text-2xl font-bold text-slate-800 mb-2">Outreach Analytics</h2>
-                  <p className="text-slate-600">Track your outreach performance and activity</p>
+              <div className="space-y-4 sm:space-y-6">
+                <div className="text-center mb-6 sm:mb-8">
+                  <h2 className="text-xl sm:text-2xl font-bold text-slate-800 mb-2">Outreach Analytics</h2>
+                  <p className="text-sm sm:text-base text-slate-600">Track your outreach performance and activity</p>
                 </div>
                 <AnalyticsDashboard />
               </div>
             )}
             
             {activeView === "settings" && (
-              <div className="max-w-md mx-auto py-8">
+              <div className="max-w-sm sm:max-w-md mx-auto py-6 sm:py-8">
                 <Settings />
               </div>
             )}
@@ -854,13 +853,13 @@ export default function HomePage() {
             )}
             
             {activeView === "research" && (
-              <div className="space-y-6">
+              <div className="space-y-4 sm:space-y-6">
                 {loading && (
                   <ResearchSpinner status={status} loading={loading} />
                 )}
                 
                 {(intermediate.research || verifiedPoints.length > 0 || contact || result) ? (
-                  <div className="space-y-6">
+                  <div className="space-y-4 sm:space-y-6">
                     {error && (
                       <Alert variant="destructive">
                         <AlertDescription>
@@ -880,15 +879,15 @@ export default function HomePage() {
                     {(email || (loading && status.messaging)) && (
                       <Card className="shadow-lg bg-gradient-to-br from-blue-50/50 to-purple-50/50">
                         <CardHeader>
-                          <CardTitle className="flex items-center gap-2 text-blue-900">
-                            <Mail className="h-5 w-5" />
+                          <CardTitle className="flex items-center gap-2 text-blue-900 text-lg sm:text-xl">
+                            <Mail className="h-4 w-4 sm:h-5 sm:w-5" />
                             Cold Email
                           </CardTitle>
-                          <CardDescription>
+                          <CardDescription className="text-sm">
                             AI-generated personalized email ready to send
                           </CardDescription>
                           {email && (
-                            <CardAction className="gap-2">
+                            <CardAction className="gap-2 flex-col sm:flex-row">
                               <ToneSelector
                                 selectedTone={selectedTone}
                                 onToneChange={setSelectedTone}
@@ -901,10 +900,11 @@ export default function HomePage() {
                                 disabled={loading || !canRun}
                                 variant="outline"
                                 size="sm"
-                                className="bg-gradient-to-r from-blue-100 to-indigo-100 hover:from-blue-200 hover:to-indigo-200 text-blue-800 shadow-md hover:shadow-lg"
+                                className="bg-gradient-to-r from-blue-100 to-indigo-100 hover:from-blue-200 hover:to-indigo-200 text-blue-800 shadow-md hover:shadow-lg text-xs sm:text-sm h-8 sm:h-9"
                               >
-                                <RefreshCw className="h-4 w-4 mr-2" />
-                                Regenerate
+                                <RefreshCw className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                                <span className="hidden sm:inline">Regenerate</span>
+                                <span className="sm:hidden">Regen</span>
                               </Button>
                             </CardAction>
                           )}
@@ -950,10 +950,11 @@ export default function HomePage() {
                                 disabled={loading || !canRun}
                                 variant="outline"
                                 size="sm"
-                                className="bg-gradient-to-r from-purple-100 to-indigo-100 hover:from-purple-200 hover:to-indigo-200 text-purple-800 shadow-md hover:shadow-lg"
+                                className="bg-gradient-to-r from-purple-100 to-indigo-100 hover:from-purple-200 hover:to-indigo-200 text-purple-800 shadow-md hover:shadow-lg text-xs sm:text-sm h-8 sm:h-9"
                               >
-                                <RefreshCw className="h-4 w-4 mr-2" />
-                                Regenerate
+                                <RefreshCw className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                                <span className="hidden sm:inline">Regenerate</span>
+                                <span className="sm:hidden">Regen</span>
                               </Button>
                               <Button
                                 onClick={async () => {
@@ -978,10 +979,11 @@ export default function HomePage() {
                                 disabled={loading || !linkedin}
                                 variant="outline"
                                 size="sm"
-                                className="bg-gradient-to-r from-indigo-100 to-purple-100 hover:from-indigo-200 hover:to-purple-200 text-indigo-800 shadow-md hover:shadow-lg"
+                                className="bg-gradient-to-r from-indigo-100 to-purple-100 hover:from-indigo-200 hover:to-purple-200 text-indigo-800 shadow-md hover:shadow-lg text-xs sm:text-sm h-8 sm:h-9"
                               >
-                                <Scissors className="h-4 w-4 mr-2" />
-                                22 words Rephrase
+                                <Scissors className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                                <span className="hidden sm:inline">22 words Rephrase</span>
+                                <span className="sm:hidden">22w</span>
                               </Button>
                             </CardAction>
                           )}

@@ -58,12 +58,12 @@ export function Dashboard({
 
   if (loading) {
     return (
-      <div className="space-y-6">
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div className="space-y-4 sm:space-y-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
           {[1, 2, 3].map((i) => (
             <Card key={i} className="animate-pulse">
-              <CardContent className="pt-6">
-                <div className="h-16 bg-slate-200 rounded"></div>
+              <CardContent className="pt-4 sm:pt-6">
+                <div className="h-12 sm:h-16 bg-slate-200 rounded"></div>
               </CardContent>
             </Card>
           ))}
@@ -76,18 +76,18 @@ export function Dashboard({
 
   if (!hasData) {
     return (
-      <div className="space-y-6">
+      <div className="space-y-4 sm:space-y-6">
         <KPIDashboard />
         
         {/* New User Onboarding */}
-        <div className="text-center py-20">
-          <div className="max-w-md mx-auto">
-            <div className="mb-8">
-              <Sparkles className="h-20 w-20 text-blue-500 mx-auto mb-6" />
-              <h2 className="text-3xl font-bold text-slate-800 mb-4">
+        <div className="text-center py-12 sm:py-20 px-4">
+          <div className="max-w-sm sm:max-w-md mx-auto">
+            <div className="mb-6 sm:mb-8">
+              <Sparkles className="h-16 w-16 sm:h-20 sm:w-20 text-blue-500 mx-auto mb-4 sm:mb-6" />
+              <h2 className="text-2xl sm:text-3xl font-bold text-slate-800 mb-3 sm:mb-4">
                 Welcome to Outreach
               </h2>
-              <p className="text-lg text-slate-600 leading-relaxed">
+              <p className="text-base sm:text-lg text-slate-600 leading-relaxed">
                 Start your AI-powered outreach journey. Research companies, find contacts, and generate personalized messages in seconds.
               </p>
             </div>
@@ -95,13 +95,13 @@ export function Dashboard({
             <Button
               onClick={onStartResearch}
               size="lg"
-              className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-4 text-lg font-semibold shadow-lg hover:shadow-xl transition-all duration-200"
+              className="bg-blue-600 hover:bg-blue-700 text-white px-6 sm:px-8 py-3 sm:py-4 text-base sm:text-lg font-semibold shadow-lg hover:shadow-xl transition-all duration-200 w-full sm:w-auto"
             >
-              <Search className="h-5 w-5 mr-3" />
+              <Search className="h-4 w-4 sm:h-5 sm:w-5 mr-2 sm:mr-3" />
               Start Research
             </Button>
             
-            <div className="mt-8 text-sm text-slate-500">
+            <div className="mt-6 sm:mt-8 text-xs sm:text-sm text-slate-500 space-y-1">
               <p>✨ AI-powered company research</p>
               <p>📧 Personalized cold emails</p>
               <p>💼 LinkedIn message generation</p>
@@ -113,9 +113,9 @@ export function Dashboard({
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {error && (
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+        <div className="bg-red-50 border border-red-200 rounded-lg p-3 sm:p-4">
           <p className="text-red-800 text-sm">{error}</p>
         </div>
       )}
@@ -123,27 +123,27 @@ export function Dashboard({
       <KPIDashboard />
       
       {/* Searched Companies */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Building2 className="h-5 w-5" />
+            <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+              <Building2 className="h-4 w-4 sm:h-5 sm:w-5" />
               Searched Companies ({contactResults.length})
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-3 max-h-96 overflow-y-auto">
+            <div className="space-y-2 sm:space-y-3 max-h-72 sm:max-h-96 overflow-y-auto">
               {contactResults.map((company) => (
                 <div
                   key={company.id}
                   onClick={() => setSelectedCompany(company)}
-                  className="flex items-center justify-between p-3 rounded-lg hover:bg-slate-50 cursor-pointer transition-colors border border-slate-100"
+                  className="flex items-center justify-between p-2 sm:p-3 rounded-lg hover:bg-slate-50 cursor-pointer transition-colors border border-slate-100"
                 >
-                  <div className="flex-1">
-                    <div className="font-medium text-slate-900 flex items-center gap-2">
-                      {company.company_name}
+                  <div className="flex-1 min-w-0">
+                    <div className="font-medium text-sm sm:text-base text-slate-900 flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
+                      <span className="truncate">{company.company_name}</span>
                       {company.confidence_score && company.confidence_score < 0.7 && (
-                        <span className="text-xs bg-orange-100 text-orange-800 px-2 py-1 rounded">
+                        <span className="text-xs bg-orange-100 text-orange-800 px-2 py-1 rounded self-start">
                           Partial Data
                         </span>
                       )}

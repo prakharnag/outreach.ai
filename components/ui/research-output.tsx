@@ -31,18 +31,21 @@ export function ResearchOutput({ content, contact, onCopyEmail }: ResearchOutput
       return (
         <Card className="shadow-lg bg-gradient-to-br from-blue-50/50 to-indigo-50/50">
           <CardHeader>
-            
+            <CardTitle className="flex items-center gap-2 text-blue-900 text-lg sm:text-xl">
+              <Building2 className="h-4 w-4 sm:h-5 sm:w-5" />
+              Company Research
+            </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-6">
+            <div className="space-y-4 sm:space-y-6">
               {/* Company Overview */}
               {jsonContent.company_overview && (
-                <div className="space-y-3">
-                  <h3 className="flex items-center gap-3 text-lg font-semibold text-slate-800">
-                    <Building2 className="h-5 w-5 text-blue-600" />
+                <div className="space-y-2 sm:space-y-3">
+                  <h3 className="flex items-center gap-2 sm:gap-3 text-base sm:text-lg font-semibold text-slate-800">
+                    <Building2 className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600" />
                     Company Overview
                   </h3>
-                  <div className="text-slate-700 leading-relaxed pl-8">
+                  <div className="text-sm sm:text-base text-slate-700 leading-relaxed pl-6 sm:pl-8">
                     {jsonContent.company_overview}
                   </div>
                 </div>
@@ -50,31 +53,31 @@ export function ResearchOutput({ content, contact, onCopyEmail }: ResearchOutput
 
               {/* Key Business Points */}
               {jsonContent.key_business_points && (
-                <div className="space-y-3">
-                  <h3 className="flex items-center gap-3 text-lg font-semibold text-slate-800">
-                    <Rocket className="h-5 w-5 text-green-600" />
+                <div className="space-y-2 sm:space-y-3">
+                  <h3 className="flex items-center gap-2 sm:gap-3 text-base sm:text-lg font-semibold text-slate-800">
+                    <Rocket className="h-4 w-4 sm:h-5 sm:w-5 text-green-600" />
                     Key Business Points
                   </h3>
-                  <div className="space-y-3 pl-8">
+                  <div className="space-y-2 sm:space-y-3 pl-6 sm:pl-8">
                     {Object.entries(jsonContent.key_business_points).map(([key, value]: [string, any], index) => {
                       if (value && typeof value === 'object' && value.description) {
                         return (
-                          <div key={index} className="flex items-start gap-3">
-                            <div className="w-2 h-2 rounded-full bg-green-500 mt-2 flex-shrink-0" />
-                            <div className="flex-1">
-                              <div className="text-slate-700 leading-relaxed">
+                          <div key={index} className="flex items-start gap-2 sm:gap-3">
+                            <div className="w-2 h-2 rounded-full bg-green-500 mt-1.5 sm:mt-2 flex-shrink-0" />
+                            <div className="flex-1 min-w-0">
+                              <div className="text-sm sm:text-base text-slate-700 leading-relaxed">
                                 {value.description}
                               </div>
                               {value.source_url && (
-                                <div className="mt-2">
+                                <div className="mt-1 sm:mt-2">
                                   <a
                                     href={value.source_url}
                                     target="_blank"
                                     rel="noopener noreferrer"
-                                    className="inline-flex items-center gap-1 text-sm text-blue-600 hover:text-blue-800 hover:underline"
+                                    className="inline-flex items-center gap-1 text-xs sm:text-sm text-blue-600 hover:text-blue-800 hover:underline"
                                   >
                                     <ExternalLink className="h-3 w-3" />
-                                    {key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                                    <span className="truncate">{key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}</span>
                                   </a>
                                 </div>
                               )}
@@ -90,12 +93,12 @@ export function ResearchOutput({ content, contact, onCopyEmail }: ResearchOutput
 
               {/* Contact Information - check both JSON format and legacy contact prop */}
               {(jsonContent.contact_information || contact) && (
-                <div className="space-y-3">
-                  <h3 className="flex items-center gap-3 text-lg font-semibold text-slate-800">
-                    <Users className="h-5 w-5 text-purple-600" />
+                <div className="space-y-2 sm:space-y-3">
+                  <h3 className="flex items-center gap-2 sm:gap-3 text-base sm:text-lg font-semibold text-slate-800">
+                    <Users className="h-4 w-4 sm:h-5 sm:w-5 text-purple-600" />
                     Contact Information
                   </h3>
-                  <div className="space-y-2 pl-8">
+                  <div className="space-y-1 sm:space-y-2 pl-6 sm:pl-8">
                     {/* Helper function to check if a value is valid */}
                     {(() => {
                       const isValidValue = (value: string | undefined) => {
@@ -133,18 +136,18 @@ export function ResearchOutput({ content, contact, onCopyEmail }: ResearchOutput
                           )}
                           {isValidValue(contactInfo.title) && (
                             <div className="flex items-center gap-2">
-                              <span className="text-slate-600 font-medium">Title:</span>
-                              <span className="text-slate-700">{contactInfo.title}</span>
+                              <span className="text-slate-600 font-medium text-sm sm:text-base">Title:</span>
+                              <span className="text-slate-700 text-sm sm:text-base">{contactInfo.title}</span>
                             </div>
                           )}
                           {isValidValue(contactInfo.email) && (
                             <div className="flex items-center gap-2">
-                              <span className="text-slate-600 font-medium">Email:</span>
-                              <span className="text-slate-700">{contactInfo.email}</span>
+                              <span className="text-slate-600 font-medium text-sm sm:text-base">Email:</span>
+                              <span className="text-slate-700 text-sm sm:text-base truncate">{contactInfo.email}</span>
                               {onCopyEmail && (
                                 <button
                                   onClick={() => onCopyEmail(contactInfo.email)}
-                                  className="text-blue-600 hover:text-blue-800 text-sm underline"
+                                  className="text-blue-600 hover:text-blue-800 text-xs sm:text-sm underline flex-shrink-0"
                                 >
                                   Copy
                                 </button>
@@ -152,21 +155,21 @@ export function ResearchOutput({ content, contact, onCopyEmail }: ResearchOutput
                             </div>
                           )}
                           {contactInfo.note && (
-                            <div className="text-sm text-slate-500 italic">
+                            <div className="text-xs sm:text-sm text-slate-500 italic">
                               {contactInfo.note}
                             </div>
                           )}
                           {contactInfo.source && (
                             <div className="flex items-center gap-2">
-                              <span className="text-slate-600 font-medium">Source:</span>
+                              <span className="text-slate-600 font-medium text-sm sm:text-base">Source:</span>
                               <a
                                 href={contactInfo.source.url}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="inline-flex items-center gap-1 text-sm text-blue-600 hover:text-blue-800 hover:underline"
+                                className="inline-flex items-center gap-1 text-xs sm:text-sm text-blue-600 hover:text-blue-800 hover:underline"
                               >
                                 <ExternalLink className="h-3 w-3" />
-                                {contactInfo.source.title}
+                                <span className="truncate">{contactInfo.source.title}</span>
                               </a>
                             </div>
                           )}
@@ -179,18 +182,18 @@ export function ResearchOutput({ content, contact, onCopyEmail }: ResearchOutput
 
               {/* Confidence Assessment */}
               {jsonContent.confidence_assessment && (
-                <div className="space-y-3">
-                  <h3 className="flex items-center gap-3 text-lg font-semibold text-slate-800">
-                    <Building2 className="h-5 w-5 text-amber-600" />
+                <div className="space-y-2 sm:space-y-3">
+                  <h3 className="flex items-center gap-2 sm:gap-3 text-base sm:text-lg font-semibold text-slate-800">
+                    <Building2 className="h-4 w-4 sm:h-5 sm:w-5 text-amber-600" />
                     Confidence Assessment
                   </h3>
-                  <div className="space-y-2 pl-8">
+                  <div className="space-y-1 sm:space-y-2 pl-6 sm:pl-8">
                     <div className="flex items-center gap-2">
-                      <span className="text-slate-600 font-medium">Level:</span>
-                      <span className="text-slate-700">{jsonContent.confidence_assessment.level}</span>
+                      <span className="text-slate-600 font-medium text-sm sm:text-base">Level:</span>
+                      <span className="text-slate-700 text-sm sm:text-base">{jsonContent.confidence_assessment.level}</span>
                     </div>
                     {jsonContent.confidence_assessment.explanation && (
-                      <div className="text-slate-700 leading-relaxed">
+                      <div className="text-slate-700 leading-relaxed text-sm sm:text-base">
                         {jsonContent.confidence_assessment.explanation}
                       </div>
                     )}
@@ -213,21 +216,21 @@ export function ResearchOutput({ content, contact, onCopyEmail }: ResearchOutput
     return (
       <Card className="shadow-lg bg-gradient-to-br from-blue-50/50 to-indigo-50/50">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-blue-900">
-            <Building2 className="h-5 w-5" />
+          <CardTitle className="flex items-center gap-2 text-blue-900 text-lg sm:text-xl">
+            <Building2 className="h-4 w-4 sm:h-5 sm:w-5" />
             Company Research
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="space-y-6">
+          <div className="space-y-4 sm:space-y-6">
             {/* Company Overview */}
             {structuredContent.summary && (
-              <div className="space-y-3">
-                <h3 className="flex items-center gap-3 text-lg font-semibold text-slate-800">
-                  <Building2 className="h-5 w-5 text-blue-600" />
+              <div className="space-y-2 sm:space-y-3">
+                <h3 className="flex items-center gap-2 sm:gap-3 text-base sm:text-lg font-semibold text-slate-800">
+                  <Building2 className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600" />
                   Company Overview
                 </h3>
-                <div className="text-slate-700 leading-relaxed pl-8">
+                <div className="text-sm sm:text-base text-slate-700 leading-relaxed pl-6 sm:pl-8">
                   {structuredContent.summary}
                 </div>
               </div>
@@ -235,29 +238,29 @@ export function ResearchOutput({ content, contact, onCopyEmail }: ResearchOutput
 
             {/* Key Business Points */}
             {structuredContent.points && structuredContent.points.length > 0 && (
-              <div className="space-y-3">
-                <h3 className="flex items-center gap-3 text-lg font-semibold text-slate-800">
-                  <Rocket className="h-5 w-5 text-green-600" />
+              <div className="space-y-2 sm:space-y-3">
+                <h3 className="flex items-center gap-2 sm:gap-3 text-base sm:text-lg font-semibold text-slate-800">
+                  <Rocket className="h-4 w-4 sm:h-5 sm:w-5 text-green-600" />
                   Key Business Points
                 </h3>
-                <div className="space-y-3 pl-8">
+                <div className="space-y-2 sm:space-y-3 pl-6 sm:pl-8">
                   {structuredContent.points.map((point, index) => (
-                    <div key={index} className="flex items-start gap-3">
-                      <div className="w-2 h-2 rounded-full bg-green-500 mt-2 flex-shrink-0" />
-                      <div className="flex-1">
-                        <div className="text-slate-700 leading-relaxed">
+                    <div key={index} className="flex items-start gap-2 sm:gap-3">
+                      <div className="w-2 h-2 rounded-full bg-green-500 mt-1.5 sm:mt-2 flex-shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <div className="text-sm sm:text-base text-slate-700 leading-relaxed">
                           {point.claim}
                         </div>
                         {point.source && (
-                          <div className="mt-2">
+                          <div className="mt-1 sm:mt-2">
                             <a
                               href={point.source.url}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="inline-flex items-center gap-1 text-sm text-blue-600 hover:text-blue-800 hover:underline"
+                              className="inline-flex items-center gap-1 text-xs sm:text-sm text-blue-600 hover:text-blue-800 hover:underline"
                             >
                               <ExternalLink className="h-3 w-3" />
-                              {point.source.title}
+                              <span className="truncate">{point.source.title}</span>
                             </a>
                           </div>
                         )}
@@ -270,12 +273,12 @@ export function ResearchOutput({ content, contact, onCopyEmail }: ResearchOutput
 
             {/* Contact Information */}
             {contact && (
-              <div className="space-y-3">
-                <h3 className="flex items-center gap-3 text-lg font-semibold text-slate-800">
-                  <Users className="h-5 w-5 text-purple-600" />
+              <div className="space-y-2 sm:space-y-3">
+                <h3 className="flex items-center gap-2 sm:gap-3 text-base sm:text-lg font-semibold text-slate-800">
+                  <Users className="h-4 w-4 sm:h-5 sm:w-5 text-purple-600" />
                   Contact Information
                 </h3>
-                <div className="space-y-2 pl-8">
+                <div className="space-y-1 sm:space-y-2 pl-6 sm:pl-8">
                   {(() => {
                     const isValidValue = (value: string | undefined) => {
                       if (!value || value.trim() === '') return false;
@@ -293,7 +296,7 @@ export function ResearchOutput({ content, contact, onCopyEmail }: ResearchOutput
 
                     if (!hasValidContact) {
                       return (
-                        <div className="text-sm text-slate-500 italic">
+                        <div className="text-xs sm:text-sm text-slate-500 italic">
                           No direct contact information found in public sources. Consider reaching out through the company&apos;s official website or LinkedIn.
                         </div>
                       );
@@ -303,24 +306,24 @@ export function ResearchOutput({ content, contact, onCopyEmail }: ResearchOutput
                       <>
                         {isValidValue(contact.name) && (
                           <div className="flex items-center gap-2">
-                            <span className="text-slate-600 font-medium">Name:</span>
-                            <span className="text-slate-700">{contact.name}</span>
+                            <span className="text-slate-600 font-medium text-sm sm:text-base">Name:</span>
+                            <span className="text-slate-700 text-sm sm:text-base">{contact.name}</span>
                           </div>
                         )}
                         {isValidValue(contact.title) && (
                           <div className="flex items-center gap-2">
-                            <span className="text-slate-600 font-medium">Title:</span>
-                            <span className="text-slate-700">{contact.title}</span>
+                            <span className="text-slate-600 font-medium text-sm sm:text-base">Title:</span>
+                            <span className="text-slate-700 text-sm sm:text-base">{contact.title}</span>
                           </div>
                         )}
                         {isValidValue(contact.email) && (
                           <div className="flex items-center gap-2">
-                            <span className="text-slate-600 font-medium">Email:</span>
-                            <span className="text-slate-700">{contact.email}</span>
+                            <span className="text-slate-600 font-medium text-sm sm:text-base">Email:</span>
+                            <span className="text-slate-700 text-sm sm:text-base truncate">{contact.email}</span>
                             {onCopyEmail && (
                               <button
                                 onClick={() => onCopyEmail(contact.email!)}
-                                className="text-blue-600 hover:text-blue-800 text-sm underline"
+                                className="text-blue-600 hover:text-blue-800 text-xs sm:text-sm underline flex-shrink-0"
                               >
                                 Copy
                               </button>
@@ -329,15 +332,15 @@ export function ResearchOutput({ content, contact, onCopyEmail }: ResearchOutput
                         )}
                         {contact.source && (
                           <div className="flex items-center gap-2">
-                            <span className="text-slate-600 font-medium">Source:</span>
+                            <span className="text-slate-600 font-medium text-sm sm:text-base">Source:</span>
                             <a
                               href={contact.source.url}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="inline-flex items-center gap-1 text-sm text-blue-600 hover:text-blue-800 hover:underline"
+                              className="inline-flex items-center gap-1 text-xs sm:text-sm text-blue-600 hover:text-blue-800 hover:underline"
                             >
                               <ExternalLink className="h-3 w-3" />
-                              {contact.source.title}
+                              <span className="truncate">{contact.source.title}</span>
                             </a>
                           </div>
                         )}
@@ -358,13 +361,13 @@ export function ResearchOutput({ content, contact, onCopyEmail }: ResearchOutput
     return (
       <Card className="shadow-lg bg-gradient-to-br from-blue-50/50 to-indigo-50/50">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-blue-900">
-            <Building2 className="h-5 w-5" />
+          <CardTitle className="flex items-center gap-2 text-blue-900 text-lg sm:text-xl">
+            <Building2 className="h-4 w-4 sm:h-5 sm:w-5" />
             Company Research
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="text-slate-700 leading-relaxed whitespace-pre-wrap">
+          <div className="text-sm sm:text-base text-slate-700 leading-relaxed whitespace-pre-wrap">
             {content}
           </div>
         </CardContent>
@@ -504,11 +507,11 @@ export function ResearchOutput({ content, contact, onCopyEmail }: ResearchOutput
 
   const getSectionIcon = (type: string) => {
     switch (type) {
-      case 'overview': return <Building2 className="h-5 w-5 text-blue-600" />;
-      case 'business': return <Rocket className="h-5 w-5 text-green-600" />;
-      case 'contact': return <Users className="h-5 w-5 text-purple-600" />;
-      case 'confidence': return <Building2 className="h-5 w-5 text-amber-600" />;
-      default: return <Building2 className="h-5 w-5 text-slate-600" />;
+      case 'overview': return <Building2 className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600" />;
+      case 'business': return <Rocket className="h-4 w-4 sm:h-5 sm:w-5 text-green-600" />;
+      case 'contact': return <Users className="h-4 w-4 sm:h-5 sm:w-5 text-purple-600" />;
+      case 'confidence': return <Building2 className="h-4 w-4 sm:h-5 sm:w-5 text-amber-600" />;
+      default: return <Building2 className="h-4 w-4 sm:h-5 sm:w-5 text-slate-600" />;
     }
   };
 
@@ -517,32 +520,32 @@ export function ResearchOutput({ content, contact, onCopyEmail }: ResearchOutput
   return (
     <Card className="shadow-lg bg-gradient-to-br from-blue-50/50 to-indigo-50/50">
       <CardHeader>
-        <CardTitle className="flex items-center gap-2 text-blue-900">
-          <Building2 className="h-5 w-5" />
+        <CardTitle className="flex items-center gap-2 text-blue-900 text-lg sm:text-xl">
+          <Building2 className="h-4 w-4 sm:h-5 sm:w-5" />
           Company Research
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="space-y-6">
+        <div className="space-y-4 sm:space-y-6">
           {sections.map((section, index) => (
-            <div key={index} className="space-y-3">
-              <h3 className="flex items-center gap-3 text-lg font-semibold text-slate-800">
+            <div key={index} className="space-y-2 sm:space-y-3">
+              <h3 className="flex items-center gap-2 sm:gap-3 text-base sm:text-lg font-semibold text-slate-800">
                 {getSectionIcon(section.type)}
                 {section.title}
               </h3>
               
-              <div className="space-y-2">
+              <div className="space-y-1 sm:space-y-2 pl-6 sm:pl-8">
                 {section.content.map((line, lineIndex) => (
                   <div key={lineIndex} className="flex items-start gap-2">
                     {line.startsWith('-') || line.startsWith('•') ? (
                       <>
-                        <div className="w-2 h-2 rounded-full bg-blue-500 mt-2 flex-shrink-0" />
-                        <div className="text-slate-700 leading-relaxed flex-1">
+                        <div className="w-2 h-2 rounded-full bg-blue-500 mt-1.5 sm:mt-2 flex-shrink-0" />
+                        <div className="text-sm sm:text-base text-slate-700 leading-relaxed flex-1 min-w-0">
                           {renderTextWithSources(line.replace(/^[-•]\s*/, ''))}
                         </div>
                       </>
                     ) : (
-                      <div className="text-slate-700 leading-relaxed w-full">
+                      <div className="text-sm sm:text-base text-slate-700 leading-relaxed w-full">
                         {renderTextWithSources(line)}
                       </div>
                     )}

@@ -209,7 +209,7 @@ export function ExpandableHistory({ items, type, loading, emptyMessage, onItemDe
   }
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-2 sm:space-y-3">
       {items.map((item) => {
         const isExpanded = expandedItems.has(item.id);
         
@@ -218,35 +218,39 @@ export function ExpandableHistory({ items, type, loading, emptyMessage, onItemDe
             <CardContent className="p-0">
               {/* Header - Always Visible */}
               <div 
-                className="flex items-center justify-between p-4 cursor-pointer hover:bg-slate-50 transition-colors"
+                className="flex items-start sm:items-center justify-between p-3 sm:p-4 cursor-pointer hover:bg-slate-50 transition-colors"
                 onClick={() => toggleExpanded(item.id)}
               >
-                <div className="flex items-center gap-3 flex-1 min-w-0">
-                  {getIcon()}
+                <div className="flex items-start sm:items-center gap-2 sm:gap-3 flex-1 min-w-0">
+                  <div className="mt-1 sm:mt-0">{getIcon()}</div>
                   <div className="flex-1 min-w-0">
-                    <div className="font-medium text-slate-900 truncate">
-                      {type === 'email' && item.subject_line ? item.subject_line : `${type === 'email' ? 'Email' : 'LinkedIn message'} to ${item.company_name}`}
+                    <div className="font-medium text-sm sm:text-base text-slate-900 leading-tight sm:leading-normal">
+                      <div className="truncate">
+                        {type === 'email' && item.subject_line ? item.subject_line : `${type === 'email' ? 'Email' : 'LinkedIn message'} to ${item.company_name}`}
+                      </div>
                       {item.total_count && item.total_count > 1 && (
-                        <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                        <span className="mt-1 sm:mt-0 sm:ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
                           {item.total_count} {type === 'email' ? 'emails' : 'messages'}
                         </span>
                       )}
                     </div>
-                    <div className="flex items-center gap-2 text-sm text-slate-500">
-                      <span>{item.company_name}</span>
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 text-xs sm:text-sm text-slate-500 mt-1">
+                      <span className="truncate">{item.company_name}</span>
                       {item.role && (
-                        <>
-                          <span>•</span>
-                          <span>{item.role}</span>
-                        </>
+                        <div className="flex items-center gap-2">
+                          <span className="hidden sm:inline">•</span>
+                          <span className="truncate">{item.role}</span>
+                        </div>
                       )}
-                      <span>•</span>
-                      <span>Latest: {formatDate(item.created_at)}</span>
+                      <div className="flex items-center gap-2">
+                        <span className="hidden sm:inline">•</span>
+                        <span className="whitespace-nowrap">Latest: {formatDate(item.created_at)}</span>
+                      </div>
                     </div>
                   </div>
                 </div>
                 
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1 sm:gap-2 ml-2">
                   <Button
                     variant="ghost"
                     size="sm"
@@ -254,9 +258,9 @@ export function ExpandableHistory({ items, type, loading, emptyMessage, onItemDe
                       e.stopPropagation();
                       copyToClipboard(item.content);
                     }}
-                    className="opacity-0 group-hover:opacity-100 transition-opacity"
+                    className="opacity-0 group-hover:opacity-100 transition-opacity p-1 sm:p-2"
                   >
-                    <Copy className="h-4 w-4" />
+                    <Copy className="h-3 w-3 sm:h-4 sm:w-4" />
                   </Button>
                   
                   <Button
@@ -267,20 +271,20 @@ export function ExpandableHistory({ items, type, loading, emptyMessage, onItemDe
                       deleteGroup(item);
                     }}
                     disabled={deleting.has(item.id)}
-                    className="opacity-0 group-hover:opacity-100 transition-opacity text-red-600 hover:text-red-700 hover:bg-red-50"
+                    className="opacity-0 group-hover:opacity-100 transition-opacity text-red-600 hover:text-red-700 hover:bg-red-50 p-1 sm:p-2"
                     title={`Delete all ${type === 'email' ? 'emails' : 'LinkedIn messages'} for ${item.company_name}`}
                   >
                     {deleting.has(item.id) ? (
-                      <div className="h-4 w-4 animate-spin rounded-full border-2 border-red-600 border-t-transparent" />
+                      <div className="h-3 w-3 sm:h-4 sm:w-4 animate-spin rounded-full border-2 border-red-600 border-t-transparent" />
                     ) : (
-                      <Trash2 className="h-4 w-4" />
+                      <Trash2 className="h-3 w-3 sm:h-4 sm:w-4" />
                     )}
                   </Button>
                   
                   {isExpanded ? (
-                    <ChevronDown className="h-4 w-4 text-slate-400" />
+                    <ChevronDown className="h-3 w-3 sm:h-4 sm:w-4 text-slate-400" />
                   ) : (
-                    <ChevronRight className="h-4 w-4 text-slate-400" />
+                    <ChevronRight className="h-3 w-3 sm:h-4 sm:w-4 text-slate-400" />
                   )}
                 </div>
               </div>
@@ -290,10 +294,10 @@ export function ExpandableHistory({ items, type, loading, emptyMessage, onItemDe
                 "overflow-hidden transition-all duration-300 ease-in-out",
                 isExpanded ? "max-h-[600px] opacity-100" : "max-h-0 opacity-0"
               )}>
-                <div className="px-4 pb-4 border-t border-slate-100">
-                  <div className="mt-4 space-y-4">
+                <div className="px-3 sm:px-4 pb-3 sm:pb-4 border-t border-slate-100">
+                  <div className="mt-3 sm:mt-4 space-y-3 sm:space-y-4">
                     {/* Metadata */}
-                    <div className="flex items-center gap-4 text-sm text-slate-600">
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 text-xs sm:text-sm text-slate-600">
                       <div className="flex items-center gap-1">
                         <Calendar className="h-3 w-3" />
                         <span>Latest: {formatDate(item.created_at)}</span>
@@ -316,11 +320,11 @@ export function ExpandableHistory({ items, type, loading, emptyMessage, onItemDe
                         <h4 className="text-sm font-medium text-slate-700">
                           All {type === 'email' ? 'Emails' : 'LinkedIn Messages'} for {item.company_name}
                         </h4>
-                        <div className="max-h-96 overflow-y-auto space-y-3 pr-2">
+                        <div className="max-h-72 sm:max-h-96 overflow-y-auto space-y-3 pr-2">
                           {(type === 'email' ? item.all_emails : item.all_messages)?.map((subItem, index) => (
-                            <div key={subItem.id} className="bg-slate-50 rounded-lg p-4">
-                              <div className="flex items-center justify-between mb-2">
-                                <span className="text-sm font-medium text-slate-700">
+                            <div key={subItem.id} className="bg-slate-50 rounded-lg p-3 sm:p-4">
+                              <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-2 gap-2">
+                                <span className="text-xs sm:text-sm font-medium text-slate-700">
                                   {type === 'email' ? 'Email' : 'LinkedIn Message'} #{index + 1} - {formatDate(subItem.created_at)}
                                 </span>
                                 <div className="flex items-center gap-2">
@@ -328,10 +332,10 @@ export function ExpandableHistory({ items, type, loading, emptyMessage, onItemDe
                                     variant="ghost"
                                     size="sm"
                                     onClick={() => copyToClipboard(subItem.content)}
-                                    className="text-xs hover:bg-blue-50"
+                                    className="text-xs hover:bg-blue-50 p-1 sm:p-2"
                                   >
                                     <Copy className="h-3 w-3 mr-1" />
-                                    Copy
+                                    <span className="hidden sm:inline">Copy</span>
                                   </Button>
                                   <Button
                                     variant="outline"
@@ -343,18 +347,18 @@ export function ExpandableHistory({ items, type, loading, emptyMessage, onItemDe
                                       }
                                     }}
                                     disabled={deleting.has(subItem.id)}
-                                    className="text-xs text-red-600 hover:text-red-700 hover:bg-red-50 border-red-300 hover:border-red-400"
+                                    className="text-xs text-red-600 hover:text-red-700 hover:bg-red-50 border-red-300 hover:border-red-400 p-1 sm:p-2"
                                     title={`Delete this ${type === 'email' ? 'email' : 'LinkedIn message'}`}
                                   >
                                     {deleting.has(subItem.id) ? (
-                                      <div className="h-4 w-4 animate-spin rounded-full border-2 border-red-600 border-t-transparent" />
+                                      <div className="h-3 w-3 sm:h-4 sm:w-4 animate-spin rounded-full border-2 border-red-600 border-t-transparent" />
                                     ) : (
-                                      <Trash2 className="h-4 w-4" />
+                                      <Trash2 className="h-3 w-3 sm:h-4 sm:w-4" />
                                     )}
                                   </Button>
                                 </div>
                               </div>
-                              <div className="text-sm text-slate-800 whitespace-pre-wrap max-h-32 overflow-y-auto">
+                              <div className="text-xs sm:text-sm text-slate-800 whitespace-pre-wrap max-h-24 sm:max-h-32 overflow-y-auto">
                                 {subItem.content}
                               </div>
                             </div>
@@ -363,34 +367,34 @@ export function ExpandableHistory({ items, type, loading, emptyMessage, onItemDe
                       </div>
                     ) : (
                       // Show single content
-                      <div className="bg-slate-50 rounded-lg p-4">
-                        <div className="flex items-center justify-between mb-2">
-                          <span className="text-sm font-medium text-slate-700">
+                      <div className="bg-slate-50 rounded-lg p-3 sm:p-4">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-2 gap-2">
+                          <span className="text-xs sm:text-sm font-medium text-slate-700">
                             {type === 'email' ? 'Email Content' : 'LinkedIn Message'}
                           </span>
                           <Button
                             variant="ghost"
                             size="sm"
                             onClick={() => copyToClipboard(item.content)}
-                            className="text-xs"
+                            className="text-xs p-1 sm:p-2 self-start sm:self-center"
                           >
                             <Copy className="h-3 w-3 mr-1" />
-                            Copy
+                            <span className="hidden sm:inline">Copy</span>
                           </Button>
                         </div>
-                        <div className="text-sm text-slate-800 whitespace-pre-wrap max-h-48 overflow-y-auto">
+                        <div className="text-xs sm:text-sm text-slate-800 whitespace-pre-wrap max-h-36 sm:max-h-48 overflow-y-auto">
                           {item.content}
                         </div>
                       </div>
                     )}
 
                     {/* Actions */}
-                    <div className="flex items-center gap-2 pt-2">
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 pt-2">
                       <Button
                         variant="outline"
                         size="sm"
                         onClick={() => copyToClipboard(item.content)}
-                        className="text-xs"
+                        className="text-xs w-full sm:w-auto"
                       >
                         <Copy className="h-3 w-3 mr-1" />
                         Copy Latest {type === 'email' ? 'Email' : 'Message'}
@@ -405,7 +409,7 @@ export function ExpandableHistory({ items, type, loading, emptyMessage, onItemDe
                             const mailtoUrl = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(item.content)}`;
                             window.open(mailtoUrl);
                           }}
-                          className="text-xs"
+                          className="text-xs w-full sm:w-auto"
                         >
                           <ExternalLink className="h-3 w-3 mr-1" />
                           Open in Email Client
