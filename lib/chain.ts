@@ -1,7 +1,8 @@
 import { OutreachOrchestrator } from "./langchain-orchestrator";
 import { saveRun, findRecentRun } from "./db";
+import { WritingTone } from "./tones";
 
-export type ChainInput = { company: string; domain?: string; role: string; highlights: string; userId?: string };
+export type ChainInput = { company: string; domain?: string; role: string; highlights: string; userId?: string; tone?: WritingTone };
 export type ChainOutput = {
   research: string;
   verified: string;

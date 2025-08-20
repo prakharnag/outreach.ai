@@ -8,7 +8,7 @@ export const runtime = "edge";
 
 export async function POST(req: NextRequest) {
   try {
-    const { company, role, highlights } = await req.json();
+    const { company, role, highlights, tone } = await req.json();
     if (!company || !role || !highlights) {
       return new Response(JSON.stringify({ error: "Missing company, role or highlights" }), { status: 400 });
     }
@@ -21,7 +21,13 @@ export async function POST(req: NextRequest) {
       const research = await researchAgent({ company: String(company), role: String(role) });
       verified = await verifierAgent({ research });
     }
-    const messages = await messagingAgent({ verified, company: String(company), role: String(role), highlights: String(highlights) });
+    const messages = await messagingAgent({ 
+      verified, 
+      company: String(company), 
+      role: String(role), 
+      highlights: String(highlights),
+      tone: tone || undefined
+    });
     return new Response(JSON.stringify(messages), { status: 200, headers: { "Content-Type": "application/json" } });
   } catch (e: any) {
     return new Response(JSON.stringify({ error: e?.message || "Unknown error" }), { status: 500 });

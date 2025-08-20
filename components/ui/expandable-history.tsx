@@ -1,10 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { ChevronDown, ChevronRight, Mail, MessageSquare, Copy, ExternalLink, Calendar } from "lucide-react";
+import { ChevronDown, ChevronRight, Mail, MessageSquare, Copy, ExternalLink, Calendar, RefreshCw, Trash2 } from "lucide-react";
 import { Button } from "./button";
 import { Card, CardContent } from "./card";
+import { ToneSelector } from "./tone-selector";
+import { WritingTone, getDefaultTone } from "../../lib/tones";
 import { cn } from "../../lib/utils";
+import { useToast } from "./toast";
 
 interface HistoryItem {
   id: string;
@@ -24,10 +27,15 @@ interface ExpandableHistoryProps {
   type: 'email' | 'linkedin';
   loading?: boolean;
   emptyMessage?: string;
+  onItemDeleted?: (id: string) => void;
 }
 
-export function ExpandableHistory({ items, type, loading, emptyMessage }: ExpandableHistoryProps) {
+export function ExpandableHistory({ items, type, loading, emptyMessage, onItemDeleted }: ExpandableHistoryProps) {
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
+  const [selectedTone, setSelectedTone] = useState<WritingTone>(getDefaultTone());
+  const [regenerating, setRegenerating] = useState<Set<string>>(new Set());
+  const [deleting, setDeleting] = useState<Set<string>>(new Set());
+  const { showToast } = useToast();
 
   const toggleExpanded = (id: string) => {
     const newExpanded = new Set(expandedItems);
@@ -44,6 +52,110 @@ export function ExpandableHistory({ items, type, loading, emptyMessage }: Expand
       await navigator.clipboard.writeText(text);
     } catch (err) {
       console.error('Failed to copy:', err);
+    }
+  };
+
+  const deleteItem = async (item: HistoryItem) => {
+    const newDeleting = new Set(deleting);
+    newDeleting.add(item.id);
+    setDeleting(newDeleting);
+
+    try {
+      const endpoint = type === 'email' 
+        ? `/api/history/emails/delete?id=${item.id}`
+        : `/api/history/linkedin/delete?id=${item.id}`;
+
+      const res = await fetch(endpoint, {
+        method: 'DELETE',
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.error || 'Failed to delete item');
+      }
+
+      const result = await res.json();
+      if (result.success) {
+        onItemDeleted?.(item.id);
+        showToast({
+          type: "success",
+          message: `${type === 'email' ? 'Email' : 'LinkedIn message'} deleted successfully`
+        });
+      }
+      
+    } catch (error) {
+      console.error('Failed to delete:', error);
+      showToast({
+        type: "error",
+        message: `Failed to delete ${type === 'email' ? 'email' : 'LinkedIn message'}: ${error instanceof Error ? error.message : 'Unknown error'}`
+      });
+    } finally {
+      const newDeleting = new Set(deleting);
+      newDeleting.delete(item.id);
+      setDeleting(newDeleting);
+    }
+  };
+
+  const deleteGroup = async (item: HistoryItem) => {
+    const allItems = type === 'email' ? item.all_emails : item.all_messages;
+    if (!allItems || allItems.length === 0) {
+      deleteItem(item);
+      return;
+    }
+
+    const confirmMessage = `Are you sure you want to delete all ${allItems.length} ${type === 'email' ? 'emails' : 'LinkedIn messages'} for ${item.company_name}?`;
+    if (!confirm(confirmMessage)) return;
+
+    const newDeleting = new Set(deleting);
+    newDeleting.add(item.id);
+    allItems.forEach(subItem => newDeleting.add(subItem.id));
+    setDeleting(newDeleting);
+
+    try {
+      const deletePromises = allItems.map(subItem => {
+        const endpoint = type === 'email' 
+          ? `/api/history/emails/delete?id=${subItem.id}`
+          : `/api/history/linkedin/delete?id=${subItem.id}`;
+        
+        return fetch(endpoint, { method: 'DELETE' });
+      });
+
+      const results = await Promise.all(deletePromises);
+      
+      const failedDeletions: HistoryItem[] = [];
+      for (let i = 0; i < results.length; i++) {
+        if (!results[i].ok) {
+          failedDeletions.push(allItems[i]);
+        }
+      }
+
+      if (failedDeletions.length === 0) {
+        allItems.forEach(subItem => onItemDeleted?.(subItem.id));
+        showToast({
+          type: "success",
+          message: `All ${allItems.length} ${type === 'email' ? 'emails' : 'LinkedIn messages'} for ${item.company_name} deleted successfully`
+        });
+      } else {
+        const successCount = allItems.length - failedDeletions.length;
+        if (successCount > 0) {
+          allItems.filter(subItem => !failedDeletions.includes(subItem)).forEach(subItem => onItemDeleted?.(subItem.id));
+        }
+        showToast({
+          type: "error",
+          message: `Failed to delete ${failedDeletions.length} items. ${successCount} items were deleted successfully.`
+        });
+      }
+    } catch (error) {
+      console.error('Failed to delete group:', error);
+      showToast({
+        type: "error",
+        message: `Failed to delete group: ${error instanceof Error ? error.message : 'Unknown error'}`
+      });
+    } finally {
+      const newDeleting = new Set(deleting);
+      newDeleting.delete(item.id);
+      allItems.forEach(subItem => newDeleting.delete(subItem.id));
+      setDeleting(newDeleting);
     }
   };
 
@@ -102,7 +214,7 @@ export function ExpandableHistory({ items, type, loading, emptyMessage }: Expand
         const isExpanded = expandedItems.has(item.id);
         
         return (
-          <Card key={item.id} className="transition-all duration-200 hover:shadow-md">
+          <Card key={item.id} className="group transition-all duration-200 hover:shadow-md">
             <CardContent className="p-0">
               {/* Header - Always Visible */}
               <div 
@@ -145,6 +257,24 @@ export function ExpandableHistory({ items, type, loading, emptyMessage }: Expand
                     className="opacity-0 group-hover:opacity-100 transition-opacity"
                   >
                     <Copy className="h-4 w-4" />
+                  </Button>
+                  
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      deleteGroup(item);
+                    }}
+                    disabled={deleting.has(item.id)}
+                    className="opacity-0 group-hover:opacity-100 transition-opacity text-red-600 hover:text-red-700 hover:bg-red-50"
+                    title={`Delete all ${type === 'email' ? 'emails' : 'LinkedIn messages'} for ${item.company_name}`}
+                  >
+                    {deleting.has(item.id) ? (
+                      <div className="h-4 w-4 animate-spin rounded-full border-2 border-red-600 border-t-transparent" />
+                    ) : (
+                      <Trash2 className="h-4 w-4" />
+                    )}
                   </Button>
                   
                   {isExpanded ? (
@@ -193,15 +323,36 @@ export function ExpandableHistory({ items, type, loading, emptyMessage }: Expand
                                 <span className="text-sm font-medium text-slate-700">
                                   {type === 'email' ? 'Email' : 'LinkedIn Message'} #{index + 1} - {formatDate(subItem.created_at)}
                                 </span>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => copyToClipboard(subItem.content)}
-                                  className="text-xs"
-                                >
-                                  <Copy className="h-3 w-3 mr-1" />
-                                  Copy
-                                </Button>
+                                <div className="flex items-center gap-2">
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => copyToClipboard(subItem.content)}
+                                    className="text-xs hover:bg-blue-50"
+                                  >
+                                    <Copy className="h-3 w-3 mr-1" />
+                                    Copy
+                                  </Button>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      if (confirm(`Are you sure you want to delete this ${type === 'email' ? 'email' : 'LinkedIn message'}?`)) {
+                                        deleteItem(subItem);
+                                      }
+                                    }}
+                                    disabled={deleting.has(subItem.id)}
+                                    className="text-xs text-red-600 hover:text-red-700 hover:bg-red-50 border-red-300 hover:border-red-400"
+                                    title={`Delete this ${type === 'email' ? 'email' : 'LinkedIn message'}`}
+                                  >
+                                    {deleting.has(subItem.id) ? (
+                                      <div className="h-4 w-4 animate-spin rounded-full border-2 border-red-600 border-t-transparent" />
+                                    ) : (
+                                      <Trash2 className="h-4 w-4" />
+                                    )}
+                                  </Button>
+                                </div>
                               </div>
                               <div className="text-sm text-slate-800 whitespace-pre-wrap max-h-32 overflow-y-auto">
                                 {subItem.content}

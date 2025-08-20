@@ -4,6 +4,7 @@ import { researchAgent, ResearchAgentOutput } from "./researchAgent";
 import { verifierAgent, VerifyAgentOutput } from "./verifyAgent";
 import { messagingAgent, MessagingAgentOutput } from "./messagingAgent";
 import { SourceTracker } from "./source-tracker";
+import { WritingTone } from "./tones";
 
 export interface ChainInput {
   company: string;
@@ -11,6 +12,7 @@ export interface ChainInput {
   role: string;
   highlights: string;
   userId?: string;
+  tone?: WritingTone;
 }
 
 export interface ChainOutput {
@@ -343,7 +345,8 @@ class OutreachOrchestrator {
         verified: messagingInput,
         company: input.company,
         role: input.role,
-        highlights: input.highlights
+        highlights: input.highlights,
+        tone: input.tone
       });
       await this.saveToSupabase('messaging', messages, input);
       this.callbacks.onStepComplete?.('messaging', messages);
