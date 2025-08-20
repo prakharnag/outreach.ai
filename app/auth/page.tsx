@@ -83,7 +83,10 @@ export default function AuthPage() {
         {/* Back to Home */}
         <Button
           variant="ghost"
-          onClick={() => router.push("/")}
+          onClick={() => {
+            // Navigate to home and force a page refresh to reset state
+            window.location.href = '/';
+          }}
           className="mb-6 text-blue-600 hover:text-blue-700"
         >
           <ArrowLeft className="h-4 w-4 mr-2" />
