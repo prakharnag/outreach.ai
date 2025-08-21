@@ -103,6 +103,10 @@ export default function HomePage() {
   const [historyLoading, setHistoryLoading] = useState(false);
   const [contactResults, setContactResults] = useState<any[]>([]);
   
+  // Regeneration loading states
+  const [regeneratingEmail, setRegeneratingEmail] = useState(false);
+  const [regeneratingLinkedin, setRegeneratingLinkedin] = useState(false);
+  
   // Tone settings
   const [selectedTone, setSelectedTone] = useState<WritingTone>(getDefaultTone());
   
@@ -560,6 +564,7 @@ export default function HomePage() {
   }, [loadContactResults]);
 
   const regenerateEmail = useCallback(async () => {
+    setRegeneratingEmail(true);
     try {
       const res = await fetch("/api/messaging", {
         method: "POST",
@@ -578,10 +583,13 @@ export default function HomePage() {
       setEditableEmail(data.email);
     } catch (e: any) {
       setError(e?.message || "Failed to regenerate email");
+    } finally {
+      setRegeneratingEmail(false);
     }
   }, [searchData, selectedTone, editableEmail]);
 
   const regenerateLinkedin = useCallback(async () => {
+    setRegeneratingLinkedin(true);
     try {
       const res = await fetch("/api/messaging", {
         method: "POST",
@@ -599,6 +607,8 @@ export default function HomePage() {
       setEditableLinkedin(data.linkedin);
     } catch (e: any) {
       setError(e?.message || "Failed to regenerate");
+    } finally {
+      setRegeneratingLinkedin(false);
     }
   }, [searchData, selectedTone]);
 
@@ -898,14 +908,18 @@ export default function HomePage() {
                               />
                               <Button
                                 onClick={regenerateEmail}
-                                disabled={loading || !canRun}
+                                disabled={loading || !canRun || regeneratingEmail}
                                 variant="outline"
                                 size="sm"
                                 className="bg-gradient-to-r from-blue-100 to-indigo-100 hover:from-blue-200 hover:to-indigo-200 text-blue-800 shadow-md hover:shadow-lg text-xs sm:text-sm h-8 sm:h-9"
                               >
-                                <RefreshCw className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-                                <span className="hidden sm:inline">Regenerate</span>
-                                <span className="sm:hidden">Regen</span>
+                                {regeneratingEmail ? (
+                                  <div className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2 animate-spin rounded-full border-2 border-blue-800 border-t-transparent" />
+                                ) : (
+                                  <RefreshCw className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                                )}
+                                <span className="hidden sm:inline">{regeneratingEmail ? 'Regenerating...' : 'Regenerate'}</span>
+                                <span className="sm:hidden">{regeneratingEmail ? 'Gen...' : 'Regen'}</span>
                               </Button>
                             </CardAction>
                           )}
@@ -948,14 +962,18 @@ export default function HomePage() {
                               />
                               <Button
                                 onClick={regenerateLinkedin}
-                                disabled={loading || !canRun}
+                                disabled={loading || !canRun || regeneratingLinkedin}
                                 variant="outline"
                                 size="sm"
                                 className="bg-gradient-to-r from-purple-100 to-indigo-100 hover:from-purple-200 hover:to-indigo-200 text-purple-800 shadow-md hover:shadow-lg text-xs sm:text-sm h-8 sm:h-9"
                               >
-                                <RefreshCw className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-                                <span className="hidden sm:inline">Regenerate</span>
-                                <span className="sm:hidden">Regen</span>
+                                {regeneratingLinkedin ? (
+                                  <div className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2 animate-spin rounded-full border-2 border-purple-800 border-t-transparent" />
+                                ) : (
+                                  <RefreshCw className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                                )}
+                                <span className="hidden sm:inline">{regeneratingLinkedin ? 'Regenerating...' : 'Regenerate'}</span>
+                                <span className="sm:hidden">{regeneratingLinkedin ? 'Gen...' : 'Regen'}</span>
                               </Button>
                               <Button
                                 onClick={async () => {
