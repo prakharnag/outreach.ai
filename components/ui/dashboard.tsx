@@ -1,6 +1,6 @@
 "use client";
 
-import { Building2, Search, Clock, Sparkles, BarChart3 } from "lucide-react";
+import { Building, Search, Clock, Sparkles, BarChart3 } from "lucide-react";
 import { Button } from "./button";
 import { Card, CardContent, CardHeader, CardTitle } from "./card";
 import { KPIDashboard } from "./kpi-dashboard";
@@ -18,13 +18,12 @@ interface DashboardProps {
   onResumeUploadClick?: () => void;
   onResumeSettingsChange?: (useResume: boolean, content: string | null) => void;
   showResumeViewer?: boolean;
-}
-
-interface DashboardProps {
-  onStartResearch: () => void;
-  onNavigateToAnalytics?: () => void;
-  onNavigateToEmailHistory?: () => void;
-  onNavigateToLinkedInHistory?: () => void;
+  resumeRefreshTrigger?: number;
+  onResumeDeleted?: () => void;
+  parentResumeState?: { // Pass parent resume state for sync
+    useInPersonalization: boolean;
+    filename?: string;
+  } | null;
 }
 
 export function Dashboard({ 
@@ -34,7 +33,10 @@ export function Dashboard({
   onNavigateToLinkedInHistory,
   onResumeUploadClick,
   onResumeSettingsChange,
-  showResumeViewer = false
+  showResumeViewer = false,
+  resumeRefreshTrigger,
+  onResumeDeleted,
+  parentResumeState
 }: DashboardProps) {
   const { contactResults, loading, error } = useContactResults();
   const [selectedCompany, setSelectedCompany] = useState<ContactResult | null>(null);
@@ -143,7 +145,7 @@ export function Dashboard({
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
-                <Building2 className="h-4 w-4 sm:h-5 sm:w-5" />
+                <Building className="h-4 w-4 sm:h-5 sm:w-5" />
                 Searched Companies ({contactResults.length})
               </CardTitle>
             </CardHeader>
@@ -158,27 +160,128 @@ export function Dashboard({
                     <div className="flex-1 min-w-0">
                       <div className="font-medium text-sm sm:text-base text-slate-900 flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
                         <span className="truncate">{company.company_name}</span>
-                        {company.confidence_score && company.confidence_score < 0.7 && (
-                          <span className="text-xs bg-orange-100 text-orange-800 px-2 py-1 rounded self-start">
-                            Partial Data
-                          </span>
-                        )}
+                        {(() => {
+                          // Display research quality indicator from research data
+                          const confidenceLevel = company.research_data?.confidence_assessment?.level;
+                          const confidenceScore = company.confidence_score;
+                          
+                          if (confidenceLevel) {
+                            const getBadgeStyles = (level: string) => {
+                              switch (level.toLowerCase()) {
+                                case 'high':
+                                  return 'bg-green-100 text-green-800 border-green-200';
+                                case 'medium':
+                                  return 'bg-blue-100 text-blue-800 border-blue-200';
+                                case 'low':
+                                  return 'bg-amber-100 text-amber-800 border-amber-200';
+                                default:
+                                  return 'bg-gray-100 text-gray-800 border-gray-200';
+                              }
+                            };
+                            
+                            const getDisplayText = (level: string) => {
+                              switch (level.toLowerCase()) {
+                                case 'high':
+                                  return 'Rich Data';
+                                case 'medium':
+                                  return 'Good Data';
+                                case 'low':
+                                  return 'Basic Data';
+                                default:
+                                  return 'Unknown';
+                              }
+                            };
+                            
+                            return (
+                              <span 
+                                className={`text-xs px-2 py-1 rounded border self-start ${getBadgeStyles(confidenceLevel)}`}
+                                title={`Research quality: ${confidenceLevel}. This indicates how much information was found about the company.`}
+                              >
+                                {getDisplayText(confidenceLevel)}
+                              </span>
+                            );
+                          } else if (confidenceScore && confidenceScore < 0.7) {
+                            return (
+                              <span 
+                                className="text-xs bg-orange-100 text-orange-800 px-2 py-1 rounded self-start"
+                                title="Limited information was found about this company"
+                              >
+                                Limited Data
+                              </span>
+                            );
+                          }
+                          return null;
+                        })()}
                       </div>
-                      {company.contact_name && (
-                        <div className="text-sm text-slate-600">
-                          {company.contact_name} • {company.contact_title}
-                          {company.confidence_score && (
-                            <span className={`ml-2 px-2 py-1 rounded text-xs ${
-                              company.confidence_score >= 0.8 ? 'bg-green-100 text-green-800' :
-                              company.confidence_score >= 0.7 ? 'bg-yellow-100 text-yellow-800' :
-                              'bg-red-100 text-red-800'
-                            }`}>
-                              {company.confidence_score >= 0.8 ? 'High' :
-                               company.confidence_score >= 0.7 ? 'Medium' : 'Low'} Confidence
-                            </span>
-                          )}
-                        </div>
-                      )}
+                      {(() => {
+                        // Check for contact information - prioritize primary, fallback to secondary
+                        let contactName = company.contact_name;
+                        let contactTitle = company.contact_title;
+                        let contactType = 'Contact';
+                        
+                        // Helper function to check if a value is valid (not N/A, empty, etc.)
+                        const isValidValue = (value: string | null | undefined) => {
+                          if (!value || value.trim() === '') return false;
+                          if (value === "N/A" || value === "n/a") return false;
+                          if (value.toLowerCase().includes("not available")) return false;
+                          return true;
+                        };
+                        
+                        // If no valid primary contact stored but we have research_data, check for contacts
+                        if (!isValidValue(contactName) && company.research_data?.contact) {
+                          const contactData = company.research_data.contact;
+                          
+                          // Check for primary contact first
+                          if (contactData.primary_contact && isValidValue(contactData.primary_contact.name)) {
+                            contactName = contactData.primary_contact.name;
+                            contactTitle = contactData.primary_contact.title;
+                            contactType = contactData.primary_contact.contact_type === 'hiring' ? 'Hiring Contact' : 'Primary Contact';
+                          }
+                          // Fall back to secondary contact
+                          else if (contactData.secondary_contact && isValidValue(contactData.secondary_contact.name)) {
+                            contactName = contactData.secondary_contact.name;
+                            contactTitle = contactData.secondary_contact.title;
+                            contactType = contactData.secondary_contact.contact_type === 'leadership' ? 'Leadership Contact' : 'Secondary Contact';
+                          }
+                          // Handle legacy single contact structure
+                          else if (isValidValue(contactData.name)) {
+                            contactName = contactData.name;
+                            contactTitle = contactData.title;
+                            contactType = 'Contact';
+                          }
+                        }
+                        
+                        if (isValidValue(contactName)) {
+                          return (
+                            <div className="text-sm text-slate-600">
+                              {contactName} • {contactTitle || 'Title not available'}
+                              <span className="ml-2 text-xs text-slate-500">({contactType})</span>
+                              {company.confidence_score && (
+                                <span className={`ml-2 px-2 py-1 rounded text-xs ${
+                                  company.confidence_score >= 0.8 ? 'bg-green-100 text-green-800' :
+                                  company.confidence_score >= 0.7 ? 'bg-blue-100 text-blue-800' :
+                                  'bg-amber-100 text-amber-800'
+                                }`}
+                                title={`Contact quality: ${
+                                  company.confidence_score >= 0.8 ? 'High-quality contact information found' :
+                                  company.confidence_score >= 0.7 ? 'Good contact information found' : 
+                                  'Basic contact information found'
+                                }`}>
+                                  {company.confidence_score >= 0.8 ? 'Verified Contact' :
+                                   company.confidence_score >= 0.7 ? 'Good Contact' : 'Basic Contact'}
+                                </span>
+                              )}
+                            </div>
+                          );
+                        } else {
+                          // No contact found at all
+                          return (
+                            <div className="text-sm text-slate-500 italic">
+                              Direct contact not found • Try company website or LinkedIn
+                            </div>
+                          );
+                        }
+                      })()}
                     </div>
                     <div className="flex items-center gap-2 text-sm text-slate-500">
                       <Clock className="h-4 w-4" />
@@ -208,8 +311,12 @@ export function Dashboard({
           {/* Resume Viewer */}
           {showResumeViewer && onResumeUploadClick && (
             <ResumeViewer
+              key="resume-viewer" // Ensure component remounts when needed
               onUploadClick={onResumeUploadClick}
               onResumeSettingsChange={onResumeSettingsChange}
+              refreshTrigger={resumeRefreshTrigger}
+              onResumeDeleted={onResumeDeleted}
+              parentResumeState={parentResumeState}
             />
           )}
 

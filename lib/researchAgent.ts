@@ -5,13 +5,21 @@ export type TrustedContact = {
   title: string;
   email?: string; // clickable in UI if present
   source?: { title: string; url: string };
+  inferred?: boolean;
+  confidence_score?: number;
+  contact_type?: 'hiring' | 'leadership';
+};
+
+export type ContactInformation = {
+  primary_contact: TrustedContact;
+  secondary_contact: TrustedContact;
 };
 
 export type ResearchAgentInput = { company: string; domain?: string; role: string };
 export type ResearchPoint = { claim: string; source?: { title: string; url: string } };
 export type ResearchAgentOutput = ResearchResult & {
   points: ResearchPoint[];
-  contact?: TrustedContact;
+  contact?: ContactInformation;
 };
 
 export async function researchAgent(input: ResearchAgentInput): Promise<ResearchAgentOutput> {
@@ -53,7 +61,10 @@ Do **not** output markdown formatting, code blocks, or numbered citations like [
 ---
 
 ## 3) Contact & Emails
-- Identify key people (CEO, CTO, founders, hiring managers, or senior engineers) from LinkedIn or official pages.  
+- Identify TWO key contacts with this priority structure:
+  1. **Primary Contact**: MUST be either a hiring manager, talent acquisition specialist, or HR director
+  2. **Secondary Contact**: Can be CEO, CTO, founders, or senior engineers relevant to the role
+- Search LinkedIn, official team pages, and company websites for both contacts
 - If a public email is found on a trusted source, include it.  
 - For contact email inference, try these approaches in order:
   1. Check official websites for contact patterns (team pages, press contacts, etc.)
@@ -63,11 +74,12 @@ Do **not** output markdown formatting, code blocks, or numbered citations like [
      - firstname@domain.com  
      - flastname@domain.com
      - first.last@domain.com
-  4. Use the most senior available contact (CEO, CTO, or department head for the requested role)
-- **IMPORTANT**: If no reliable contact information can be found or inferred, OMIT the "contact_information" field entirely from the JSON response
-- Only include contact_information if you have at least a name OR a reasonable email inference
-- Mark inferred emails with "inferred": true and provide confidence reasoning
-- Provide a "confidence_score" (0.00–1.00) for contact details.
+- **CONTACT REQUIREMENTS**:
+  - Always prioritize finding a hiring manager or talent acquisition contact as the primary contact
+  - If no hiring/talent acquisition contact can be found, clearly state this limitation
+  - Only include contacts if you have at least a name OR a reasonable email inference
+  - Mark inferred emails with "inferred": true and provide confidence reasoning
+  - Provide a "confidence_score" (0.00–1.00) for each contact
 - Prefer recent leadership information (check for recent changes or appointments)
 
 ---
@@ -84,11 +96,22 @@ Do **not** output markdown formatting, code blocks, or numbered citations like [
     "leadership_details": { "description": "...", "source_url": "https://..." }
   },
   "contact_information": {
-    "name": "Jane Doe",
-    "title": "CEO", 
-    "email": "jane.doe@company.com",
-    "inferred": true,
-    "confidence_score": 0.85
+    "primary_contact": {
+      "name": "Sarah Johnson",
+      "title": "Talent Acquisition Manager", 
+      "email": "sarah.johnson@company.com",
+      "inferred": true,
+      "confidence_score": 0.85,
+      "contact_type": "hiring"
+    },
+    "secondary_contact": {
+      "name": "John Smith",
+      "title": "Engineering Director", 
+      "email": "john.smith@company.com",
+      "inferred": false,
+      "confidence_score": 0.90,
+      "contact_type": "leadership"
+    }
   },
   "confidence_assessment": {
     "level": "High/Medium/Low",
@@ -97,9 +120,11 @@ Do **not** output markdown formatting, code blocks, or numbered citations like [
 }
 
 **CRITICAL**: 
-- If no reliable contact information is found, OMIT the entire "contact_information" field
+- Always provide TWO contacts: primary (hiring/talent acquisition) and secondary (leadership/engineering)
+- If no hiring manager or talent acquisition specialist can be found, clearly state this in the confidence assessment
 - Do NOT include "contact_information" with "N/A" values or explanatory text
-- Only include contact_information when you have actual name/title/email data
+- Only include contacts when you have actual name/title/email data
+- Primary contact MUST be hiring-related role when possible
 
 ---
 

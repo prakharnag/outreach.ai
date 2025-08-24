@@ -236,7 +236,22 @@ class OutreachOrchestrator {
     
     if (verifiedData.contact) {
       confidence += 0.2;
-      if (verifiedData.contact.email && !(verifiedData.contact as any).inferred) {
+      
+      const contactAny = verifiedData.contact as any;
+      
+      // Handle new two-contact structure
+      if (contactAny.primary_contact || contactAny.secondary_contact) {
+        // Check primary contact for non-inferred email
+        if (contactAny.primary_contact?.email && !contactAny.primary_contact?.inferred) {
+          confidence += 0.1;
+        }
+        // Check secondary contact for non-inferred email (smaller boost)
+        else if (contactAny.secondary_contact?.email && !contactAny.secondary_contact?.inferred) {
+          confidence += 0.05;
+        }
+      } 
+      // Handle legacy single contact structure
+      else if (contactAny.email && !contactAny.inferred) {
         confidence += 0.1;
       }
     }
@@ -273,15 +288,24 @@ class OutreachOrchestrator {
             }))
           : [],
         contact: research.contact_information
-          ? {
-              name: research.contact_information.name,
-              title: research.contact_information.title,
-              email: research.contact_information.email,
-              inferred: research.contact_information.inferred,
-              source: research.contact_information.source_url
-                ? { title: 'Contact Source', url: research.contact_information.source_url }
-                : undefined
-            }
+          ? (
+              // Handle new two-contact structure
+              research.contact_information.primary_contact || research.contact_information.secondary_contact 
+                ? {
+                    primary_contact: research.contact_information.primary_contact || undefined,
+                    secondary_contact: research.contact_information.secondary_contact || undefined
+                  }
+                : // Handle legacy single contact structure
+                {
+                  name: research.contact_information.name,
+                  title: research.contact_information.title,
+                  email: research.contact_information.email,
+                  inferred: research.contact_information.inferred,
+                  source: research.contact_information.source_url
+                    ? { title: 'Contact Source', url: research.contact_information.source_url }
+                    : undefined
+                }
+            )
           : undefined
       };
     }

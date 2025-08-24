@@ -47,7 +47,15 @@ Outreach.ai is an intelligent cold outreach automation platform that combines AI
 - Adaptive layouts for mobile, tablet, and desktop
 - Optimized performance on all screen sizes
 
-### 🗂️ **Advanced History Management**
+### � **Resume-Powered Personalization**
+- **Resume Upload & Management** - Secure PDF resume upload with file management
+- **Intelligent Content Extraction** - AI-powered parsing of resume content and skills
+- **Personalized Messaging** - AI incorporates resume details into outreach messages
+- **Toggle Control** - Easy on/off toggle for resume-based personalization
+- **Cross-Component Sync** - Consistent resume settings across search panel and dashboard
+- **Real-time Updates** - Instant synchronization of resume preferences
+
+### �🗂️ **Advanced History Management**
 - **Smart Company Grouping** - Automatically groups emails and LinkedIn messages by company
 - **Individual Item Management** - Delete specific messages within grouped company history
 - **Group Operations** - Bulk delete all messages for a specific company
@@ -55,6 +63,40 @@ Outreach.ai is an intelligent cold outreach automation platform that combines AI
 - **Expandable Interface** - Clean, organized view of all historical outreach
 
 ## 🆕 Recent Updates & Improvements
+
+### **V2.2.0 - Resume Toggle Synchronization & Performance**
+
+#### 🔧 **Fixed Issues**
+- **Resume Toggle Synchronization** - Fixed critical state synchronization between search panel and dashboard ResumeViewer
+  - Resolved toggle not working properly between components
+  - Implemented immediate state sync using `parentResumeState` prop pattern
+  - Fixed state inconsistencies when toggling resume usage from different UI locations
+- **Performance Optimization** - Eliminated unnecessary re-renders and refresh triggers
+  - Removed redundant `setResumeRefreshTrigger` calls that caused repeated component refreshes
+  - Optimized `useEffect` dependencies to prevent unnecessary re-renders
+  - Cleaned up production code by removing debug console.log statements
+
+#### ✨ **New Features**
+- **Resume Upload & Personalization** - Complete resume management system for enhanced outreach
+  - Secure PDF upload with file validation and storage
+  - AI-powered content extraction and skill identification
+  - Toggle-based personalization control in search panel and dashboard
+  - Intelligent integration of resume details into email and LinkedIn messages
+  - Real-time synchronization between components for consistent user experience
+- **Enhanced State Management** - Implemented efficient prop-based synchronization
+  - Added `parentResumeState` prop to ResumeViewer component for immediate sync
+  - Direct state updates in `handleResumeSettingsChange` for instant UI feedback
+  - Automatic database persistence with error handling and state rollback
+- **Optimized Component Architecture** - Streamlined communication between components
+  - Enhanced Dashboard component interface to pass resume state efficiently
+  - Improved ResumeViewer `useEffect` to only depend on necessary state changes
+  - Maintained dual state system while ensuring consistency across components
+
+#### 🎯 **User Experience**
+- **Instant Toggle Response** - Resume toggle changes are now immediate across all UI components
+- **Reliable State Sync** - Toggle state remains consistent between search panel and dashboard
+- **Error Handling** - Robust error handling with automatic state rollback on database failures
+- **Performance** - Removed unnecessary refresh cycles for smoother user experience
 
 ### **V2.1.0 - History Management & Mobile Experience**
 
@@ -306,10 +348,11 @@ Key tables:
 ### Basic Workflow
 
 1. **Authentication** - Sign in with Google or email
-2. **Company Research** - Enter company name and role
-3. **Review Results** - Analyze research findings and contact data
-4. **Generate Messages** - Create personalized outreach content
-5. **Track Performance** - Monitor campaign success rates
+2. **Resume Upload** - Upload your resume for AI-powered personalization (optional)
+3. **Company Research** - Enter company name and role with resume personalization toggle
+4. **Review Results** - Analyze research findings and contact data
+5. **Generate Messages** - Create personalized outreach content enhanced with resume details
+6. **Track Performance** - Monitor campaign success rates
 
 ### Advanced Features
 

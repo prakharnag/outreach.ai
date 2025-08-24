@@ -79,11 +79,23 @@ export function KPIDashboard({ onDataLoad }: KPIDashboardProps) {
             const confidenceScore = c.confidence_score || 0;
             const hasDirectContactData = c.contact_name || c.contact_email;
             
-            // Also check research_data JSON for contact info
+            // Also check research_data JSON for confidence assessment
             if (c.research_data) {
               const data = typeof c.research_data === 'string' ? JSON.parse(c.research_data) : c.research_data;
+              
+              // Prioritize confidence_assessment from research agent
+              if (data.confidence_assessment?.level) {
+                const level = data.confidence_assessment.level.toLowerCase();
+                const isHighConfidence = level === 'high';
+                const hasContact = data.contact && (data.contact.name || data.contact.email || 
+                  data.contact.primary_contact || data.contact.secondary_contact);
+                
+                return isHighConfidence && (hasDirectContactData || hasContact);
+              }
+              
+              // Fallback to legacy confidence scoring
               const hasJsonContact = data.contact && (data.contact.name || data.contact.email);
-              const jsonConfidence = data.confidence || (data.confidence_assessment?.level === 'High' ? 0.8 : 0.5);
+              const jsonConfidence = data.confidence || 0.5;
               
               return (hasDirectContactData || hasJsonContact) && (confidenceScore >= 0.7 || jsonConfidence >= 0.7);
             }
@@ -226,7 +238,7 @@ export function KPIDashboard({ onDataLoad }: KPIDashboardProps) {
             {loading ? '...' : stats.highConfidenceContacts}
           </div>
           <p className="text-xs sm:text-sm text-green-600">
-            Contacts with &gt;70% confidence
+            High confidence research results
           </p>
         </CardContent>
       </Card>

@@ -7,11 +7,14 @@ import { SourceLink } from "./source-link";
 interface ResearchOutputProps {
   content: string | { summary: string; points: Array<{ claim: string; source?: { title: string; url: string } }> } | any;
   contact?: {
+    primary_contact?: { name?: string; title?: string; email?: string; source?: { title: string; url: string }; contact_type?: string };
+    secondary_contact?: { name?: string; title?: string; email?: string; source?: { title: string; url: string }; contact_type?: string };
+  } | {
     name?: string;
     title?: string;
     email?: string;
     source?: { title: string; url: string };
-  };
+  }; // legacy format
   onCopyEmail?: (email: string) => void;
 }
 
@@ -88,93 +91,202 @@ export function ResearchOutput({ content, contact, onCopyEmail }: ResearchOutput
               )}
 
               {/* Contact Information - check both JSON format and legacy contact prop */}
-              {(jsonContent.contact_information || contact) && (
-                <div className="space-y-2 sm:space-y-3">
-                  <h3 className="flex items-center gap-2 sm:gap-3 text-base sm:text-lg font-semibold text-slate-800">
-                    <Users className="h-4 w-4 sm:h-5 sm:w-5 text-purple-600" />
-                    Contact Information
-                  </h3>
-                  <div className="space-y-1 sm:space-y-2 pl-6 sm:pl-8">
-                    {/* Helper function to check if a value is valid */}
+              {(() => {
+                // Helper function to check if a value is valid (not N/A, empty, etc.)
+                const isValidValue = (value: string | undefined) => {
+                  if (!value || value.trim() === '') return false;
+                  if (value === "N/A" || value === "n/a") return false;
+                  if (value.toLowerCase().includes("no publicly available")) return false;
+                  if (value.toLowerCase().includes("not available")) return false;
+                  if (value.toLowerCase().includes("contact typically routed")) return false;
+                  return true;
+                };
+
+                // Check if we have any valid contact information to display
+                const contactInfo = jsonContent.contact_information || contact;
+                if (!contactInfo) return null;
+
+                // Check for valid contacts in the two-contact structure
+                const hasTwoContacts = contactInfo?.primary_contact || contactInfo?.secondary_contact;
+                if (hasTwoContacts) {
+                  const hasValidPrimary = contactInfo.primary_contact && (
+                    isValidValue(contactInfo.primary_contact.name) ||
+                    isValidValue(contactInfo.primary_contact.title) ||
+                    isValidValue(contactInfo.primary_contact.email)
+                  );
+                  const hasValidSecondary = contactInfo.secondary_contact && (
+                    isValidValue(contactInfo.secondary_contact.name) ||
+                    isValidValue(contactInfo.secondary_contact.title) ||
+                    isValidValue(contactInfo.secondary_contact.email)
+                  );
+                  
+                  if (!hasValidPrimary && !hasValidSecondary) return null;
+                } else {
+                  // Check legacy single contact structure
+                  const hasValidContact = 
+                    isValidValue(contactInfo?.name) ||
+                    isValidValue(contactInfo?.title) ||
+                    isValidValue(contactInfo?.email);
+                  
+                  if (!hasValidContact) return null;
+                }
+
+                return (
+                  <div className="space-y-2 sm:space-y-3">
+                    <h3 className="flex items-center gap-2 sm:gap-3 text-base sm:text-lg font-semibold text-slate-800">
+                      <Users className="h-4 w-4 sm:h-5 sm:w-5 text-purple-600" />
+                      Contact Information
+                    </h3>
+                    <div className="space-y-3 sm:space-y-4 pl-6 sm:pl-8">
                     {(() => {
-                      const isValidValue = (value: string | undefined) => {
-                        if (!value || value.trim() === '') return false;
-                        if (value === "N/A" || value === "n/a") return false;
-                        if (value.toLowerCase().includes("no publicly available")) return false;
-                        if (value.toLowerCase().includes("not available")) return false;
-                        if (value.toLowerCase().includes("contact typically routed")) return false;
-                        return true;
-                      };
-
-                      // Use JSON contact_information if available, otherwise fall back to legacy contact prop
-                      const contactInfo = jsonContent.contact_information || contact;
+                      // Check if this is the new two-contact structure
+                      const hasTwoContacts = contactInfo?.primary_contact || contactInfo?.secondary_contact;
                       
-                      const hasValidContact = 
-                        isValidValue(contactInfo?.name) ||
-                        isValidValue(contactInfo?.title) ||
-                        isValidValue(contactInfo?.email);
-
-                      if (!hasValidContact) {
-                        return (
-                          <div className="text-sm text-slate-500 italic">
-                            No direct contact information found in public sources. Consider reaching out through the company&apos;s official website or LinkedIn.
-                          </div>
+                      if (hasTwoContacts) {
+                        // Handle new two-contact structure
+                        const contacts = [];
+                        if (contactInfo.primary_contact) contacts.push({ ...contactInfo.primary_contact, isPrimary: true });
+                        if (contactInfo.secondary_contact) contacts.push({ ...contactInfo.secondary_contact, isPrimary: false });
+                        
+                        // Filter out contacts with no valid information
+                        const validContacts = contacts.filter(contact => 
+                          isValidValue(contact?.name) ||
+                          isValidValue(contact?.title) ||
+                          isValidValue(contact?.email)
                         );
-                      }
 
-                      return (
-                        <>
-                          {isValidValue(contactInfo.name) && (
-                            <div className="flex items-center gap-2">
-                              <span className="text-slate-600 font-medium">Name:</span>
-                              <span className="text-slate-700">{contactInfo.name}</span>
+                        if (validContacts.length === 0) {
+                          return (
+                            <div className="text-sm text-slate-500 italic">
+                              No direct contact information found in public sources. Consider reaching out through the company&apos;s official website or LinkedIn.
                             </div>
-                          )}
-                          {isValidValue(contactInfo.title) && (
-                            <div className="flex items-center gap-2">
-                              <span className="text-slate-600 font-medium text-sm sm:text-base">Title:</span>
-                              <span className="text-slate-700 text-sm sm:text-base">{contactInfo.title}</span>
-                            </div>
-                          )}
-                          {isValidValue(contactInfo.email) && (
-                            <div className="flex items-center gap-2">
-                              <span className="text-slate-600 font-medium text-sm sm:text-base">Email:</span>
-                              <span className="text-slate-700 text-sm sm:text-base truncate">{contactInfo.email}</span>
-                              {onCopyEmail && (
-                                <button
-                                  onClick={() => onCopyEmail(contactInfo.email)}
-                                  className="text-blue-600 hover:text-blue-800 text-xs sm:text-sm underline flex-shrink-0"
-                                >
-                                  Copy
-                                </button>
+                          );
+                        }
+
+                        return validContacts.map((contact, index) => {
+                          return (
+                            <div key={index} className="border-l-2 border-indigo-200 pl-3 space-y-1 sm:space-y-2">
+                              <h4 className="text-sm font-medium text-slate-600">
+                                {contact.isPrimary ? "Primary Contact" : "Secondary Contact"}
+                                {contact.contact_type && (
+                                  <span className="ml-2 text-xs text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded">
+                                    {contact.contact_type === 'hiring' ? 'Hiring/Talent' : 'Leadership'}
+                                  </span>
+                                )}
+                              </h4>
+                              {isValidValue(contact.name) && (
+                                <div className="flex items-center gap-2">
+                                  <span className="text-slate-600 font-medium text-sm">Name:</span>
+                                  <span className="text-slate-700 text-sm">{contact.name}</span>
+                                </div>
+                              )}
+                              {isValidValue(contact.title) && (
+                                <div className="flex items-center gap-2">
+                                  <span className="text-slate-600 font-medium text-sm">Title:</span>
+                                  <span className="text-slate-700 text-sm">{contact.title}</span>
+                                </div>
+                              )}
+                              {isValidValue(contact.email) && (
+                                <div className="flex items-center gap-2">
+                                  <span className="text-slate-600 font-medium text-sm">Email:</span>
+                                  <span className="text-slate-700 text-sm truncate">{contact.email}</span>
+                                  {onCopyEmail && (
+                                    <button
+                                      onClick={() => onCopyEmail(contact.email!)}
+                                      className="text-blue-600 hover:text-blue-800 text-xs underline flex-shrink-0"
+                                    >
+                                      Copy
+                                    </button>
+                                  )}
+                                </div>
+                              )}
+                              {contact.source && (
+                                <div className="flex items-center gap-2">
+                                  <span className="text-slate-600 font-medium text-sm">Source:</span>
+                                  <a
+                                    href={contact.source.url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="inline-flex items-center gap-1 text-xs text-blue-600 hover:text-blue-800 hover:underline"
+                                  >
+                                    <ExternalLink className="h-3 w-3" />
+                                    <span className="truncate">{contact.source.title}</span>
+                                  </a>
+                                </div>
                               )}
                             </div>
-                          )}
-                          {contactInfo.note && (
-                            <div className="text-xs sm:text-sm text-slate-500 italic">
-                              {contactInfo.note}
+                          );
+                        });
+                      } else {
+                        // Handle legacy single contact structure
+                        const hasValidContact = 
+                          isValidValue(contactInfo?.name) ||
+                          isValidValue(contactInfo?.title) ||
+                          isValidValue(contactInfo?.email);
+
+                        if (!hasValidContact) {
+                          return (
+                            <div className="text-sm text-slate-500 italic">
+                              No direct contact information found in public sources. Consider reaching out through the company&apos;s official website or LinkedIn.
                             </div>
-                          )}
-                          {contactInfo.source && (
-                            <div className="flex items-center gap-2">
-                              <span className="text-slate-600 font-medium text-sm sm:text-base">Source:</span>
-                              <a
-                                href={contactInfo.source.url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="inline-flex items-center gap-1 text-xs sm:text-sm text-blue-600 hover:text-blue-800 hover:underline"
-                              >
-                                <ExternalLink className="h-3 w-3" />
-                                <span className="truncate">{contactInfo.source.title}</span>
-                              </a>
-                            </div>
-                          )}
-                        </>
-                      );
+                          );
+                        }
+
+                        return (
+                          <>
+                            {isValidValue(contactInfo.name) && (
+                              <div className="flex items-center gap-2">
+                                <span className="text-slate-600 font-medium">Name:</span>
+                                <span className="text-slate-700">{contactInfo.name}</span>
+                              </div>
+                            )}
+                            {isValidValue(contactInfo.title) && (
+                              <div className="flex items-center gap-2">
+                                <span className="text-slate-600 font-medium text-sm sm:text-base">Title:</span>
+                                <span className="text-slate-700 text-sm sm:text-base">{contactInfo.title}</span>
+                              </div>
+                            )}
+                            {isValidValue(contactInfo.email) && (
+                              <div className="flex items-center gap-2">
+                                <span className="text-slate-600 font-medium text-sm sm:text-base">Email:</span>
+                                <span className="text-slate-700 text-sm sm:text-base truncate">{contactInfo.email}</span>
+                                {onCopyEmail && (
+                                  <button
+                                    onClick={() => onCopyEmail(contactInfo.email!)}
+                                    className="text-blue-600 hover:text-blue-800 text-xs sm:text-sm underline flex-shrink-0"
+                                  >
+                                    Copy
+                                  </button>
+                                )}
+                              </div>
+                            )}
+                            {contactInfo.note && (
+                              <div className="text-xs sm:text-sm text-slate-500 italic">
+                                {contactInfo.note}
+                              </div>
+                            )}
+                            {contactInfo.source && (
+                              <div className="flex items-center gap-2">
+                                <span className="text-slate-600 font-medium text-sm sm:text-base">Source:</span>
+                                <a
+                                  href={contactInfo.source.url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="inline-flex items-center gap-1 text-xs sm:text-sm text-blue-600 hover:text-blue-800 hover:underline"
+                                >
+                                  <ExternalLink className="h-3 w-3" />
+                                  <span className="truncate">{contactInfo.source.title}</span>
+                                </a>
+                              </div>
+                            )}
+                          </>
+                        );
+                      }
                     })()}
+                    </div>
                   </div>
-                </div>
-              )}
+                );
+              })()}
 
               {/* Confidence Assessment */}
               {jsonContent.confidence_assessment && (
@@ -274,7 +386,7 @@ export function ResearchOutput({ content, contact, onCopyEmail }: ResearchOutput
                   <Users className="h-4 w-4 sm:h-5 sm:w-5 text-purple-600" />
                   Contact Information
                 </h3>
-                <div className="space-y-1 sm:space-y-2 pl-6 sm:pl-8">
+                <div className="space-y-3 sm:space-y-4 pl-6 sm:pl-8">
                   {(() => {
                     const isValidValue = (value: string | undefined) => {
                       if (!value || value.trim() === '') return false;
@@ -285,63 +397,144 @@ export function ResearchOutput({ content, contact, onCopyEmail }: ResearchOutput
                       return true;
                     };
 
-                    const hasValidContact = 
-                      isValidValue(contact.name) ||
-                      isValidValue(contact.title) ||
-                      isValidValue(contact.email);
-
-                    if (!hasValidContact) {
-                      return (
-                        <div className="text-xs sm:text-sm text-slate-500 italic">
-                          No direct contact information found in public sources. Consider reaching out through the company&apos;s official website or LinkedIn.
-                        </div>
-                      );
-                    }
-
-                    return (
-                      <>
-                        {isValidValue(contact.name) && (
-                          <div className="flex items-center gap-2">
-                            <span className="text-slate-600 font-medium text-sm sm:text-base">Name:</span>
-                            <span className="text-slate-700 text-sm sm:text-base">{contact.name}</span>
+                    // Check if this is the new two-contact structure  
+                    const hasTwoContacts = (contact as any)?.primary_contact || (contact as any)?.secondary_contact;
+                    
+                    if (hasTwoContacts) {
+                      // Handle new two-contact structure
+                      const contacts = [];
+                      if ((contact as any).primary_contact) contacts.push({ ...(contact as any).primary_contact, isPrimary: true });
+                      if ((contact as any).secondary_contact) contacts.push({ ...(contact as any).secondary_contact, isPrimary: false });
+                      
+                      if (contacts.length === 0) {
+                        return (
+                          <div className="text-sm text-slate-500 italic">
+                            No direct contact information found in public sources. Consider reaching out through the company&apos;s official website or LinkedIn.
                           </div>
-                        )}
-                        {isValidValue(contact.title) && (
-                          <div className="flex items-center gap-2">
-                            <span className="text-slate-600 font-medium text-sm sm:text-base">Title:</span>
-                            <span className="text-slate-700 text-sm sm:text-base">{contact.title}</span>
-                          </div>
-                        )}
-                        {isValidValue(contact.email) && (
-                          <div className="flex items-center gap-2">
-                            <span className="text-slate-600 font-medium text-sm sm:text-base">Email:</span>
-                            <span className="text-slate-700 text-sm sm:text-base truncate">{contact.email}</span>
-                            {onCopyEmail && (
-                              <button
-                                onClick={() => onCopyEmail(contact.email!)}
-                                className="text-blue-600 hover:text-blue-800 text-xs sm:text-sm underline flex-shrink-0"
-                              >
-                                Copy
-                              </button>
+                        );
+                      }
+
+                      return contacts.map((contactItem, index) => {
+                        const hasValidContact = 
+                          isValidValue(contactItem?.name) ||
+                          isValidValue(contactItem?.title) ||
+                          isValidValue(contactItem?.email);
+
+                        if (!hasValidContact) return null;
+
+                        return (
+                          <div key={index} className="border-l-2 border-indigo-200 pl-3 space-y-1 sm:space-y-2">
+                            <h4 className="text-sm font-medium text-slate-600">
+                              {contactItem.isPrimary ? "Primary Contact" : "Secondary Contact"}
+                              {contactItem.contact_type && (
+                                <span className="ml-2 text-xs text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded">
+                                  {contactItem.contact_type === 'hiring' ? 'Hiring/Talent' : 'Leadership'}
+                                </span>
+                              )}
+                            </h4>
+                            {isValidValue(contactItem.name) && (
+                              <div className="flex items-center gap-2">
+                                <span className="text-slate-600 font-medium text-sm">Name:</span>
+                                <span className="text-slate-700 text-sm">{contactItem.name}</span>
+                              </div>
+                            )}
+                            {isValidValue(contactItem.title) && (
+                              <div className="flex items-center gap-2">
+                                <span className="text-slate-600 font-medium text-sm">Title:</span>
+                                <span className="text-slate-700 text-sm">{contactItem.title}</span>
+                              </div>
+                            )}
+                            {isValidValue(contactItem.email) && (
+                              <div className="flex items-center gap-2">
+                                <span className="text-slate-600 font-medium text-sm">Email:</span>
+                                <span className="text-slate-700 text-sm truncate">{contactItem.email}</span>
+                                {onCopyEmail && (
+                                  <button
+                                    onClick={() => onCopyEmail(contactItem.email!)}
+                                    className="text-blue-600 hover:text-blue-800 text-xs underline flex-shrink-0"
+                                  >
+                                    Copy
+                                  </button>
+                                )}
+                              </div>
+                            )}
+                            {contactItem.source && (
+                              <div className="flex items-center gap-2">
+                                <span className="text-slate-600 font-medium text-sm">Source:</span>
+                                <a
+                                  href={contactItem.source.url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="inline-flex items-center gap-1 text-xs text-blue-600 hover:text-blue-800 hover:underline"
+                                >
+                                  <ExternalLink className="h-3 w-3" />
+                                  <span className="truncate">{contactItem.source.title}</span>
+                                </a>
+                              </div>
                             )}
                           </div>
-                        )}
-                        {contact.source && (
-                          <div className="flex items-center gap-2">
-                            <span className="text-slate-600 font-medium text-sm sm:text-base">Source:</span>
-                            <a
-                              href={contact.source.url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="inline-flex items-center gap-1 text-xs sm:text-sm text-blue-600 hover:text-blue-800 hover:underline"
-                            >
-                              <ExternalLink className="h-3 w-3" />
-                              <span className="truncate">{contact.source.title}</span>
-                            </a>
+                        );
+                      });
+                    } else {
+                      // Handle legacy single contact structure
+                      const hasValidContact = 
+                        isValidValue((contact as any)?.name) ||
+                        isValidValue((contact as any)?.title) ||
+                        isValidValue((contact as any)?.email);
+
+                      if (!hasValidContact) {
+                        return (
+                          <div className="text-xs sm:text-sm text-slate-500 italic">
+                            No direct contact information found in public sources. Consider reaching out through the company&apos;s official website or LinkedIn.
                           </div>
-                        )}
-                      </>
-                    );
+                        );
+                      }
+
+                      return (
+                        <>
+                          {isValidValue((contact as any).name) && (
+                            <div className="flex items-center gap-2">
+                              <span className="text-slate-600 font-medium text-sm sm:text-base">Name:</span>
+                              <span className="text-slate-700 text-sm sm:text-base">{(contact as any).name}</span>
+                            </div>
+                          )}
+                          {isValidValue((contact as any).title) && (
+                            <div className="flex items-center gap-2">
+                              <span className="text-slate-600 font-medium text-sm sm:text-base">Title:</span>
+                              <span className="text-slate-700 text-sm sm:text-base">{(contact as any).title}</span>
+                            </div>
+                          )}
+                          {isValidValue((contact as any).email) && (
+                            <div className="flex items-center gap-2">
+                              <span className="text-slate-600 font-medium text-sm sm:text-base">Email:</span>
+                              <span className="text-slate-700 text-sm sm:text-base truncate">{(contact as any).email}</span>
+                              {onCopyEmail && (
+                                <button
+                                  onClick={() => onCopyEmail((contact as any).email!)}
+                                  className="text-blue-600 hover:text-blue-800 text-xs sm:text-sm underline flex-shrink-0"
+                                >
+                                  Copy
+                                </button>
+                              )}
+                            </div>
+                          )}
+                          {(contact as any).source && (
+                            <div className="flex items-center gap-2">
+                              <span className="text-slate-600 font-medium text-sm sm:text-base">Source:</span>
+                              <a
+                                href={(contact as any).source.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-1 text-xs sm:text-sm text-blue-600 hover:text-blue-800 hover:underline"
+                              >
+                                <ExternalLink className="h-3 w-3" />
+                                <span className="truncate">{(contact as any).source.title}</span>
+                              </a>
+                            </div>
+                          )}
+                        </>
+                      );
+                    }
                   })()}
                 </div>
               </div>

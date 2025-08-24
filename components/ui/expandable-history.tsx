@@ -1,11 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { ChevronDown, ChevronRight, Mail, MessageSquare, Copy, ExternalLink, Calendar, RefreshCw, Trash2 } from "lucide-react";
+import { ChevronDown, ChevronRight, Mail, MessageSquare, Copy, Calendar, Trash2 } from "lucide-react";
 import { Button } from "./button";
 import { Card, CardContent } from "./card";
-import { ToneSelector } from "./tone-selector";
-import { WritingTone, getDefaultTone } from "../../lib/tones";
 import { cn } from "../../lib/utils";
 import { useToast } from "./toast";
 
@@ -32,7 +30,6 @@ interface ExpandableHistoryProps {
 
 export function ExpandableHistory({ items, type, loading, emptyMessage, onItemDeleted }: ExpandableHistoryProps) {
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
-  const [selectedTone, setSelectedTone] = useState<WritingTone>(getDefaultTone());
   const [regenerating, setRegenerating] = useState<Set<string>>(new Set());
   const [deleting, setDeleting] = useState<Set<string>>(new Set());
   const { showToast } = useToast();

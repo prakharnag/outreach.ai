@@ -5,7 +5,10 @@ export type MessagingAgentInput = {
   verified: {
     summary: string;
     points: Array<{ claim: string; source: { title: string; url: string } }>;
-    contact?: { name: string; title: string; email?: string; source?: { title: string; url: string } };
+    contact?: { 
+      primary_contact: { name: string; title: string; email?: string; source?: { title: string; url: string }; contact_type?: string };
+      secondary_contact: { name: string; title: string; email?: string; source?: { title: string; url: string }; contact_type?: string };
+    } | { name: string; title: string; email?: string; source?: { title: string; url: string } }; // legacy format
   };
   company: string;
   role: string;
@@ -24,14 +27,17 @@ export async function messagingAgent(input: MessagingAgentInput): Promise<Messag
   const toneConfig = getToneConfig(tone);
   
   // Debug logging for contact information
-  console.log('[Messaging Agent] Contact information received:', {
-    hasContact: !!input.verified.contact,
-    contactName: input.verified.contact?.name,
-    contactTitle: input.verified.contact?.title,
-    company: input.company
-  });
-  
-  const system = `You are a master of warm, high-conversion outreach. Return ONLY valid JSON: {"linkedin":"string","email":"string"}.
+  console.log("Messaging Agent Input:", {
+    contactStructure: input.verified.contact,
+    primaryContactName: (input.verified.contact as any)?.primary_contact?.name,
+    secondaryContactName: (input.verified.contact as any)?.secondary_contact?.name,
+    legacyContactName: (input.verified.contact as any)?.name,
+    company: input.company,
+    role: input.role,
+    highlights: input.highlights,
+    tone: input.tone,
+    hasResumeContent: !!input.resumeContent
+  });  const system = `You are a master of warm, high-conversion outreach. Return ONLY valid JSON: {"linkedin":"string","email":"string"}.
 
 TONE INSTRUCTION: ${toneConfig.systemPrompt}
 
@@ -41,23 +47,35 @@ LinkedIn Example: ${toneConfig.exampleLinkedIn}
 
 Email Example: ${toneConfig.exampleEmail}
 
-Rules:
+You are a professional outreach specialist creating personalized messages.
+
+**CRITICAL INSTRUCTIONS:**
+- User's TARGET ROLE: ${input.role} - This is the position they are seeking/targeting. Reference this role appropriately.
+- When referencing the user's background, ONLY use information from their "Highlights" and "Resume Content" (if provided).
+- NEVER invent or assume job titles, experiences, or skills not explicitly mentioned in the user's information.
+- If resume content is provided, use it to personalize the message with specific skills, experiences, and achievements that align with the target role.
+
+Generate TWO outputs ONLY:
+
 - Cold Email (90–100 words): natural, human, and value-driven. Personalize with company-specific insights and key highlights from user input. 
   Structure:
     1. Start with "Subject: ..." (compelling but not click-baity)
     2. Direct, respectful greeting by name if possible (use the CONTACT's name from the verified insights, NOT the user's name from resume).
-    3. One-line intro: who you are + 1 relevant credential/achievement.
+    3. One-line intro: who you are as it relates to the TARGET ROLE + 1 relevant credential/achievement from YOUR highlights/resume.
     4. 2–3 short sentences connecting your skills and key highlights (from user input) to their current needs or recent initiatives (from provided research).
     5. End with one clear, low-pressure call-to-action (e.g., "Happy to chat if this aligns").
     6. End with a professional closing (e.g., "Best regards," or "Best,")
   Tone: Apply the ${toneConfig.label.toLowerCase()} writing style while maintaining professionalism.
+
 - LinkedIn (exactly 44 words): connection-oriented, same personalization style as the email, START WITH "Hi" or "Hey" followed by the contact's name (from verified insights, NOT from resume), no formal sign-offs, written in one smooth flow using ${toneConfig.label.toLowerCase()} tone.
 
 CRITICAL RULES:
 - Return ONLY the JSON object. Do not include any extra text, explanations, or additional properties.
 - DO NOT include email addresses, contact information, or signatures in the message content.
 - CONTACT NAME HANDLING: 
-  * IF contact name is available in verified insights: Use "Hi [Contact Name]" for LinkedIn and "Dear [Contact Name]" for email
+  * ALWAYS use the PRIMARY CONTACT NAME for greetings when available
+  * IF primary contact name is available: Use "Hi [Primary Contact Name]" for LinkedIn and "Dear [Primary Contact Name]" for email
+  * IF no primary contact but secondary contact available: Use "Hi [Secondary Contact Name]" for LinkedIn and "Dear [Secondary Contact Name]" for email
   * IF NO contact name available: Use "Hi there" for LinkedIn and "Hi" for email (DO NOT use any name from resume content)
   * NEVER use the user's name from resume content as the contact greeting
 - LinkedIn messages MUST start with "Hi [Contact Name]" or "Hey [Contact Name]" when contact is known, or "Hi there" when unknown.
@@ -73,15 +91,54 @@ Role: ${input.role}
 Highlights: ${input.highlights}${input.resumeContent ? `
 Resume Content: ${input.resumeContent}` : ''}
 
+TARGET ROLE FOR USER: ${input.role}
+
 CONTACT INFORMATION:
-${input.verified.contact?.name ? `Contact Name: ${input.verified.contact.name}` : 'Contact Name: NOT AVAILABLE'}
-${input.verified.contact?.title ? `Contact Title: ${input.verified.contact.title}` : 'Contact Title: NOT AVAILABLE'}
+${(() => {
+  const contactAny = input.verified.contact as any;
+  // Handle new two-contact structure
+  if (contactAny?.primary_contact || contactAny?.secondary_contact) {
+    const contacts = [];
+    if (contactAny.primary_contact) {
+      contacts.push(`Primary Contact: ${contactAny.primary_contact.name || 'NOT AVAILABLE'} - ${contactAny.primary_contact.title || 'NOT AVAILABLE'}`);
+    }
+    if (contactAny.secondary_contact) {
+      contacts.push(`Secondary Contact: ${contactAny.secondary_contact.name || 'NOT AVAILABLE'} - ${contactAny.secondary_contact.title || 'NOT AVAILABLE'}`);
+    }
+    return contacts.join('\n');
+  }
+  // Handle legacy single contact structure
+  return `${contactAny?.name ? `Contact Name: ${contactAny.name}` : 'Contact Name: NOT AVAILABLE'}
+${contactAny?.title ? `Contact Title: ${contactAny.title}` : 'Contact Title: NOT AVAILABLE'}`;
+})()}
+
+PRIMARY CONTACT FOR GREETING:
+${(() => {
+  const contactAny = input.verified.contact as any;
+  // Prioritize primary contact for greetings
+  if (contactAny?.primary_contact?.name) {
+    return `Use name: ${contactAny.primary_contact.name}`;
+  }
+  // Fall back to secondary contact if no primary available
+  if (contactAny?.secondary_contact?.name) {
+    return `Use name: ${contactAny.secondary_contact.name}`;
+  }
+  // Legacy single contact structure
+  if (contactAny?.name) {
+    return `Use name: ${contactAny.name}`;
+  }
+  return 'Use generic greeting (no name available)';
+})()}
 
 Verified insights: ${JSON.stringify(input.verified)}
 
 ${input.resumeContent ? 'PERSONALIZATION INSTRUCTION: Use the resume content to create highly personalized and relevant outreach messages. Reference specific skills, experiences, or achievements from the resume that align with the company\'s needs and the target role. Make the connection clear and compelling.' : ''}
 
-IMPORTANT: If Contact Name is "NOT AVAILABLE", use generic greetings like "Hi there" (LinkedIn) or "Hi" (email). NEVER use names from resume content for contact greetings.
+IMPORTANT: When addressing contacts in messages:
+1. ALWAYS use the name specified in "PRIMARY CONTACT FOR GREETING" section above
+2. If Contact Name is "NOT AVAILABLE", use generic greetings like "Hi there" (LinkedIn) or "Hi" (email)
+3. NEVER use names from resume content for contact greetings
+4. BE CONSISTENT - the same contact name should be used throughout both email and LinkedIn message
 
 Output must be strictly valid JSON with ONLY "linkedin" and "email" properties — nothing extra.`;
 
@@ -129,7 +186,9 @@ export async function rephraseLinkedInTo22Words(linkedin: string, tone?: Writing
     [
       { 
         role: "system", 
-        content: `Rewrite to exactly 22 words, preserving core value, concise and engaging. Apply ${toneConfig.label.toLowerCase()} tone: ${toneConfig.systemPrompt}. Return plain text only.` 
+        content: `You are a professional message editor. Rewrite the given LinkedIn message to exactly 22 words while preserving the core value proposition and maintaining a ${toneConfig.label.toLowerCase()} tone. ${toneConfig.systemPrompt}
+
+CRITICAL: Return ONLY the rewritten 22-word message. Do not include any explanations, instructions, or additional text before or after the message.` 
       },
       { role: "user", content: linkedin },
     ],

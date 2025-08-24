@@ -10,7 +10,10 @@ export type ChainOutput = {
   _intermediate?: { research?: any; verified?: string; verified_points?: Array<{ claim: string; source: { title: string; url: string } }> };
   _status?: { research?: string; verify?: string; messaging?: string };
   verified_points?: Array<{ claim: string; source: { title: string; url: string } }>;
-  contact?: { name: string; title: string; email?: string; source?: { title: string; url: string } };
+  contact?: { 
+    primary_contact: { name: string; title: string; email?: string; source?: { title: string; url: string }; contact_type?: string };
+    secondary_contact: { name: string; title: string; email?: string; source?: { title: string; url: string }; contact_type?: string };
+  } | { name: string; title: string; email?: string; source?: { title: string; url: string } }; // legacy format
 };
 
 type StreamCallbacks = {

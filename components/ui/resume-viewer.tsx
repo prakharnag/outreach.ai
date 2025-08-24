@@ -12,6 +12,12 @@ interface ResumeViewerProps {
   className?: string;
   onUploadClick: () => void;
   onResumeSettingsChange?: (useResume: boolean, content: string | null) => void;
+  refreshTrigger?: number; // Add trigger to force refresh
+  onResumeDeleted?: () => void; // Callback when resume is deleted
+  parentResumeState?: { // Pass parent resume state for immediate sync
+    useInPersonalization: boolean;
+    filename?: string;
+  } | null;
 }
 
 interface ResumeData {
@@ -21,7 +27,7 @@ interface ResumeData {
   useInPersonalization: boolean;
 }
 
-export function ResumeViewer({ className, onUploadClick, onResumeSettingsChange }: ResumeViewerProps) {
+export function ResumeViewer({ className, onUploadClick, onResumeSettingsChange, refreshTrigger, onResumeDeleted, parentResumeState }: ResumeViewerProps) {
   const [resumeData, setResumeData] = useState<ResumeData | null>(null);
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
@@ -76,6 +82,14 @@ export function ResumeViewer({ className, onUploadClick, onResumeSettingsChange 
             data.use_resume_in_personalization || false, 
             data.resume_content || null
           );
+        }
+      } else {
+        // No resume data found - clear the state
+        setResumeData(null);
+        
+        // Notify parent component that there's no resume
+        if (onResumeSettingsChange) {
+          onResumeSettingsChange(false, null);
         }
       }
     } catch (error) {
@@ -235,6 +249,9 @@ export function ResumeViewer({ className, onUploadClick, onResumeSettingsChange 
         type: "success",
         message: "Resume deleted successfully"
       });
+      
+      // Notify parent that resume was deleted
+      onResumeDeleted?.();
     } catch (error: any) {
       console.error('Error deleting resume:', error);
       showToast({
@@ -284,7 +301,18 @@ export function ResumeViewer({ className, onUploadClick, onResumeSettingsChange 
 
   useEffect(() => {
     loadUserProfile();
-  }, []);
+  }, [refreshTrigger]); // Re-run when refreshTrigger changes
+
+  // Sync with parent resume state for immediate UI updates
+  useEffect(() => {
+    if (parentResumeState && resumeData && 
+        resumeData.useInPersonalization !== parentResumeState.useInPersonalization) {
+      setResumeData(prev => prev ? { 
+        ...prev, 
+        useInPersonalization: parentResumeState.useInPersonalization 
+      } : null);
+    }
+  }, [parentResumeState?.useInPersonalization]);
 
   // Function to refresh resume data (called from parent after upload)
   const refreshResumeData = (newResumeData: {
@@ -406,16 +434,8 @@ export function ResumeViewer({ className, onUploadClick, onResumeSettingsChange 
           </div>
         </div>
 
+        {/* Enhanced action buttons with better organization */}
         <div className="flex gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={onUploadClick}
-            className="flex-1 gap-1.5 h-8"
-          >
-            <Upload className="h-3.5 w-3.5" />
-            Replace
-          </Button>
           {/* Show reprocess button if content looks like it failed extraction */}
           {resumeData.content.startsWith('Resume file:') && resumeData.content.length < 100 && (
             <Button
@@ -434,11 +454,40 @@ export function ResumeViewer({ className, onUploadClick, onResumeSettingsChange 
               Fix
             </Button>
           )}
+          
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={onUploadClick}
+            className="flex-1 gap-1.5 h-8 text-blue-600 border-blue-200 hover:bg-blue-50"
+            title="Replace current resume with a new one"
+          >
+            <Upload className="h-3.5 w-3.5" />
+            Replace
+          </Button>
+          
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={deleteResume}
+            disabled={deleting}
+            className="flex-1 gap-1.5 h-8 text-red-600 border-red-200 hover:bg-red-50"
+            title="Delete current resume"
+          >
+            {deleting ? (
+              <div className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-red-600 border-t-transparent" />
+            ) : (
+              <Trash2 className="h-3.5 w-3.5" />
+            )}
+            Delete
+          </Button>
+          
           <Button
             variant="outline"
             size="sm"
             onClick={() => window.open(resumeData.url, '_blank')}
-            className="flex-1 gap-1.5 h-8"
+            className="gap-1.5 h-8 px-3"
+            title="View resume in new tab"
           >
             <FileText className="h-3.5 w-3.5" />
             View

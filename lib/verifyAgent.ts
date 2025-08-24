@@ -5,14 +5,20 @@ export type VerifyAgentInput = {
     summary: string;
     points: Array<{ claim: string; source?: { title: string; url: string } }>;
     sources?: Array<{ title: string; url: string }>;
-    contact?: { name: string; title: string; email?: string; source?: { title: string; url: string } };
+    contact?: { 
+      primary_contact?: { name: string; title: string; email?: string; source?: { title: string; url: string }; contact_type?: string };
+      secondary_contact?: { name: string; title: string; email?: string; source?: { title: string; url: string }; contact_type?: string };
+    } | { name: string; title: string; email?: string; source?: { title: string; url: string } }; // legacy format
   };
 };
 
 export type VerifyAgentOutput = {
   summary: string;
   points: Array<{ claim: string; source: { title: string; url: string } }>;
-  contact?: { name: string; title: string; email?: string; source?: { title: string; url: string } };
+  contact?: { 
+    primary_contact: { name: string; title: string; email?: string; source?: { title: string; url: string }; contact_type?: string };
+    secondary_contact: { name: string; title: string; email?: string; source?: { title: string; url: string }; contact_type?: string };
+  };
 };
 
 export async function verifierAgent(input: VerifyAgentInput): Promise<VerifyAgentOutput> {
@@ -32,8 +38,12 @@ Task:
    - Cross-check the company name against trusted sources to prevent hallucinations.
    - For emails, first attempt to find them from trusted sources.
    - If no reliable email found, infer a plausible one based on common corporate patterns (firstname.lastname@domain), and clearly mark it as "inferred".
-   - Always try to provide contact information - only omit if absolutely no reasonable inference can be made.
-   - When inferring contacts, use the most senior relevant person (CEO, department head, etc.).
+   - Always try to provide TWO contacts: primary (hiring manager/talent acquisition) and secondary (leadership/engineering).
+   - Primary contact MUST be hiring-related when possible (hiring manager, talent acquisition, HR director).
+   - Secondary contact should be leadership (CEO, CTO, department head).
+   - Only omit contacts if absolutely no reasonable inference can be made.
+   - NEVER include "N/A", "Not Available", or placeholder text in contact fields.
+   - If contact information is not available or unreliable, omit the entire contact object rather than including empty/placeholder values.
 
 CRITICAL: Output ONLY valid JSON matching this exact schema. No explanations, no extra text, no markdown formatting:
 {
@@ -45,9 +55,24 @@ CRITICAL: Output ONLY valid JSON matching this exact schema. No explanations, no
     }
   ],
   "contact": {
-    "name": "string",
-    "title": "string",
-    "email": "string",
+    "primary_contact": {
+      "name": "string",
+      "title": "string",
+      "email": "string",
+      "inferred": boolean,
+      "contact_type": "hiring",
+      "source": { "title": "string", "url": "string" }
+    },
+    "secondary_contact": {
+      "name": "string",
+      "title": "string",
+      "email": "string",
+      "inferred": boolean,
+      "contact_type": "leadership",
+      "source": { "title": "string", "url": "string" }
+    }
+  }
+}
     "inferred": boolean,
     "source": { "title": "string", "url": "string" }
   }
@@ -64,6 +89,8 @@ Requirements:
 - Exclude unverifiable or outdated claims (>12 months old), unless explicitly noted as historical.
 - Check company names for accuracy from trusted sources.
 - Search for contact emails in official/trusted sources; if unavailable, infer a likely format and mark as "inferred".
+- Do NOT include contacts with "N/A", "Not Available", or empty values - omit contact fields entirely if no valid information available.
+- Only include contact information when you have actual names, titles, or verifiable emails.
 - Return ONLY the JSON object specified in the schema. No explanations, no markdown, no extra text.
 `;
 
