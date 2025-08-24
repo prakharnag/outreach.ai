@@ -8,7 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from ".
 import { Badge } from "../../components/ui/badge";
 import { Alert, AlertDescription } from "../../components/ui/alert";
 import { Textarea } from "../../components/ui/textarea";
-import { Copy, Mail, MessageSquare, RefreshCw, Scissors, Search, User, Settings as SettingsIcon, BarChart3 } from "lucide-react";
+import { Copy, Mail, MessageSquare, RefreshCw, Scissors, Search, User, Settings as SettingsIcon, BarChart3, FileText, ToggleLeft, ToggleRight } from "lucide-react";
 import { signOut } from "../../lib/supabase";
 import { supabase } from "../../lib/supabase";
 import { cn } from "../../lib/utils";
@@ -27,6 +27,8 @@ import { ToastProvider } from "../../components/ui/toast";
 import { ResearchSpinner } from "../../components/ui/research-spinner";
 import { CompanyLink } from "../../components/ui/company-link";
 import { ResearchOutput } from "../../components/ui/research-output";
+import { ResumeUpload } from "../../components/ui/resume-upload";
+import { getUserResumeData, formatResumeForMessaging } from "../../lib/resumeUtils";
 
 interface ResearchFinding {
   title: string;
@@ -76,6 +78,10 @@ export default function HomePage() {
   
   const [activeView, setActiveView] = useState<"home" | "search" | "email" | "linkedin" | "research" | "analytics" | "settings">("home");
   const [isSearchExpanded, setIsSearchExpanded] = useState(false);
+  
+  // Resume states
+  const [resumeModalOpen, setResumeModalOpen] = useState(false);
+  const [resumeData, setResumeData] = useState<{ url: string; filename: string; content: string; useInPersonalization: boolean } | null>(null);
   
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -194,6 +200,26 @@ export default function HomePage() {
     const cleanup = setupSubscriptions();
     return cleanup;
   }, [supabaseClient]);
+
+  // Resume data loading and handlers
+  const loadResumeData = async () => {
+    if (!user) return;
+    const data = await getUserResumeData(user.id);
+    setResumeData(data);
+  };
+
+  useEffect(() => {
+    if (user) loadResumeData();
+  }, [user]);
+
+  const handleResumeUploadSuccess = (data: { url: string; filename: string; content: string }) => {
+    setResumeModalOpen(false);
+    loadResumeData();
+  };
+
+  const handleResumeSettingsChange = (useResume: boolean, content: string | null) => {
+    setResumeData(prev => prev ? { ...prev, useInPersonalization: useResume } : prev);
+  };
 
   const extractPrimaryEmail = (researchData: any, contactData: any) => {
     if (contactData?.email) return contactData.email;
@@ -423,10 +449,18 @@ export default function HomePage() {
     const controller = new AbortController();
     abortRef.current = controller;
     try {
+      // Add resume content and toggle to API call
+      const resumeContent = resumeData?.useInPersonalization ? formatResumeForMessaging(resumeData.content) : undefined;
+      const useResumeInPersonalization = resumeData?.useInPersonalization || false;
+      
       const res = await fetch("/api/run", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
+        body: JSON.stringify({ 
+          ...data, 
+          resumeContent, 
+          useResumeInPersonalization 
+        }),
         signal: controller.signal,
       });
       if (!res.ok || !res.body) throw new Error("Failed to run chain");
@@ -557,7 +591,7 @@ export default function HomePage() {
     } finally {
       setLoading(false);
     }
-  }, [contact, saveContactResult, researchData]);
+  }, [contact, saveContactResult, researchData, resumeData]);
   
   useEffect(() => {
     loadContactResults();
@@ -687,6 +721,16 @@ export default function HomePage() {
             </Button>
             
             <Button
+              variant={resumeData ? "default" : "ghost"}
+              size="sm"
+              onClick={() => setResumeModalOpen(true)}
+              className={`h-8 w-8 sm:h-10 sm:w-10 p-0 ${resumeData ? 'bg-green-600 hover:bg-green-700' : ''}`}
+              title={resumeData ? `Resume: ${resumeData.filename}` : "Upload Resume"}
+            >
+              <FileText className={`h-4 w-4 sm:h-5 sm:w-5 ${resumeData ? 'text-white' : ''}`} />
+            </Button>
+            
+            <Button
               variant={activeView === "settings" ? "default" : "ghost"}
               size="sm"
               onClick={() => handleNavClick("settings")}
@@ -751,6 +795,55 @@ export default function HomePage() {
                     className="w-full px-2 sm:px-3 py-2 text-xs sm:text-sm border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none min-h-[60px] sm:min-h-[80px]"
                   />
                 </div>
+
+                {/* Resume Personalization */}
+                {resumeData && (
+                  <div className="space-y-2">
+                    <label className="block text-xs sm:text-sm font-medium text-slate-700 mb-1 sm:mb-2">
+                      Resume Personalization
+                    </label>
+                    <div className="relative overflow-hidden rounded-lg bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 p-3">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2 flex-1 min-w-0">
+                          <div className="p-1.5 rounded-full bg-blue-100">
+                            <FileText className="h-3.5 w-3.5 text-blue-600" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs sm:text-sm font-medium text-slate-800">Use Resume</p>
+                            <p className="text-xs text-slate-600 truncate">{resumeData.filename}</p>
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => handleResumeSettingsChange(!resumeData.useInPersonalization, resumeData.content)}
+                          className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-full transition-all duration-200 ${
+                            resumeData.useInPersonalization 
+                              ? 'bg-green-100 hover:bg-green-200 text-green-700' 
+                              : 'bg-slate-100 hover:bg-slate-200 text-slate-600'
+                          }`}
+                          title={`${resumeData.useInPersonalization ? 'Disable' : 'Enable'} resume in personalization`}
+                        >
+                          {resumeData.useInPersonalization ? (
+                            <ToggleRight className="h-4 w-4" />
+                          ) : (
+                            <ToggleLeft className="h-4 w-4" />
+                          )}
+                          <span className="text-xs font-semibold">
+                            {resumeData.useInPersonalization ? 'ON' : 'OFF'}
+                          </span>
+                        </button>
+                      </div>
+                      {resumeData.useInPersonalization && (
+                        <div className="mt-2 flex items-center gap-1.5">
+                          <div className="w-1.5 h-1.5 rounded-full bg-green-500"></div>
+                          <p className="text-xs text-green-700 font-medium">
+                            Messages will be personalized using your resume
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
                 
                 <div>
                   <label className="block text-xs sm:text-sm font-medium text-slate-700 mb-1 sm:mb-2">
@@ -860,6 +953,9 @@ export default function HomePage() {
                 onNavigateToAnalytics={() => handleNavClick("analytics")}
                 onNavigateToEmailHistory={() => handleNavClick("email")}
                 onNavigateToLinkedInHistory={() => handleNavClick("linkedin")}
+                onResumeUploadClick={() => setResumeModalOpen(true)}
+                onResumeSettingsChange={handleResumeSettingsChange}
+                showResumeViewer={!!resumeData}
               />
             )}
             
@@ -1029,6 +1125,13 @@ export default function HomePage() {
             )}
           </div>
         </div>
+        
+        {/* Resume Upload Modal */}
+        <ResumeUpload 
+          isOpen={resumeModalOpen} 
+          onClose={() => setResumeModalOpen(false)} 
+          onUploadSuccess={handleResumeUploadSuccess} 
+        />
       </div>
     </ToastProvider>
   );

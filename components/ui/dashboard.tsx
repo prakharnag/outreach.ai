@@ -5,9 +5,20 @@ import { Button } from "./button";
 import { Card, CardContent, CardHeader, CardTitle } from "./card";
 import { KPIDashboard } from "./kpi-dashboard";
 import { CompanyDetails } from "./company-details";
+import { ResumeViewer } from "./resume-viewer";
 import { useContactResults } from "../../hooks/useContactResults";
 import { ContactResult } from "../../types";
 import { useState } from "react";
+
+interface DashboardProps {
+  onStartResearch: () => void;
+  onNavigateToAnalytics?: () => void;
+  onNavigateToEmailHistory?: () => void;
+  onNavigateToLinkedInHistory?: () => void;
+  onResumeUploadClick?: () => void;
+  onResumeSettingsChange?: (useResume: boolean, content: string | null) => void;
+  showResumeViewer?: boolean;
+}
 
 interface DashboardProps {
   onStartResearch: () => void;
@@ -20,7 +31,10 @@ export function Dashboard({
   onStartResearch, 
   onNavigateToAnalytics, 
   onNavigateToEmailHistory, 
-  onNavigateToLinkedInHistory 
+  onNavigateToLinkedInHistory,
+  onResumeUploadClick,
+  onResumeSettingsChange,
+  showResumeViewer = false
 }: DashboardProps) {
   const { contactResults, loading, error } = useContactResults();
   const [selectedCompany, setSelectedCompany] = useState<ContactResult | null>(null);
@@ -122,116 +136,130 @@ export function Dashboard({
       
       <KPIDashboard />
       
-      {/* Searched Companies */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
-              <Building2 className="h-4 w-4 sm:h-5 sm:w-5" />
-              Searched Companies ({contactResults.length})
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2 sm:space-y-3 max-h-72 sm:max-h-96 overflow-y-auto">
-              {contactResults.map((company) => (
-                <div
-                  key={company.id}
-                  onClick={() => setSelectedCompany(company)}
-                  className="flex items-center justify-between p-2 sm:p-3 rounded-lg hover:bg-slate-50 cursor-pointer transition-colors border border-slate-100"
-                >
-                  <div className="flex-1 min-w-0">
-                    <div className="font-medium text-sm sm:text-base text-slate-900 flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
-                      <span className="truncate">{company.company_name}</span>
-                      {company.confidence_score && company.confidence_score < 0.7 && (
-                        <span className="text-xs bg-orange-100 text-orange-800 px-2 py-1 rounded self-start">
-                          Partial Data
-                        </span>
-                      )}
-                    </div>
-                    {company.contact_name && (
-                      <div className="text-sm text-slate-600">
-                        {company.contact_name} • {company.contact_title}
-                        {company.confidence_score && (
-                          <span className={`ml-2 px-2 py-1 rounded text-xs ${
-                            company.confidence_score >= 0.8 ? 'bg-green-100 text-green-800' :
-                            company.confidence_score >= 0.7 ? 'bg-yellow-100 text-yellow-800' :
-                            'bg-red-100 text-red-800'
-                          }`}>
-                            {company.confidence_score >= 0.8 ? 'High' :
-                             company.confidence_score >= 0.7 ? 'Medium' : 'Low'} Confidence
+      {/* Main Content Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
+        {/* Searched Companies - Takes 2 columns on large screens */}
+        <div className="lg:col-span-2">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+                <Building2 className="h-4 w-4 sm:h-5 sm:w-5" />
+                Searched Companies ({contactResults.length})
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2 sm:space-y-3 max-h-64 sm:max-h-80 overflow-y-auto">
+                {contactResults.map((company) => (
+                  <div
+                    key={company.id}
+                    onClick={() => setSelectedCompany(company)}
+                    className="flex items-center justify-between p-2 sm:p-3 rounded-lg hover:bg-slate-50 cursor-pointer transition-colors border border-slate-100"
+                  >
+                    <div className="flex-1 min-w-0">
+                      <div className="font-medium text-sm sm:text-base text-slate-900 flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
+                        <span className="truncate">{company.company_name}</span>
+                        {company.confidence_score && company.confidence_score < 0.7 && (
+                          <span className="text-xs bg-orange-100 text-orange-800 px-2 py-1 rounded self-start">
+                            Partial Data
                           </span>
                         )}
                       </div>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-2 text-sm text-slate-500">
-                    <Clock className="h-4 w-4" />
-                    {(() => {
-                      const { timeText, isUpdated } = formatDate(company.created_at, company.updated_at);
-                      return (
-                        <span className="flex items-center gap-1">
-                          {timeText}
-                          {isUpdated && (
-                            <span className="text-xs bg-blue-100 text-blue-800 px-1.5 py-0.5 rounded">
-                              Updated
+                      {company.contact_name && (
+                        <div className="text-sm text-slate-600">
+                          {company.contact_name} • {company.contact_title}
+                          {company.confidence_score && (
+                            <span className={`ml-2 px-2 py-1 rounded text-xs ${
+                              company.confidence_score >= 0.8 ? 'bg-green-100 text-green-800' :
+                              company.confidence_score >= 0.7 ? 'bg-yellow-100 text-yellow-800' :
+                              'bg-red-100 text-red-800'
+                            }`}>
+                              {company.confidence_score >= 0.8 ? 'High' :
+                               company.confidence_score >= 0.7 ? 'Medium' : 'Low'} Confidence
                             </span>
                           )}
-                        </span>
-                      );
-                    })()}
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2 text-sm text-slate-500">
+                      <Clock className="h-4 w-4" />
+                      {(() => {
+                        const { timeText, isUpdated } = formatDate(company.created_at, company.updated_at);
+                        return (
+                          <span className="flex items-center gap-1">
+                            {timeText}
+                            {isUpdated && (
+                              <span className="text-xs bg-blue-100 text-blue-800 px-1.5 py-0.5 rounded">
+                                Updated
+                              </span>
+                            )}
+                          </span>
+                        );
+                      })()}
+                    </div>
                   </div>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
 
-        {/* Quick Actions */}
-        <Card className="h-fit">
-          <CardHeader className="pb-4">
-            <CardTitle className="text-lg">Quick Actions</CardTitle>
-          </CardHeader>
-          <CardContent className="pt-0">
-            <div className="grid grid-cols-1 gap-2">
-              <Button
-                onClick={onStartResearch}
-                className="justify-start h-9"
-                variant="outline"
-                size="sm"
-              >
-                <Search className="h-4 w-4 mr-2" />
-                Research New Company
-              </Button>
-              <Button
-                onClick={onNavigateToAnalytics}
-                className="justify-start h-9"
-                variant="ghost"
-                size="sm"
-              >
-                <BarChart3 className="h-4 w-4 mr-2" />
-                View Analytics
-              </Button>
-              <Button
-                onClick={onNavigateToEmailHistory}
-                className="justify-start h-9"
-                variant="ghost"
-                size="sm"
-              >
-                <Clock className="h-4 w-4 mr-2" />
-                Email History
-              </Button>
-              <Button
-                onClick={onNavigateToLinkedInHistory}
-                className="justify-start h-9"
-                variant="ghost"
-                size="sm"
-              >
-                <Clock className="h-4 w-4 mr-2" />
-                LinkedIn History
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
+        {/* Right Sidebar - Takes 1 column */}
+        <div className="space-y-4">
+          {/* Resume Viewer */}
+          {showResumeViewer && onResumeUploadClick && (
+            <ResumeViewer
+              onUploadClick={onResumeUploadClick}
+              onResumeSettingsChange={onResumeSettingsChange}
+            />
+          )}
+
+          {/* Quick Actions */}
+          <Card className="h-fit">
+            <CardHeader className="pb-4">
+              <CardTitle className="text-lg">Quick Actions</CardTitle>
+            </CardHeader>
+            <CardContent className="pt-0">
+              <div className="grid grid-cols-1 gap-2">
+                <Button
+                  onClick={onStartResearch}
+                  className="justify-start h-9"
+                  variant="outline"
+                  size="sm"
+                >
+                  <Search className="h-4 w-4 mr-2" />
+                  Research New Company
+                </Button>
+                <Button
+                  onClick={onNavigateToAnalytics}
+                  className="justify-start h-9"
+                  variant="ghost"
+                  size="sm"
+                >
+                  <BarChart3 className="h-4 w-4 mr-2" />
+                  View Analytics
+                </Button>
+                <Button
+                  onClick={onNavigateToEmailHistory}
+                  className="justify-start h-9"
+                  variant="ghost"
+                  size="sm"
+                >
+                  <Clock className="h-4 w-4 mr-2" />
+                  Email History
+                </Button>
+                <Button
+                  onClick={onNavigateToLinkedInHistory}
+                  className="justify-start h-9"
+                  variant="ghost"
+                  size="sm"
+                >
+                  <Clock className="h-4 w-4 mr-2" />
+                  LinkedIn History
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     </div>
   );

@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 import Head from "next/head";
 import { AuthProvider } from "../contexts/auth-context";
-import { Analytics } from '@vercel/analytics/next';
+import { Analytics } from '@vercel/analytics/react';
 
 export const metadata: Metadata = {
   title: "Outreach",

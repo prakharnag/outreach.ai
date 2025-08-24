@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { Button } from "./button";
 import { Card, CardContent, CardHeader, CardTitle } from "./card";
-import { FileText, X, Upload, Trash2, ToggleLeft, ToggleRight } from "lucide-react";
+import { FileText, X, Upload, Trash2, ToggleLeft, ToggleRight, RefreshCw } from "lucide-react";
 import { cn } from "../../lib/utils";
 import { supabase } from "../../lib/supabase";
 import { useToast } from "./toast";
@@ -246,6 +246,42 @@ export function ResumeViewer({ className, onUploadClick, onResumeSettingsChange 
     }
   };
 
+  const reprocessResumeContent = async () => {
+    if (!resumeData || updating) return;
+
+    setUpdating(true);
+    try {
+      const response = await fetch('/api/reprocess-resume', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to reprocess resume');
+      }
+
+      const result = await response.json();
+      
+      showToast({
+        type: "success",
+        message: result.message
+      });
+
+      // Reload the resume data to get the updated content
+      await loadUserProfile();
+      
+    } catch (error: any) {
+      console.error('Error reprocessing resume:', error);
+      showToast({
+        type: "error",
+        message: `Failed to reprocess resume: ${error.message}`
+      });
+    } finally {
+      setUpdating(false);
+    }
+  };
+
   useEffect(() => {
     loadUserProfile();
   }, []);
@@ -318,22 +354,22 @@ export function ResumeViewer({ className, onUploadClick, onResumeSettingsChange 
 
   return (
     <Card className={cn("w-full", className)}>
-      <CardHeader>
+      <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
-          <CardTitle className="text-lg font-semibold">Resume</CardTitle>
-          <div className="flex items-center gap-2">
+          <CardTitle className="text-base font-semibold">Resume</CardTitle>
+          <div className="flex items-center gap-1">
             <Button
               variant="ghost"
               size="sm"
               onClick={toggleResumeUsage}
               disabled={updating}
-              className="h-8 px-2 gap-2"
+              className="h-7 px-2 gap-1.5"
               title={`${resumeData.useInPersonalization ? 'Disable' : 'Enable'} resume in personalization`}
             >
               {resumeData.useInPersonalization ? (
-                <ToggleRight className="h-4 w-4 text-green-600" />
+                <ToggleRight className="h-3.5 w-3.5 text-green-600" />
               ) : (
-                <ToggleLeft className="h-4 w-4 text-slate-400" />
+                <ToggleLeft className="h-3.5 w-3.5 text-slate-400" />
               )}
               <span className="text-xs">
                 {resumeData.useInPersonalization ? 'ON' : 'OFF'}
@@ -344,39 +380,27 @@ export function ResumeViewer({ className, onUploadClick, onResumeSettingsChange 
               size="sm"
               onClick={deleteResume}
               disabled={deleting}
-              className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
+              className="h-7 w-7 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
               title="Delete resume"
             >
               {deleting ? (
-                <div className="h-4 w-4 animate-spin rounded-full border-2 border-red-600 border-t-transparent" />
+                <div className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-red-600 border-t-transparent" />
               ) : (
-                <Trash2 className="h-4 w-4" />
+                <Trash2 className="h-3.5 w-3.5" />
               )}
             </Button>
           </div>
         </div>
       </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg">
-          <FileText className="h-5 w-5 text-blue-600 flex-shrink-0" />
+      <CardContent className="space-y-3 pt-0">
+        <div className="flex items-center gap-2 p-2 bg-slate-50 rounded-md">
+          <FileText className="h-4 w-4 text-blue-600 flex-shrink-0" />
           <div className="flex-1 min-w-0">
-            <p className="font-medium text-slate-900 truncate">{resumeData.filename}</p>
+            <p className="text-sm font-medium text-slate-900 truncate">{resumeData.filename}</p>
             <p className="text-xs text-slate-500">
               {resumeData.useInPersonalization 
                 ? "✓ Used in personalization" 
                 : "Not used in personalization"
-              }
-            </p>
-          </div>
-        </div>
-
-        <div className="space-y-2">
-          <h4 className="text-sm font-medium text-slate-700">Content Preview</h4>
-          <div className="max-h-32 overflow-y-auto p-3 bg-slate-50 rounded-lg">
-            <p className="text-xs text-slate-600 leading-relaxed">
-              {resumeData.content.length > 300 
-                ? `${resumeData.content.substring(0, 300)}...` 
-                : resumeData.content
               }
             </p>
           </div>
@@ -387,18 +411,36 @@ export function ResumeViewer({ className, onUploadClick, onResumeSettingsChange 
             variant="outline"
             size="sm"
             onClick={onUploadClick}
-            className="flex-1 gap-2"
+            className="flex-1 gap-1.5 h-8"
           >
-            <Upload className="h-4 w-4" />
+            <Upload className="h-3.5 w-3.5" />
             Replace
           </Button>
+          {/* Show reprocess button if content looks like it failed extraction */}
+          {resumeData.content.startsWith('Resume file:') && resumeData.content.length < 100 && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={reprocessResumeContent}
+              disabled={updating}
+              className="flex-1 gap-1.5 h-8 text-orange-600 border-orange-200 hover:bg-orange-50"
+              title="Re-extract text content from resume file"
+            >
+              {updating ? (
+                <div className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-orange-600 border-t-transparent" />
+              ) : (
+                <RefreshCw className="h-3.5 w-3.5" />
+              )}
+              Fix
+            </Button>
+          )}
           <Button
             variant="outline"
             size="sm"
             onClick={() => window.open(resumeData.url, '_blank')}
-            className="flex-1 gap-2"
+            className="flex-1 gap-1.5 h-8"
           >
-            <FileText className="h-4 w-4" />
+            <FileText className="h-3.5 w-3.5" />
             View
           </Button>
         </div>

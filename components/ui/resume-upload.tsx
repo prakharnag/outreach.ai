@@ -61,6 +61,7 @@ export function ResumeUpload({ isOpen, onClose, onUploadSuccess, className }: Re
     // For PDF text extraction, we'll use a simple approach
     // In a production environment, you might want to use PDF.js or send to a server
     try {
+      console.log('[Resume Upload] Starting PDF text extraction for:', file.name);
       const formData = new FormData();
       formData.append('file', file);
       
@@ -69,14 +70,20 @@ export function ResumeUpload({ isOpen, onClose, onUploadSuccess, className }: Re
         body: formData,
       });
       
+      console.log('[Resume Upload] Extract text API response status:', response.status);
+      
       if (!response.ok) {
+        const errorData = await response.text();
+        console.error('[Resume Upload] Extract text API error:', errorData);
         throw new Error('Failed to extract text from PDF');
       }
       
       const { text } = await response.json();
+      console.log('[Resume Upload] Successfully extracted text, length:', text.length);
+      console.log('[Resume Upload] Text preview:', text.slice(0, 200) + '...');
       return text;
     } catch (error) {
-      console.error('PDF text extraction failed:', error);
+      console.error('[Resume Upload] PDF text extraction failed:', error);
       // Fallback to filename-based content
       return `Resume file: ${file.name}`;
     }
@@ -86,6 +93,7 @@ export function ResumeUpload({ isOpen, onClose, onUploadSuccess, className }: Re
     // For DOCX text extraction, we'll use a simple approach
     // In a production environment, you might want to use mammoth.js or send to a server
     try {
+      console.log('[Resume Upload] Starting DOCX text extraction for:', file.name);
       const formData = new FormData();
       formData.append('file', file);
       
@@ -94,14 +102,20 @@ export function ResumeUpload({ isOpen, onClose, onUploadSuccess, className }: Re
         body: formData,
       });
       
+      console.log('[Resume Upload] Extract text API response status:', response.status);
+      
       if (!response.ok) {
+        const errorData = await response.text();
+        console.error('[Resume Upload] Extract text API error:', errorData);
         throw new Error('Failed to extract text from DOCX');
       }
       
       const { text } = await response.json();
+      console.log('[Resume Upload] Successfully extracted text, length:', text.length);
+      console.log('[Resume Upload] Text preview:', text.slice(0, 200) + '...');
       return text;
     } catch (error) {
-      console.error('DOCX text extraction failed:', error);
+      console.error('[Resume Upload] DOCX text extraction failed:', error);
       // Fallback to filename-based content
       return `Resume file: ${file.name}`;
     }
@@ -212,7 +226,7 @@ export function ResumeUpload({ isOpen, onClose, onUploadSuccess, className }: Re
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 bg-white/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
       <Card className={cn("w-full max-w-md", className)}>
         <CardHeader>
           <div className="flex items-center justify-between">
@@ -236,8 +250,10 @@ export function ResumeUpload({ isOpen, onClose, onUploadSuccess, className }: Re
 
           <div
             className={cn(
-              "border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors",
-              isDragging ? "border-blue-500 bg-blue-50" : "border-slate-300 hover:border-slate-400",
+              "border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-all duration-200",
+              isDragging 
+                ? "border-blue-500 bg-gradient-to-br from-blue-50 to-blue-100 shadow-lg scale-105" 
+                : "border-slate-300 bg-gradient-to-br from-slate-50 to-white hover:border-blue-400 hover:bg-gradient-to-br hover:from-blue-50 hover:to-slate-50 shadow-sm hover:shadow-md",
               uploading && "pointer-events-none opacity-50"
             )}
             onDragOver={handleDragOver}
@@ -255,25 +271,39 @@ export function ResumeUpload({ isOpen, onClose, onUploadSuccess, className }: Re
             />
             
             {uploading ? (
-              <div className="flex flex-col items-center gap-2">
-                <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
-                <p className="text-sm font-medium">Uploading resume...</p>
-                <p className="text-xs text-slate-500">This may take a moment</p>
+              <div className="flex flex-col items-center gap-3">
+                <div className="relative">
+                  <div className="absolute inset-0 bg-blue-500/20 rounded-full animate-ping"></div>
+                  <Loader2 className="h-10 w-10 animate-spin text-blue-500 relative z-10" />
+                </div>
+                <div className="text-center">
+                  <p className="text-sm font-medium text-slate-700">Uploading resume...</p>
+                  <p className="text-xs text-slate-500 mt-1">This may take a moment</p>
+                </div>
               </div>
             ) : (
-              <div className="flex flex-col items-center gap-2">
-                <div className="rounded-full bg-slate-100 p-3">
+              <div className="flex flex-col items-center gap-4">
+                <div className={cn(
+                  "relative rounded-full p-4 transition-all duration-200",
+                  isDragging 
+                    ? "bg-gradient-to-br from-blue-100 to-blue-200 scale-110" 
+                    : "bg-gradient-to-br from-slate-100 to-slate-200 hover:from-blue-50 hover:to-blue-100"
+                )}>
+                  <div className="absolute inset-0 rounded-full bg-gradient-to-br from-white/50 to-transparent"></div>
                   {isDragging ? (
-                    <Upload className="h-6 w-6 text-blue-500" />
+                    <Upload className="h-8 w-8 text-blue-600 relative z-10" />
                   ) : (
-                    <FileText className="h-6 w-6 text-slate-400" />
+                    <FileText className="h-8 w-8 text-slate-500 hover:text-blue-500 transition-colors duration-200 relative z-10" />
                   )}
                 </div>
-                <div>
-                  <p className="text-sm font-medium">
+                <div className="text-center space-y-2">
+                  <p className={cn(
+                    "text-sm font-medium transition-colors duration-200",
+                    isDragging ? "text-blue-700" : "text-slate-700"
+                  )}>
                     {isDragging ? "Drop your resume here" : "Click to upload or drag and drop"}
                   </p>
-                  <p className="text-xs text-slate-500 mt-1">
+                  <p className="text-xs text-slate-500 bg-slate-50 px-3 py-1 rounded-full inline-block">
                     PDF, DOC, or DOCX up to 5MB
                   </p>
                 </div>
@@ -281,10 +311,21 @@ export function ResumeUpload({ isOpen, onClose, onUploadSuccess, className }: Re
             )}
           </div>
 
-          <div className="text-xs text-slate-500 space-y-1">
-            <p>• Your resume will be used to personalize outreach messages</p>
-            <p>• File is securely stored and only accessible to you</p>
-            <p>• You can toggle resume usage on/off in message generation</p>
+          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-100 rounded-lg p-4">
+            <div className="text-xs text-blue-700 space-y-2">
+              <div className="flex items-start gap-2">
+                <span className="text-blue-500 font-bold">•</span>
+                <p className="flex-1">Your resume will be used to personalize outreach messages</p>
+              </div>
+              <div className="flex items-start gap-2">
+                <span className="text-blue-500 font-bold">•</span>
+                <p className="flex-1">File is securely stored and only accessible to you</p>
+              </div>
+              <div className="flex items-start gap-2">
+                <span className="text-blue-500 font-bold">•</span>
+                <p className="flex-1">You can toggle resume usage on/off in message generation</p>
+              </div>
+            </div>
           </div>
         </CardContent>
       </Card>

@@ -1,84 +1,51 @@
-import { NextRequest, NextResponse } from 'next/server';
-import * as pdfjsLib from 'pdfjs-dist';
-const mammoth = require('mammoth');
+import { NextResponse } from "next/server";
 
-// Set up PDF.js worker
-if (typeof window === 'undefined') {
-  pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
-}
+// For Node.js runtime compatibility
+export const runtime = 'nodejs';
 
-async function extractTextFromPDF(arrayBuffer: ArrayBuffer): Promise<string> {
+export async function POST(req: Request) {
   try {
-    const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-    let text = '';
-    
-    for (let i = 1; i <= pdf.numPages; i++) {
-      const page = await pdf.getPage(i);
-      const content = await page.getTextContent();
-      const pageText = content.items
-        .map((item: any) => item.str)
-        .join(' ');
-      text += pageText + '\n';
-    }
-    
-    return text.trim();
-  } catch (error) {
-    console.error('Error extracting text from PDF:', error);
-    throw new Error('Failed to extract text from PDF');
-  }
-}
+    const formData = await req.formData();
+    const file = formData.get("file") as File;
 
-async function extractTextFromDOCX(arrayBuffer: ArrayBuffer): Promise<string> {
-  try {
-    const result = await mammoth.extractRawText({ arrayBuffer });
-    return result.value.trim();
-  } catch (error) {
-    console.error('Error extracting text from DOCX:', error);
-    throw new Error('Failed to extract text from DOCX');
-  }
-}
-
-export async function POST(request: NextRequest) {
-  try {
-    const data = await request.formData();
-    const file = data.get('file') as File;
-    
     if (!file) {
-      return NextResponse.json(
-        { error: 'No file provided' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "No file uploaded" }, { status: 400 });
     }
-    
+
+    console.log('[Extract Text API] Processing file:', file.name, 'type:', file.type, 'size:', file.size);
+
+    // Convert File to Buffer (equivalent to fs.readFileSync for uploaded file)
+    console.log('[Extract Text API] Converting file to ArrayBuffer...');
     const arrayBuffer = await file.arrayBuffer();
-    const fileType = file.type.toLowerCase();
-    let extractedText: string;
+    console.log('[Extract Text API] ArrayBuffer size:', arrayBuffer.byteLength);
     
-    if (fileType === 'application/pdf') {
-      extractedText = await extractTextFromPDF(arrayBuffer);
-    } else if (
-      fileType === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ||
-      fileType === 'application/msword'
-    ) {
-      extractedText = await extractTextFromDOCX(arrayBuffer);
-    } else {
-      return NextResponse.json(
-        { error: 'Unsupported file type. Please upload a PDF or DOCX file.' },
-        { status: 400 }
-      );
-    }
+    console.log('[Extract Text API] Converting ArrayBuffer to Buffer...');
+    const dataBuffer = Buffer.from(arrayBuffer);
+    console.log('[Extract Text API] Buffer size:', dataBuffer.length);
+    console.log('[Extract Text API] Buffer first 20 bytes:', dataBuffer.subarray(0, 20));
+
+    // Use dynamic require to avoid initialization issues
+    console.log('[Extract Text API] Loading pdf-parse with require...');
+    const pdf = require('pdf-parse');
     
-    if (!extractedText || extractedText.length < 10) {
-      return NextResponse.json(
-        { error: 'Could not extract meaningful text from the file' },
-        { status: 400 }
-      );
-    }
+    // Use pdf-parse with the buffer approach
+    console.log('[Extract Text API] Starting PDF parsing...');
+    const data = await pdf(dataBuffer);
+    console.log('[Extract Text API] PDF parsing completed successfully');
     
-    return NextResponse.json({ text: extractedText });
-    
+    // Log PDF details like in the example
+    console.log('Number of pages:', data.numpages);
+    console.log('Number of rendered pages:', data.numrender);
+    console.log('PDF info:', data.info);
+    console.log('PDF metadata:', data.metadata);
+    console.log('PDF.js version:', data.version);
+    console.log('PDF text length:', data.text.length);
+    console.log('PDF text preview (first 200 chars):', data.text.substring(0, 200));
+
+    return NextResponse.json({ text: data.text });
   } catch (error: any) {
-    console.error('Text extraction error:', error);
+    console.error('[Extract Text API] Error:', error.message);
+    console.error('[Extract Text API] Full error:', error);
     return NextResponse.json(
       { error: error.message || 'Failed to extract text from file' },
       { status: 500 }

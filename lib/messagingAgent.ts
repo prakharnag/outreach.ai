@@ -11,6 +11,7 @@ export type MessagingAgentInput = {
   role: string;
   highlights: string; // user-provided
   tone?: WritingTone; // optional tone, defaults to formal
+  resumeContent?: string; // optional resume content for personalization
 };
 
 export type MessagingAgentOutput = {
@@ -21,6 +22,14 @@ export type MessagingAgentOutput = {
 export async function messagingAgent(input: MessagingAgentInput): Promise<MessagingAgentOutput> {
   const tone = input.tone || getDefaultTone();
   const toneConfig = getToneConfig(tone);
+  
+  // Debug logging for contact information
+  console.log('[Messaging Agent] Contact information received:', {
+    hasContact: !!input.verified.contact,
+    contactName: input.verified.contact?.name,
+    contactTitle: input.verified.contact?.title,
+    company: input.company
+  });
   
   const system = `You are a master of warm, high-conversion outreach. Return ONLY valid JSON: {"linkedin":"string","email":"string"}.
 
@@ -36,18 +45,23 @@ Rules:
 - Cold Email (90–100 words): natural, human, and value-driven. Personalize with company-specific insights and key highlights from user input. 
   Structure:
     1. Start with "Subject: ..." (compelling but not click-baity)
-    2. Direct, respectful greeting by name if possible.
+    2. Direct, respectful greeting by name if possible (use the CONTACT's name from the verified insights, NOT the user's name from resume).
     3. One-line intro: who you are + 1 relevant credential/achievement.
     4. 2–3 short sentences connecting your skills and key highlights (from user input) to their current needs or recent initiatives (from provided research).
     5. End with one clear, low-pressure call-to-action (e.g., "Happy to chat if this aligns").
     6. End with a professional closing (e.g., "Best regards," or "Best,")
   Tone: Apply the ${toneConfig.label.toLowerCase()} writing style while maintaining professionalism.
-- LinkedIn (exactly 44 words): connection-oriented, same personalization style as the email, no greetings or sign-offs, written in one smooth sentence using ${toneConfig.label.toLowerCase()} tone.
+- LinkedIn (exactly 44 words): connection-oriented, same personalization style as the email, START WITH "Hi" or "Hey" followed by the contact's name (from verified insights, NOT from resume), no formal sign-offs, written in one smooth flow using ${toneConfig.label.toLowerCase()} tone.
 
 CRITICAL RULES:
 - Return ONLY the JSON object. Do not include any extra text, explanations, or additional properties.
 - DO NOT include email addresses, contact information, or signatures in the message content.
-- Use the contact name for personalization but do not add their email to the message text.
+- CONTACT NAME HANDLING: 
+  * IF contact name is available in verified insights: Use "Hi [Contact Name]" for LinkedIn and "Dear [Contact Name]" for email
+  * IF NO contact name available: Use "Hi there" for LinkedIn and "Hi" for email (DO NOT use any name from resume content)
+  * NEVER use the user's name from resume content as the contact greeting
+- LinkedIn messages MUST start with "Hi [Contact Name]" or "Hey [Contact Name]" when contact is known, or "Hi there" when unknown.
+- Email greetings should use "Dear [Contact Name]" or "Hi [Contact Name]" when contact is known, or "Hi" when unknown.
 - MAINTAIN PERFECT spelling and grammar - double-check every word before responding.
 - When referencing the user's key highlights, use them EXACTLY as provided for accuracy - do not paraphrase or modify their content.
 - The email content should be complete and professional without requiring additional contact information.
@@ -56,8 +70,19 @@ CRITICAL RULES:
 
 const user = `Company: ${input.company}
 Role: ${input.role}
-Highlights: ${input.highlights}
+Highlights: ${input.highlights}${input.resumeContent ? `
+Resume Content: ${input.resumeContent}` : ''}
+
+CONTACT INFORMATION:
+${input.verified.contact?.name ? `Contact Name: ${input.verified.contact.name}` : 'Contact Name: NOT AVAILABLE'}
+${input.verified.contact?.title ? `Contact Title: ${input.verified.contact.title}` : 'Contact Title: NOT AVAILABLE'}
+
 Verified insights: ${JSON.stringify(input.verified)}
+
+${input.resumeContent ? 'PERSONALIZATION INSTRUCTION: Use the resume content to create highly personalized and relevant outreach messages. Reference specific skills, experiences, or achievements from the resume that align with the company\'s needs and the target role. Make the connection clear and compelling.' : ''}
+
+IMPORTANT: If Contact Name is "NOT AVAILABLE", use generic greetings like "Hi there" (LinkedIn) or "Hi" (email). NEVER use names from resume content for contact greetings.
+
 Output must be strictly valid JSON with ONLY "linkedin" and "email" properties — nothing extra.`;
 
 

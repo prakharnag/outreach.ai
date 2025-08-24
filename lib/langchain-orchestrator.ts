@@ -13,6 +13,7 @@ export interface ChainInput {
   highlights: string;
   userId?: string;
   tone?: WritingTone;
+  resumeContent?: string;
 }
 
 export interface ChainOutput {
@@ -346,7 +347,8 @@ class OutreachOrchestrator {
         company: input.company,
         role: input.role,
         highlights: input.highlights,
-        tone: input.tone
+        tone: input.tone,
+        resumeContent: input.resumeContent
       });
       await this.saveToSupabase('messaging', messages, input);
       this.callbacks.onStepComplete?.('messaging', messages);
