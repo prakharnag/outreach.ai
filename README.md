@@ -80,6 +80,25 @@ Outreach.ai is an intelligent cold outreach automation platform that combines AI
 
 ## 🆕 Recent Updates & Improvements
 
+### **V2.4.0 - Model Deprecation Handling & API Resilience**
+
+#### 🔧 **API Infrastructure Improvements**
+- **Model Deprecation Fallback System** - Implemented automatic handling of deprecated AI models
+  - Added `getModelWithFallback()` function in `api.ts` for centralized model management
+  - Automatic fallback from deprecated `llama3-70b-8192` to `llama-3.3-70b-versatile`
+  - Zero-downtime transition - existing code continues working without modification
+  - Future-proof architecture for handling additional model deprecations
+- **Enhanced API Resilience** - Improved reliability of AI model interactions
+  - Centralized model selection logic prevents API failures from deprecated models
+  - Automatic model translation at the API layer for seamless upgrades
+  - Comprehensive fallback strategy ensures continuous service availability
+
+#### ✨ **Technical Enhancements**
+- **Backward Compatibility** - All existing code using `llama3-70b-8192` automatically uses the new model
+- **Centralized Configuration** - Single point of control for model fallbacks in `lib/api.ts`
+- **Production Readiness** - Prevents service disruption when AI providers deprecate models
+- **Logging Optimization** - Removed debug console.log statements for cleaner production output
+
 ### **V2.3.0 - Email Formatting & Resume Recovery System**
 
 #### 🔧 **Fixed Critical Issues**

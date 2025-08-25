@@ -29,22 +29,14 @@ export async function getUserResumeData(userId: string): Promise<ResumeData | nu
     }
 
     // Check if the signed URL is still valid
-    console.log('Checking resume URL validity for:', data.resume_filename);
-    const isValid = await isSignedUrlValid(data.resume_url);
-    console.log('URL validation result:', isValid);
-    
-    if (!isValid) {
-      console.log('Resume signed URL expired, regenerating...');
+    if (!(await isSignedUrlValid(data.resume_url))) {
       const newUrl = await regenerateResumeSignedUrl(userId, data.resume_filename);
       if (newUrl) {
-        console.log('Successfully regenerated URL');
         data.resume_url = newUrl;
       } else {
         console.error('Failed to regenerate signed URL');
         return null;
       }
-    } else {
-      console.log('Resume URL is still valid');
     }
 
     return {
@@ -168,7 +160,6 @@ export async function isSignedUrlValid(url: string): Promise<boolean> {
     return response.ok || response.status === 403;
   } catch (error) {
     // If the request fails (network error, timeout, or CORS), assume URL is invalid
-    console.log('URL validation failed:', error);
     return false;
   }
 }
@@ -196,8 +187,6 @@ export async function regenerateResumeSignedUrl(userId: string, filename: string
       storedFileName = `${userId}/${filename}`;
     }
 
-    console.log(`Attempting to regenerate signed URL for: ${storedFileName}`);
-
     const { data: signedData, error: signedError } = await supabase.storage
       .from('resumes')
       .createSignedUrl(storedFileName, 3600); // 1 hour
@@ -207,7 +196,6 @@ export async function regenerateResumeSignedUrl(userId: string, filename: string
       
       // If file not found, try to recover by finding existing files
       if (signedError.message?.includes('Object not found')) {
-        console.log('File not found, attempting recovery...');
         const recoveredUrl = await findAndRecoverResumeFile(userId, filename);
         if (recoveredUrl) {
           return recoveredUrl;
@@ -228,7 +216,6 @@ export async function regenerateResumeSignedUrl(userId: string, filename: string
       return null;
     }
 
-    console.log('Successfully regenerated signed URL for resume');
     return signedData.signedUrl;
   } catch (error) {
     console.error('Error regenerating signed URL:', error);
@@ -265,14 +252,10 @@ export async function listUserResumeFiles(userId: string): Promise<string[]> {
  */
 async function findAndRecoverResumeFile(userId: string, originalFilename: string): Promise<string | null> {
   try {
-    console.log(`Searching for alternative resume files for user: ${userId}`);
-    
     // List all files in the user's folder
     const existingFiles = await listUserResumeFiles(userId);
-    console.log('Found existing files:', existingFiles);
     
     if (existingFiles.length === 0) {
-      console.log('No resume files found in storage for this user');
       return null;
     }
 
@@ -288,8 +271,6 @@ async function findAndRecoverResumeFile(userId: string, originalFilename: string
         break;
       }
     }
-    
-    console.log(`Selected file for recovery: ${bestMatch}`);
     
     // Generate a new signed URL for the found file
     const { data: signedData, error: signedError } = await supabase.storage
@@ -316,7 +297,6 @@ async function findAndRecoverResumeFile(userId: string, originalFilename: string
       return null;
     }
 
-    console.log(`Successfully recovered resume file, keeping original filename: ${originalFilename}`);
     return signedData.signedUrl;
   } catch (error) {
     console.error('Error during file recovery:', error);

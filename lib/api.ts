@@ -73,6 +73,19 @@ export async function callPerplexity(prompt: string, options?: PplxOptions): Pro
 
 type ChatMessage = { role: "system" | "user" | "assistant"; content: string };
 
+/**
+ * Gets the appropriate model with fallback for deprecated models
+ */
+function getModelWithFallback(requestedModel?: string): string {
+  // Handle the deprecated llama3-70b-8192 model
+  if (requestedModel === "llama3-70b-8192") {
+    return "llama-3.3-70b-versatile";
+  }
+  
+  // Return requested model or default
+  return requestedModel || "mixtral-8x7b-32768";
+}
+
 export async function callGroq(messages: ChatMessage[], opts?: { model?: string; temperature?: number }) {
   if (!GROQ_API_KEY) {
     // Simulate if missing
@@ -80,8 +93,10 @@ export async function callGroq(messages: ChatMessage[], opts?: { model?: string;
       content: messages[messages.length - 1]?.content?.slice(0, 400) || "Simulated response",
     };
   }
-  const model = opts?.model || "mixtral-8x7b-32768"; // or llama3-70b-8192
+  
+  const model = getModelWithFallback(opts?.model);
   const temperature = opts?.temperature ?? 0.4;
+  
   const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
     method: "POST",
     headers: {
