@@ -303,6 +303,29 @@ export function ResumeViewer({ className, onUploadClick, onResumeSettingsChange,
     loadUserProfile();
   }, [refreshTrigger]); // Re-run when refreshTrigger changes
 
+  // Set up periodic URL validation to prevent expiration issues
+  useEffect(() => {
+    if (!resumeData?.url) return;
+
+    // Check URL validity every 30 minutes
+    const interval = setInterval(async () => {
+      if (resumeData?.url) {
+        try {
+          const response = await fetch(resumeData.url, { method: 'HEAD' });
+          if (!response.ok) {
+            console.log('Resume URL expired during session, refreshing...');
+            await regenerateSignedUrl(resumeData.filename);
+          }
+        } catch (error) {
+          console.log('Resume URL validation failed, refreshing...');
+          await regenerateSignedUrl(resumeData.filename);
+        }
+      }
+    }, 30 * 60 * 1000); // 30 minutes
+
+    return () => clearInterval(interval);
+  }, [resumeData?.url]);
+
   // Sync with parent resume state for immediate UI updates
   useEffect(() => {
     if (parentResumeState && resumeData && 

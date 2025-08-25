@@ -225,6 +225,19 @@ export default function HomePage() {
     if (user) loadResumeData();
   }, [user]);
 
+  // Set up periodic resume data refresh to handle expired URLs
+  useEffect(() => {
+    if (!user || !resumeData) return;
+
+    // Refresh resume data every 45 minutes to prevent URL expiration issues
+    const interval = setInterval(() => {
+      console.log('Performing periodic resume data refresh...');
+      loadResumeData();
+    }, 45 * 60 * 1000); // 45 minutes
+
+    return () => clearInterval(interval);
+  }, [user, resumeData]);
+
   const handleResumeUploadSuccess = (data: { url: string; filename: string; content: string }) => {
     setResumeModalOpen(false);
     loadResumeData();

@@ -1,6 +1,22 @@
 # Outreach.ai
 
-[![Next.js](https://img.shields.io/badge/Next.js-14.2.5-black?logo=next.js)](https://nextjs.org/)
+[![Next.js](https://img.shields.io### 📄 **Resume-Powered Personalization**
+- **Resume Upload & Management** - Secure PDF resume upload with intelligent file management
+- **Intelligent Content Extraction** - AI-powered parsing of resume content and skills
+- **Personalized Messaging** - AI incorporates resume details into outreach messages
+- **Toggle Control** - Easy on/off toggle for resume-based personalization
+- **Cross-Component Sync** - Consistent resume settings across search panel and dashboard
+- **Real-time Updates** - Instant synchronization of resume preferences
+- **Automatic URL Recovery** - Intelligent system prevents resume disappearance due to expired links
+- **File Persistence** - Resumes remain accessible with automatic background URL regeneration
+- **Original Filename Preservation** - User-friendly filenames maintained during file recovery
+
+### 📧 **Enhanced Message Generation**
+- **Proper Email Formatting** - Generated emails display with correct paragraph structure and spacing
+- **Multi-layer Content Validation** - Advanced guardrails prevent JSON artifacts and malformed content
+- **Subject Line Optimization** - Intelligent subject line generation with proper formatting
+- **Paragraph Structure** - Maintains email readability with proper line breaks and sections
+- **Fallback Content Generation** - Robust backup content when AI generation encounters issuesNext.js-14.2.5-black?logo=next.js)](https://nextjs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.9.2-blue?logo=typescript)](https://www.typescriptlang.org/)
 [![Supabase](https://img.shields.io/badge/Supabase-Ready-green?logo=supabase)](https://supabase.com/)
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-4.1.11-38B2AC?logo=tailwind-css)](https://tailwindcss.com/)
@@ -63,6 +79,54 @@ Outreach.ai is an intelligent cold outreach automation platform that combines AI
 - **Expandable Interface** - Clean, organized view of all historical outreach
 
 ## 🆕 Recent Updates & Improvements
+
+### **V2.3.0 - Email Formatting & Resume Recovery System**
+
+#### 🔧 **Fixed Critical Issues**
+- **Email Structure Formatting** - Completely overhauled email rendering to display proper email structure
+  - Fixed paragraph formatting in generated emails (previously showing as single paragraph)
+  - Enhanced `validateEmailMessage()` function to preserve line breaks and email structure
+  - Improved `cleanJsonArtifacts()` to maintain email formatting while cleaning JSON artifacts
+  - Ensured proper email display with Subject line, greeting, body paragraphs, and closing
+- **Resume URL Expiration** - Implemented automatic recovery system for expired Supabase signed URLs
+  - Added automatic URL validation before serving resume data
+  - Built intelligent file recovery system that finds existing files when URLs expire
+  - Created `regenerateResumeSignedUrl()` function with robust error handling
+  - Implemented periodic URL refresh (every 30-45 minutes) to prevent expiration during sessions
+- **Resume Filename Preservation** - Fixed issue where original user-friendly filenames were being lost
+  - Recovery system now preserves original filename display (e.g., "PrakharNag_FoundingEngineer.pdf")
+  - Storage uses timestamp-based names internally while maintaining user-friendly display names
+  - Enhanced database update logic to only refresh URLs without changing displayed filenames
+
+#### ✨ **New Features**
+- **Intelligent Resume Recovery** - Advanced file recovery system for lost or expired resume files
+  - Automatic detection of file path mismatches and storage inconsistencies
+  - Smart file matching algorithm that finds similar files when exact matches fail
+  - Fallback to most recent file when name matching is inconclusive
+  - Comprehensive logging for troubleshooting file recovery issues
+- **Proactive URL Management** - Prevents resume disappearance through automated maintenance
+  - Background URL validation every 30 minutes in ResumeViewer component
+  - Dashboard-level periodic refresh every 45 minutes for proactive maintenance
+  - Enhanced `isSignedUrlValid()` function with timeout and robust error handling
+  - Automatic database synchronization when URLs are regenerated
+- **Enhanced Email Validation** - Multi-layer content validation and formatting
+  - Improved paragraph structure preservation in email content
+  - Better subject line spacing and formatting validation
+  - Enhanced fallback content generation for incomplete emails
+  - Robust JSON artifact detection and removal while preserving email structure
+
+#### 🎯 **User Experience Improvements**
+- **Seamless Resume Persistence** - Resumes no longer disappear after signed URL expiration
+- **Proper Email Display** - Generated emails now display with proper paragraph breaks and structure
+- **Automatic Recovery** - System automatically recovers from file path issues without user intervention
+- **Preserved Filenames** - Original resume filenames remain visible even after URL regeneration
+- **Background Maintenance** - All URL management happens transparently in the background
+
+#### 🔧 **Technical Enhancements**
+- **Enhanced Error Handling** - Comprehensive error logging and recovery mechanisms
+- **File Storage Optimization** - Better handling of both legacy and current file storage formats
+- **Database Consistency** - Improved synchronization between storage files and database references
+- **Performance Optimization** - Efficient URL validation with proper timeouts and abort controllers
 
 ### **V2.2.0 - Resume Toggle Synchronization & Performance**
 
