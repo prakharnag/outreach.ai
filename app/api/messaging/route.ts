@@ -3,6 +3,7 @@ import { findRecentRun } from "lib/db";
 import { verifierAgent } from "lib/verifyAgent";
 import { researchAgent } from "lib/researchAgent";
 import { messagingAgent } from "lib/messagingAgent";
+import { sanitizeMessageContent } from "lib/utils";
 
 export const runtime = "edge";
 
@@ -28,7 +29,14 @@ export async function POST(req: NextRequest) {
       highlights: String(highlights),
       tone: tone || undefined
     });
-    return new Response(JSON.stringify(messages), { status: 200, headers: { "Content-Type": "application/json" } });
+    
+    // Apply final guardrails to ensure clean output
+    const sanitizedMessages = {
+      linkedin: sanitizeMessageContent(messages.linkedin),
+      email: sanitizeMessageContent(messages.email)
+    };
+    
+    return new Response(JSON.stringify(sanitizedMessages), { status: 200, headers: { "Content-Type": "application/json" } });
   } catch (e: any) {
     return new Response(JSON.stringify({ error: e?.message || "Unknown error" }), { status: 500 });
   }

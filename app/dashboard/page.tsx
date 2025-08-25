@@ -8,10 +8,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from ".
 import { Badge } from "../../components/ui/badge";
 import { Alert, AlertDescription } from "../../components/ui/alert";
 import { Textarea } from "../../components/ui/textarea";
-import { Copy, Mail, MessageSquare, RefreshCw, Scissors, Search, User, Settings as SettingsIcon, BarChart3, FileText, ToggleLeft, ToggleRight } from "lucide-react";
+import { Copy, Mail, MessageSquare, RefreshCw, Scissors, Search, User, Settings as SettingsIcon, BarChart3, FileText, ToggleLeft, ToggleRight, X } from "lucide-react";
 import { signOut } from "../../lib/supabase";
 import { supabase } from "../../lib/supabase";
-import { cn } from "../../lib/utils";
+import { cn, sanitizeMessageContent } from "../../lib/utils";
 import { CompanyAutocomplete } from "../../components/ui/company-autocomplete";
 import { Settings } from "../../components/ui/settings";
 import { AnalyticsDashboard } from "../../components/ui/analytics-dashboard";
@@ -615,10 +615,14 @@ export default function HomePage() {
               }
               
               if (confidence >= 0.7) {
-                setLinkedin(evt.data.outputs.linkedin);
-                setEmail(evt.data.outputs.email);
-                setEditableEmail(evt.data.outputs.email);
-                setEditableLinkedin(evt.data.outputs.linkedin);
+                // Apply UI guardrails to sanitize message content
+                const sanitizedLinkedIn = sanitizeMessageContent(evt.data.outputs.linkedin);
+                const sanitizedEmail = sanitizeMessageContent(evt.data.outputs.email);
+                
+                setLinkedin(sanitizedLinkedIn);
+                setEmail(sanitizedEmail);
+                setEditableEmail(sanitizedEmail);
+                setEditableLinkedin(sanitizedLinkedIn);
                 
                 // History is automatically saved by the orchestrator
                 // Refresh history to show updated groupings after a short delay
@@ -743,8 +747,9 @@ export default function HomePage() {
       });
       if (!res.ok) throw new Error("Failed to regenerate email");
       const data = await res.json();
-      setEmail(data.email);
-      setEditableEmail(data.email);
+      const sanitizedEmail = sanitizeMessageContent(data.email);
+      setEmail(sanitizedEmail);
+      setEditableEmail(sanitizedEmail);
     } catch (e: any) {
       setError(e?.message || "Failed to regenerate email");
     } finally {
@@ -767,8 +772,9 @@ export default function HomePage() {
       });
       if (!res.ok) throw new Error("Failed to regenerate");
       const data = await res.json();
-      setLinkedin(data.linkedin);
-      setEditableLinkedin(data.linkedin);
+      const sanitizedLinkedIn = sanitizeMessageContent(data.linkedin);
+      setLinkedin(sanitizedLinkedIn);
+      setEditableLinkedin(sanitizedLinkedIn);
     } catch (e: any) {
       setError(e?.message || "Failed to regenerate");
     } finally {
@@ -851,7 +857,7 @@ export default function HomePage() {
             </Button>
             
             <Button
-              variant={resumeData ? "default" : "ghost"}
+              variant="ghost"
               size="sm"
               onClick={() => setResumeModalOpen(true)}
               className="h-8 w-8 sm:h-10 sm:w-10 p-0"
@@ -873,200 +879,223 @@ export default function HomePage() {
         </div>
 
         {isSearchExpanded && (
-          <div className="fixed left-12 sm:left-16 top-0 h-full w-64 sm:w-80 bg-white/95 backdrop-blur-md border-r border-slate-200/50 shadow-xl z-40">
-            <div className="p-3 sm:p-6">
-              <form onSubmit={handleSearch} className="space-y-3 sm:space-y-4">
-                <div>
-                  <label className="block text-xs sm:text-sm font-medium text-slate-700 mb-1 sm:mb-2">
-                    Company Name
-                  </label>
-                  <CompanyAutocomplete
-                    value={company}
-                    onChange={handleCompanyChange}
-                    onSelect={handleCompanySuggestionSelect}
-                    placeholder="Search for a company..."
-                    disabled={loading}
-                    className="text-sm"
-                  />
-                  {selectedDomain && (
-                    <div className="mt-1 sm:mt-2 text-xs sm:text-sm text-slate-600">
-                      Selected: <span className="font-medium">{company}</span> ({selectedDomain})
-                    </div>
-                  )}
-                  {company && !selectedDomain && (
-                    <div className="mt-1 sm:mt-2 text-xs sm:text-sm text-blue-600">
-                      Using manual entry: <span className="font-medium">{company}</span>
-                    </div>
-                  )}
-                  
-                  {/* URL Fallback Section */}
-                  {showUrlFallback && (
-                    <div className="mt-3 p-3 bg-amber-50 border border-amber-200 rounded-md">
-                      <div className="mb-2">
-                        <p className="text-xs sm:text-sm text-amber-800 font-medium">
-                          Company not found in our database
-                        </p>
-                        <p className="text-xs text-amber-700 mt-1">
-                          Please provide the exact company website URL for better research:
-                        </p>
-                      </div>
-                      <div className="flex gap-2">
-                        <input
-                          type="text"
-                          value={companyUrl}
-                          onChange={(e) => setCompanyUrl(e.target.value)}
-                          placeholder="https://company.com"
-                          className="flex-1 px-2 py-1.5 text-xs border border-amber-300 rounded focus:outline-none focus:ring-1 focus:ring-amber-400"
-                        />
-                        <button
-                          type="button"
-                          onClick={handleUrlSearch}
-                          disabled={!companyUrl.trim()}
-                          className="px-3 py-1.5 text-xs bg-amber-600 text-white rounded hover:bg-amber-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                          Use URL
-                        </button>
-                      </div>
-                      {urlSearchError && (
-                        <p className="text-xs text-red-600 mt-1">{urlSearchError}</p>
-                      )}
-                      <button
-                        type="button"
-                        onClick={() => setShowUrlFallback(false)}
-                        className="text-xs text-amber-700 hover:text-amber-800 mt-2 underline"
-                      >
-                        Cancel
-                      </button>
-                    </div>
-                  )}
-                </div>
-                
-                <div>
-                  <label className="block text-xs sm:text-sm font-medium text-slate-700 mb-1 sm:mb-2">
-                    Role
-                  </label>
-                  <input
-                    type="text"
-                    value={role}
-                    onChange={(e) => setRole(e.target.value)}
-                    placeholder="Target role"
-                    className="w-full px-2 sm:px-3 py-2 text-sm border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 h-9 sm:h-10"
-                  />
-                </div>
-                
-                <div>
-                  <label className="block text-xs sm:text-sm font-medium text-slate-700 mb-1 sm:mb-2">
-                    Key Highlights
-                  </label>
-                  <textarea
-                    value={highlights}
-                    onChange={(e) => setHighlights(e.target.value)}
-                    placeholder="Your key skills and experience"
-                    rows={3}
-                    className="w-full px-2 sm:px-3 py-2 text-xs sm:text-sm border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none min-h-[60px] sm:min-h-[80px]"
-                  />
-                </div>
-
-                {/* Resume Personalization */}
-                <div className="space-y-2">
-                  <label className="block text-xs sm:text-sm font-medium text-slate-700 mb-1 sm:mb-2">
-                    Resume Personalization
-                  </label>
-                  {resumeData ? (
-                    <div className="relative overflow-hidden rounded-lg bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 p-3">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2 flex-1 min-w-0">
-                          <div className="p-1.5 rounded-full bg-blue-100">
-                            <FileText className="h-3.5 w-3.5 text-blue-600" />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-xs sm:text-sm font-medium text-slate-800">Use Resume</p>
-                            <p className="text-xs text-slate-600 truncate">{resumeData.filename}</p>
-                          </div>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => handleResumeSettingsChange(!resumeData.useInPersonalization, resumeData.content)}
-                          className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-full transition-all duration-200 ${
-                            resumeData.useInPersonalization 
-                              ? 'bg-green-100 hover:bg-green-200 text-green-700' 
-                              : 'bg-slate-100 hover:bg-slate-200 text-slate-600'
-                          }`}
-                          title={`${resumeData.useInPersonalization ? 'Disable' : 'Enable'} resume in personalization`}
-                        >
-                          {resumeData.useInPersonalization ? (
-                            <ToggleRight className="h-4 w-4" />
-                          ) : (
-                            <ToggleLeft className="h-4 w-4" />
-                          )}
-                          <span className="text-xs font-semibold">
-                            {resumeData.useInPersonalization ? 'ON' : 'OFF'}
-                          </span>
-                        </button>
-                      </div>
-                      {resumeData.useInPersonalization && (
-                        <div className="mt-2 flex items-center gap-1.5">
-                          <div className="w-1.5 h-1.5 rounded-full bg-green-500"></div>
-                          <p className="text-xs text-green-700 font-medium">
-                            Messages will be personalized using your resume
-                          </p>
-                        </div>
-                      )}
-                    </div>
-                  ) : (
-                    <div className="relative overflow-hidden rounded-lg bg-gradient-to-r from-slate-50 to-gray-50 border border-slate-200 p-3">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2 flex-1 min-w-0">
-                          <div className="p-1.5 rounded-full bg-slate-100">
-                            <FileText className="h-3.5 w-3.5 text-slate-500" />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-xs sm:text-sm font-medium text-slate-600">No Resume Uploaded</p>
-                            <p className="text-xs text-slate-500">Upload a resume to enable personalization</p>
-                          </div>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => setResumeModalOpen(true)}
-                          className="px-3 py-1.5 text-xs bg-blue-600 text-white rounded-full hover:bg-blue-700 transition-colors"
-                        >
-                          Upload
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                </div>
-                
-                <div>
-                  <label className="block text-xs sm:text-sm font-medium text-slate-700 mb-1 sm:mb-2">
-                    Writing Tone
-                  </label>
-                  <ToneSelector
-                    selectedTone={searchTone}
-                    onToneChange={setSearchTone}
-                    disabled={loading}
-                    variant="outline"
-                    size="sm"
-                    className="w-full justify-start h-9 sm:h-10 text-xs sm:text-sm"
-                  />
-                </div>
-                
+          <>
+            {/* Mobile backdrop overlay */}
+            <div 
+              className="fixed inset-0 bg-black/20 backdrop-blur-sm z-40 md:hidden"
+              onClick={() => setIsSearchExpanded(false)}
+            />
+            
+            <div className="fixed left-0 md:left-12 lg:left-16 top-0 h-full w-full max-w-sm md:w-80 lg:w-96 bg-white/95 backdrop-blur-md border-r border-slate-200/50 shadow-xl z-50">
+              {/* Mobile header with close button */}
+              <div className="flex items-center justify-between p-3 border-b border-slate-200/50 md:hidden">
+                <h2 className="text-lg font-semibold text-slate-800">Research</h2>
                 <Button
-                  type="submit"
-                  disabled={loading || !canRun}
-                  className="w-full h-9 sm:h-10 text-sm sm:text-base"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setIsSearchExpanded(false)}
+                  className="h-8 w-8 p-0"
                 >
-                  {loading ? "Running..." : "Run AI Agents"}
+                  <X className="h-4 w-4" />
                 </Button>
-              </form>
+              </div>
+              
+              <div className="h-full overflow-y-auto pb-20 md:pb-6">
+                <div className="p-3 md:p-4 lg:p-6">
+                  <form onSubmit={handleSearch} className="space-y-3 md:space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-2">
+                        Company Name
+                      </label>
+                      <CompanyAutocomplete
+                        value={company}
+                        onChange={handleCompanyChange}
+                        onSelect={handleCompanySuggestionSelect}
+                        placeholder="Search for a company..."
+                        disabled={loading}
+                        className="text-sm"
+                      />
+                      {selectedDomain && (
+                        <div className="mt-2 text-xs text-slate-600">
+                          Selected: <span className="font-medium">{company}</span> ({selectedDomain})
+                        </div>
+                      )}
+                      {company && !selectedDomain && (
+                        <div className="mt-2 text-xs text-blue-600">
+                          Using manual entry: <span className="font-medium">{company}</span>
+                        </div>
+                      )}
+                      
+                      {/* URL Fallback Section */}
+                      {showUrlFallback && (
+                        <div className="mt-3 p-3 bg-amber-50 border border-amber-200 rounded-md">
+                          <div className="mb-2">
+                            <p className="text-sm text-amber-800 font-medium">
+                              Company not found in our database
+                            </p>
+                            <p className="text-xs text-amber-700 mt-1">
+                              Please provide the exact company website URL for better research:
+                            </p>
+                          </div>
+                          <div className="flex flex-col sm:flex-row gap-2">
+                            <input
+                              type="text"
+                              value={companyUrl}
+                              onChange={(e) => setCompanyUrl(e.target.value)}
+                              placeholder="https://company.com"
+                              className="flex-1 px-3 py-2 text-sm border border-amber-300 rounded-md focus:outline-none focus:ring-1 focus:ring-amber-400"
+                            />
+                            <button
+                              type="button"
+                              onClick={handleUrlSearch}
+                              disabled={!companyUrl.trim()}
+                              className="px-4 py-2 text-sm bg-amber-600 text-white rounded-md hover:bg-amber-700 disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+                            >
+                              Use URL
+                            </button>
+                          </div>
+                          {urlSearchError && (
+                            <p className="text-xs text-red-600 mt-2">{urlSearchError}</p>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => setShowUrlFallback(false)}
+                            className="text-xs text-amber-700 hover:text-amber-800 mt-2 underline"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-2">
+                        Role
+                      </label>
+                      <input
+                        type="text"
+                        value={role}
+                        onChange={(e) => setRole(e.target.value)}
+                        placeholder="Target role"
+                        className="w-full px-3 py-2.5 text-sm border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-2">
+                        Key Highlights
+                      </label>
+                      <textarea
+                        value={highlights}
+                        onChange={(e) => setHighlights(e.target.value)}
+                        placeholder="Your key skills and experience"
+                        rows={4}
+                        className="w-full px-3 py-2.5 text-sm border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                      />
+                    </div>
+
+                    {/* Resume Personalization */}
+                    <div className="space-y-2">
+                      <label className="block text-sm font-medium text-slate-700 mb-2">
+                        Resume Personalization
+                      </label>
+                      {resumeData ? (
+                        <div className="relative overflow-hidden rounded-lg bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 p-3">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2 flex-1 min-w-0">
+                              <div className="p-1.5 rounded-full bg-blue-100">
+                                <FileText className="h-3.5 w-3.5 text-blue-600" />
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm font-medium text-slate-800">Use Resume</p>
+                                <p className="text-xs text-slate-600 truncate">{resumeData.filename}</p>
+                              </div>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => handleResumeSettingsChange(!resumeData.useInPersonalization, resumeData.content)}
+                              className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-full transition-all duration-200 ${
+                                resumeData.useInPersonalization 
+                                  ? 'bg-green-100 hover:bg-green-200 text-green-700' 
+                                  : 'bg-slate-100 hover:bg-slate-200 text-slate-600'
+                              }`}
+                              title={`${resumeData.useInPersonalization ? 'Disable' : 'Enable'} resume in personalization`}
+                            >
+                              {resumeData.useInPersonalization ? (
+                                <ToggleRight className="h-4 w-4" />
+                              ) : (
+                                <ToggleLeft className="h-4 w-4" />
+                              )}
+                              <span className="text-xs font-semibold">
+                                {resumeData.useInPersonalization ? 'ON' : 'OFF'}
+                              </span>
+                            </button>
+                          </div>
+                          {resumeData.useInPersonalization && (
+                            <div className="mt-2 flex items-center gap-1.5">
+                              <div className="w-1.5 h-1.5 rounded-full bg-green-500"></div>
+                              <p className="text-xs text-green-700 font-medium">
+                                Messages will be personalized using your resume
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="relative overflow-hidden rounded-lg bg-gradient-to-r from-slate-50 to-gray-50 border border-slate-200 p-3">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2 flex-1 min-w-0">
+                              <div className="p-1.5 rounded-full bg-slate-100">
+                                <FileText className="h-3.5 w-3.5 text-slate-500" />
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm font-medium text-slate-600">No Resume Uploaded</p>
+                                <p className="text-xs text-slate-500">Upload a resume to enable personalization</p>
+                              </div>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => setResumeModalOpen(true)}
+                              className="px-3 py-1.5 text-xs bg-blue-600 text-white rounded-full hover:bg-blue-700 transition-colors"
+                            >
+                              Upload
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-2">
+                        Writing Tone
+                      </label>
+                      <ToneSelector
+                        selectedTone={searchTone}
+                        onToneChange={setSearchTone}
+                        disabled={loading}
+                        variant="outline"
+                        size="sm"
+                        className="w-full justify-start h-10 text-sm"
+                      />
+                    </div>
+                    
+                    <Button
+                      type="submit"
+                      disabled={loading || !canRun}
+                      className="w-full h-11 text-base font-medium"
+                    >
+                      {loading ? "Running..." : "Run AI Agents"}
+                    </Button>
+                  </form>
+                </div>
+              </div>
             </div>
-          </div>
+          </>
         )}
 
         <div className={cn(
           "transition-all duration-300 ease-in-out",
           "ml-12 sm:ml-16",
-          isSearchExpanded && "ml-76 sm:ml-96"
+          isSearchExpanded && "md:ml-76 lg:ml-96"
         )}>
           <div className="header-transition">
             <DynamicHeader 
@@ -1284,8 +1313,9 @@ export default function HomePage() {
                                     });
                                     if (!res.ok) throw new Error("Failed to rephrase");
                                     const data = await res.json();
-                                    setLinkedin(data.linkedin);
-                                    setEditableLinkedin(data.linkedin);
+                                    const sanitizedLinkedIn = sanitizeMessageContent(data.linkedin);
+                                    setLinkedin(sanitizedLinkedIn);
+                                    setEditableLinkedin(sanitizedLinkedIn);
                                   } catch (e: any) {
                                     setError(e?.message || "Failed to rephrase");
                                   } finally {

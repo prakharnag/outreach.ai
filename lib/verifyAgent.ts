@@ -36,14 +36,17 @@ Task:
 5. Remove or rephrase anything unverifiable, vague, or speculative.
 7. For company and contact details:
    - Cross-check the company name against trusted sources to prevent hallucinations.
+   - ALWAYS try to provide TWO contacts: primary (hiring manager/talent acquisition) and secondary (leadership/engineering).
+   - Primary contact MUST be hiring-related when possible (hiring manager, talent acquisition, HR director).
+   - If no hiring contact available, promote best leadership contact to primary and find another for secondary.
+   - Secondary contact should be leadership (CEO, CTO, department head) relevant to the role.
+   - Use actual job titles from research sources - never use generic labels like "Inferred Hiring Manager".
    - For emails, first attempt to find them from trusted sources.
    - If no reliable email found, infer a plausible one based on common corporate patterns (firstname.lastname@domain), and clearly mark it as "inferred".
-   - Always try to provide TWO contacts: primary (hiring manager/talent acquisition) and secondary (leadership/engineering).
-   - Primary contact MUST be hiring-related when possible (hiring manager, talent acquisition, HR director).
-   - Secondary contact should be leadership (CEO, CTO, department head).
-   - Only omit contacts if absolutely no reasonable inference can be made.
+   - Only omit contacts if absolutely no reasonable inference can be made from any sources.
    - NEVER include "N/A", "Not Available", or placeholder text in contact fields.
    - If contact information is not available or unreliable, omit the entire contact object rather than including empty/placeholder values.
+   - Each contact must have at least a name AND title to be included.
 
 CRITICAL: Output ONLY valid JSON matching this exact schema. No explanations, no extra text, no markdown formatting:
 {
@@ -88,7 +91,12 @@ Requirements:
 - Keep only claims with credible sources; attach title + URL.
 - Exclude unverifiable or outdated claims (>12 months old), unless explicitly noted as historical.
 - Check company names for accuracy from trusted sources.
-- Search for contact emails in official/trusted sources; if unavailable, infer a likely format and mark as "inferred".
+- ALWAYS provide TWO contacts when any contact information is available.
+- Primary contact should be hiring/talent acquisition role when possible; otherwise use senior leadership.
+- Secondary contact should be leadership or department head relevant to the role.
+- Use actual job titles from sources - avoid generic labels like "Inferred Hiring Manager".
+- Search for contact emails in official/trusted sources; if unavailable, infer likely format and mark as "inferred".
+- Each contact must have name AND title - never include partial or placeholder data.
 - Do NOT include contacts with "N/A", "Not Available", or empty values - omit contact fields entirely if no valid information available.
 - Only include contact information when you have actual names, titles, or verifiable emails.
 - Return ONLY the JSON object specified in the schema. No explanations, no markdown, no extra text.

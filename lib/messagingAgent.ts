@@ -22,6 +22,139 @@ export type MessagingAgentOutput = {
   email: string; // 90-100 words, includes Subject: on first line
 };
 
+// GUARDRAIL HELPER FUNCTIONS
+function cleanJsonArtifacts(content: string): string {
+  if (!content) return "";
+  
+  // Remove common JSON artifacts and unwanted characters
+  let cleaned = content
+    .replace(/^["']|["']$/g, '') // Remove surrounding quotes
+    .replace(/\\n/g, '\n') // Convert escaped newlines
+    .replace(/\\"/g, '"') // Convert escaped quotes
+    .replace(/^\s*\{.*\}\s*$/, '') // Remove if entire content is JSON object
+    .replace(/^[^a-zA-Z]*/, '') // Remove leading non-alphabetic characters
+    .trim();
+  
+  // For email content, preserve line breaks and paragraph structure
+  // Only normalize excessive whitespace, not line breaks
+  if (cleaned.toLowerCase().includes('subject:')) {
+    // This is likely an email, preserve line structure
+    cleaned = cleaned.replace(/[ \t]+/g, ' '); // Only normalize spaces and tabs, keep newlines
+  } else {
+    // For non-email content (like LinkedIn), normalize all whitespace
+    cleaned = cleaned.replace(/\s+/g, ' ');
+  }
+  
+  return cleaned;
+}
+
+function validateLinkedInMessage(content: string): string {
+  if (!content) return "";
+  
+  // Ensure it starts with a proper greeting
+  if (!content.match(/^(Hi|Hey|Hello)\s+/i)) {
+    // If no proper greeting, add one
+    const hasName = content.match(/\b[A-Z][a-z]+\b/);
+    if (hasName) {
+      content = `Hi there, ${content}`;
+    } else {
+      content = `Hi there! ${content}`;
+    }
+  }
+  
+  // Remove any JSON-like structures
+  content = content.replace(/\{[^}]*\}/g, '');
+  
+  // Ensure reasonable length (20-80 words for flexibility)
+  const words = content.split(/\s+/).filter(word => word.length > 0);
+  if (words.length > 80) {
+    content = words.slice(0, 80).join(' ') + '...';
+  }
+  
+  return content.trim();
+}
+
+function validateEmailMessage(content: string): string {
+  if (!content) return "";
+  
+  // Remove any JSON-like structures first
+  content = content.replace(/\{[^}]*\}/g, '').trim();
+  
+  // Check if it already has a proper email structure
+  const hasSubject = content.toLowerCase().includes('subject:');
+  
+  // If it already has subject and reasonable content, preserve the structure
+  if (hasSubject) {
+    // Split into lines and preserve structure but clean up formatting
+    const lines = content.split('\n');
+    const cleanedLines = lines.map(line => line.trim());
+    
+    // Rejoin with proper spacing - preserve empty lines for paragraph breaks
+    let result = cleanedLines.join('\n');
+    
+    // Ensure proper spacing after subject line
+    result = result.replace(/^(Subject:.*?)(\n)([^\n])/i, '$1\n\n$3');
+    
+    // Ensure paragraph breaks are maintained (double line breaks)
+    result = result.replace(/\n{3,}/g, '\n\n'); // Normalize multiple line breaks to double
+    
+    // Check if the email body (after subject) is substantial enough
+    const emailBody = result.replace(/^Subject:.*?\n\n?/i, '').trim();
+    if (emailBody.length >= 20) {
+      return result.trim();
+    }
+  }
+  
+  // Only add subject line if it's missing
+  if (!hasSubject) {
+    content = `Subject: Exploring Opportunities\n\n${content}`;
+  }
+  
+  // Only add basic content if the email seems incomplete (very short)
+  const contentWithoutSubject = content.replace(/^Subject:.*?\n\n?/i, '').trim();
+  if (contentWithoutSubject.length < 20) {
+    const subjectMatch = content.match(/^(Subject:.*?)(\n\n?)(.*)/is);
+    if (subjectMatch) {
+      content = `${subjectMatch[1]}\n\nHi,\n\nI hope this message finds you well. I wanted to reach out regarding potential opportunities.\n\nBest regards`;
+    } else {
+      content = `Subject: Exploring Opportunities\n\nHi,\n\nI hope this message finds you well. I wanted to reach out regarding potential opportunities.\n\nBest regards`;
+    }
+  }
+  
+  // Final cleanup while preserving paragraph structure
+  return content
+    .split('\n')
+    .map(line => line.trim())
+    .join('\n')
+    .replace(/\n{3,}/g, '\n\n') // Normalize multiple line breaks
+    .replace(/^(Subject:.*?)(\n)([^\n])/i, '$1\n\n$3') // Ensure spacing after subject
+    .trim();
+}
+
+function generateFallbackLinkedIn(input: MessagingAgentInput): string {
+  const contactAny = input.verified.contact as any;
+  const contactName = contactAny?.primary_contact?.name || contactAny?.secondary_contact?.name || contactAny?.name || "there";
+  
+  return `Hi ${contactName}! I'm interested in the ${input.role} position at ${input.company}. With my background in ${input.highlights.split(',')[0] || 'relevant experience'}, I'd love to connect and learn more about your team's goals. Would you be open to a brief conversation?`;
+}
+
+function generateFallbackEmail(input: MessagingAgentInput): string {
+  const contactAny = input.verified.contact as any;
+  const contactName = contactAny?.primary_contact?.name || contactAny?.secondary_contact?.name || contactAny?.name || "Hiring Manager";
+  
+  return `Subject: Interest in ${input.role} Position at ${input.company}
+
+Dear ${contactName},
+
+I hope this email finds you well. I'm writing to express my interest in the ${input.role} position at ${input.company}.
+
+With my background in ${input.highlights.split('.')[0] || 'relevant experience'}, I believe I could contribute meaningfully to your team. I'm particularly drawn to ${input.company}'s innovative approach and would love to discuss how my skills align with your current needs.
+
+Would you be available for a brief conversation to explore this opportunity further?
+
+Best regards`;
+}
+
 export async function messagingAgent(input: MessagingAgentInput): Promise<MessagingAgentOutput> {
   const tone = input.tone || getDefaultTone();
   const toneConfig = getToneConfig(tone);
@@ -37,7 +170,7 @@ export async function messagingAgent(input: MessagingAgentInput): Promise<Messag
     highlights: input.highlights,
     tone: input.tone,
     hasResumeContent: !!input.resumeContent
-  });  const system = `You are a master of warm, high-conversion outreach. Return ONLY valid JSON: {"linkedin":"string","email":"string"}.
+  });  const system = `You are a master of warm, high-conversion outreach. Return ONLY valid JSON with exactly two properties: {"linkedin":"string","email":"string"}.
 
 TONE INSTRUCTION: ${toneConfig.systemPrompt}
 
@@ -48,6 +181,13 @@ LinkedIn Example: ${toneConfig.exampleLinkedIn}
 Email Example: ${toneConfig.exampleEmail}
 
 You are a professional outreach specialist creating personalized messages.
+
+**CRITICAL OUTPUT REQUIREMENTS:**
+- Return ONLY a JSON object with "linkedin" and "email" properties
+- Do NOT include any explanations, additional text, or formatting outside the JSON
+- Do NOT include nested JSON objects within the message content
+- Do NOT include quotes, backslashes, or escape characters in the message content
+- Each message should be clean, readable text without any JSON formatting
 
 **CRITICAL INSTRUCTIONS:**
 - User's TARGET ROLE: ${input.role} - This is the position they are seeking/targeting. Reference this role appropriately.
@@ -70,7 +210,9 @@ Generate TWO outputs ONLY:
 - LinkedIn (exactly 44 words): connection-oriented, same personalization style as the email, START WITH "Hi" or "Hey" followed by the contact's name (from verified insights, NOT from resume), no formal sign-offs, written in one smooth flow using ${toneConfig.label.toLowerCase()} tone.
 
 CRITICAL RULES:
-- Return ONLY the JSON object. Do not include any extra text, explanations, or additional properties.
+- Return ONLY the JSON object: {"linkedin":"message content here","email":"email content here"}
+- Do NOT include any extra text, explanations, markdown formatting, or additional properties.
+- The message content itself should be plain text without any JSON formatting or escape characters.
 - DO NOT include email addresses, contact information, or signatures in the message content.
 - CONTACT NAME HANDLING: 
   * ALWAYS use the PRIMARY CONTACT NAME for greetings when available
@@ -169,14 +311,37 @@ Output must be strictly valid JSON with ONLY "linkedin" and "email" properties â
     
     const parsed = JSON.parse(cleanContent);
     
-    // Guardrails on lengths
-    const linkedin: string = String(parsed.linkedin || "").trim();
-    const email: string = String(parsed.email || "").trim();
+    // Extract and validate the message content with guardrails
+    let linkedin: string = String(parsed.linkedin || "").trim();
+    let email: string = String(parsed.email || "").trim();
+    
+    // GUARDRAILS: Clean up any JSON artifacts or unwanted formatting
+    linkedin = cleanJsonArtifacts(linkedin);
+    email = cleanJsonArtifacts(email);
+    
+    // GUARDRAILS: Validate content structure
+    linkedin = validateLinkedInMessage(linkedin);
+    email = validateEmailMessage(email);
+    
+    // GUARDRAILS: Final content checks
+    if (!linkedin || linkedin.length < 10) {
+      linkedin = generateFallbackLinkedIn(input);
+    }
+    
+    if (!email || email.length < 20) {
+      email = generateFallbackEmail(input);
+    }
     
     const result = { linkedin, email };
+    console.log("Messaging Agent Final Output:", result);
     return result;
   } catch (parseError) {
-    return { linkedin: content.slice(0, 300), email: content };
+    console.error("Messaging Agent Parse Error:", parseError);
+    // Enhanced fallback with proper content generation
+    return {
+      linkedin: generateFallbackLinkedIn(input),
+      email: generateFallbackEmail(input)
+    };
   }
 }
 
@@ -188,13 +353,24 @@ export async function rephraseLinkedInTo22Words(linkedin: string, tone?: Writing
         role: "system", 
         content: `You are a professional message editor. Rewrite the given LinkedIn message to exactly 22 words while preserving the core value proposition and maintaining a ${toneConfig.label.toLowerCase()} tone. ${toneConfig.systemPrompt}
 
-CRITICAL: Return ONLY the rewritten 22-word message. Do not include any explanations, instructions, or additional text before or after the message.` 
+CRITICAL: Return ONLY the rewritten 22-word message. Do not include any explanations, instructions, additional text, JSON formatting, or quotes before or after the message.` 
       },
       { role: "user", content: linkedin },
     ],
     { model: "llama3-70b-8192", temperature: 0.5 }
   );
-  return content.trim();
+  
+  // Apply guardrails to prevent JSON output
+  let cleanedContent = cleanJsonArtifacts(content.trim());
+  cleanedContent = validateLinkedInMessage(cleanedContent);
+  
+  // Ensure it's roughly 22 words
+  const words = cleanedContent.split(/\s+/).filter(word => word.length > 0);
+  if (words.length > 25) {
+    cleanedContent = words.slice(0, 22).join(' ');
+  }
+  
+  return cleanedContent || linkedin; // Fallback to original if cleaning fails
 }
 
 export async function rephraseEmailWithTone(email: string, tone: WritingTone): Promise<string> {
@@ -207,13 +383,18 @@ export async function rephraseEmailWithTone(email: string, tone: WritingTone): P
 
 Style Reference: ${toneConfig.exampleEmail}
 
-Keep it 90-100 words and maintain the Subject line format. Return plain text only.` 
+Keep it 90-100 words and maintain the Subject line format. Return ONLY the email content with no additional formatting, explanations, or JSON structures.` 
       },
       { role: "user", content: email },
     ],
     { model: "llama3-70b-8192", temperature: 0.5 }
   );
-  return content.trim();
+  
+  // Apply guardrails to prevent JSON output
+  let cleanedContent = cleanJsonArtifacts(content.trim());
+  cleanedContent = validateEmailMessage(cleanedContent);
+  
+  return cleanedContent || email; // Fallback to original if cleaning fails
 }
 
 export async function rephraseLinkedInWithTone(linkedin: string, tone: WritingTone): Promise<string> {
@@ -226,13 +407,18 @@ export async function rephraseLinkedInWithTone(linkedin: string, tone: WritingTo
 
 Style Reference: ${toneConfig.exampleLinkedIn}
 
-Keep it around 44 words, concise and engaging. Return plain text only.` 
+Keep it around 44 words, concise and engaging. Return ONLY the message content with no additional formatting, explanations, or JSON structures.` 
       },
       { role: "user", content: linkedin },
     ],
     { model: "llama3-70b-8192", temperature: 0.5 }
   );
-  return content.trim();
+  
+  // Apply guardrails to prevent JSON output
+  let cleanedContent = cleanJsonArtifacts(content.trim());
+  cleanedContent = validateLinkedInMessage(cleanedContent);
+  
+  return cleanedContent || linkedin; // Fallback to original if cleaning fails
 }
 
 

@@ -61,26 +61,33 @@ Do **not** output markdown formatting, code blocks, or numbered citations like [
 ---
 
 ## 3) Contact & Emails
-- Identify TWO key contacts with this priority structure:
-  1. **Primary Contact**: MUST be either a hiring manager, talent acquisition specialist, or HR director
-  2. **Secondary Contact**: Can be CEO, CTO, founders, or senior engineers relevant to the role
-- Search LinkedIn, official team pages, and company websites for both contacts
-- If a public email is found on a trusted source, include it.  
-- For contact email inference, try these approaches in order:
-  1. Check official websites for contact patterns (team pages, press contacts, etc.)
-  2. Look for executive emails in press releases or official announcements
-  3. If no direct email found, infer using common corporate patterns:
-     - firstname.lastname@domain.com
-     - firstname@domain.com  
-     - flastname@domain.com
-     - first.last@domain.com
+- ALWAYS identify TWO key contacts with this strict priority structure:
+  1. **Primary Contact**: MUST be either a hiring manager, talent acquisition specialist, recruiter, or HR director
+  2. **Secondary Contact**: Should be CEO, CTO, founders, department heads, or senior engineers relevant to the role
+- Search LinkedIn, official team pages, company websites, and press releases for both contacts
+- **CONTACT DISCOVERY STRATEGY**:
+  - First, actively search for hiring managers, talent acquisition specialists, or HR personnel
+  - Look for recent job postings or career pages that might mention recruiting contacts
+  - Check LinkedIn for people with hiring/recruiting titles at the company
+  - For secondary contact, identify leadership relevant to the role (engineering leaders for technical roles, etc.)
 - **CONTACT REQUIREMENTS**:
-  - Always prioritize finding a hiring manager or talent acquisition contact as the primary contact
-  - If no hiring/talent acquisition contact can be found, clearly state this limitation
-  - Only include contacts if you have at least a name OR a reasonable email inference
+  - ALWAYS provide TWO contacts when any contact information is available
+  - If no hiring manager is found, promote the best available leadership contact to primary and find another for secondary
+  - Never leave contact_information empty if you can identify at least one person
+  - Each contact MUST have at least a name AND title
+  - Use actual titles found in research, avoid generic labels like "Inferred Hiring Manager"
+- **EMAIL INFERENCE RULES**:
+  - If a public email is found on a trusted source, include it with "inferred": false
+  - For contact email inference, try these approaches in order:
+    1. Check official websites for contact patterns (team pages, press contacts, etc.)
+    2. Look for executive emails in press releases or official announcements
+    3. If no direct email found, infer using common corporate patterns:
+       - firstname.lastname@domain.com
+       - firstname@domain.com  
+       - flastname@domain.com
+       - first.last@domain.com
   - Mark inferred emails with "inferred": true and provide confidence reasoning
-  - Provide a "confidence_score" (0.00–1.00) for each contact
-- Prefer recent leadership information (check for recent changes or appointments)
+  - Provide a "confidence_score" (0.00–1.00) for each contact based on source reliability
 
 ---
 
@@ -98,7 +105,7 @@ Do **not** output markdown formatting, code blocks, or numbered citations like [
   "contact_information": {
     "primary_contact": {
       "name": "Sarah Johnson",
-      "title": "Talent Acquisition Manager", 
+      "title": "Senior Talent Acquisition Specialist", 
       "email": "sarah.johnson@company.com",
       "inferred": true,
       "confidence_score": 0.85,
@@ -106,7 +113,7 @@ Do **not** output markdown formatting, code blocks, or numbered citations like [
     },
     "secondary_contact": {
       "name": "John Smith",
-      "title": "Engineering Director", 
+      "title": "VP of Engineering", 
       "email": "john.smith@company.com",
       "inferred": false,
       "confidence_score": 0.90,
@@ -119,12 +126,21 @@ Do **not** output markdown formatting, code blocks, or numbered citations like [
   }
 }
 
-**CRITICAL**: 
-- Always provide TWO contacts: primary (hiring/talent acquisition) and secondary (leadership/engineering)
-- If no hiring manager or talent acquisition specialist can be found, clearly state this in the confidence assessment
-- Do NOT include "contact_information" with "N/A" values or explanatory text
-- Only include contacts when you have actual name/title/email data
-- Primary contact MUST be hiring-related role when possible
+**CRITICAL CONTACT REQUIREMENTS**: 
+- ALWAYS provide TWO contacts in the contact_information object when any contact data is available
+- Primary contact MUST be hiring-related role when possible (hiring manager, talent acquisition, recruiter, HR)
+- If no hiring role is found, use the most senior/relevant leadership as primary and find another for secondary
+- Secondary contact should be leadership or department head relevant to the target role
+- Use actual job titles from research - avoid generic labels like "Inferred Hiring Manager" or "Hiring Manager (Inferred)"
+- Each contact must have name, title, and preferably email (inferred if necessary)
+- If only one contact can be identified, duplicate with different confidence scores rather than leaving secondary empty
+- Never include "N/A", "Not Available", or placeholder text in contact fields
+- Mark email inference clearly with "inferred": true/false and appropriate confidence_score
+
+**OUTPUT REQUIREMENTS**:
+- Return ONLY valid JSON with no markdown formatting or explanations
+- Include contact_information section only when you have actual contact data
+- Ensure all required fields are present and properly formatted
 
 ---
 

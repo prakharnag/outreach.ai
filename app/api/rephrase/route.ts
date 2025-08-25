@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import { rephraseLinkedInTo22Words, rephraseEmailWithTone, rephraseLinkedInWithTone } from "lib/messagingAgent";
 import { WritingTone } from "lib/tones";
+import { sanitizeMessageContent } from "lib/utils";
 
 export const runtime = "edge";
 
@@ -18,21 +19,21 @@ export async function POST(req: NextRequest) {
       if (type === "22words") {
         // Special 22-word rephrase
         const text = await rephraseLinkedInTo22Words(String(linkedin), tone as WritingTone);
-        result.linkedin = text;
+        result.linkedin = sanitizeMessageContent(text);
       } else if (tone) {
         // Tone-based rephrase
         const text = await rephraseLinkedInWithTone(String(linkedin), tone as WritingTone);
-        result.linkedin = text;
+        result.linkedin = sanitizeMessageContent(text);
       } else {
         // Default 22-word rephrase for backward compatibility
         const text = await rephraseLinkedInTo22Words(String(linkedin));
-        result.linkedin = text;
+        result.linkedin = sanitizeMessageContent(text);
       }
     }
 
     if (email && tone) {
       const text = await rephraseEmailWithTone(String(email), tone as WritingTone);
-      result.email = text;
+      result.email = sanitizeMessageContent(text);
     }
 
     return new Response(JSON.stringify(result), { 
