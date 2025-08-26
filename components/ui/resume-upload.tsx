@@ -61,7 +61,7 @@ export function ResumeUpload({ isOpen, onClose, onUploadSuccess, className }: Re
     // For PDF text extraction, we'll use a simple approach
     // In a production environment, you might want to use PDF.js or send to a server
     try {
-      console.log('[Resume Upload] Starting PDF text extraction for:', file.name);
+      // Starting PDF text extraction
       const formData = new FormData();
       formData.append('file', file);
       
@@ -70,8 +70,6 @@ export function ResumeUpload({ isOpen, onClose, onUploadSuccess, className }: Re
         body: formData,
       });
       
-      console.log('[Resume Upload] Extract text API response status:', response.status);
-      
       if (!response.ok) {
         const errorData = await response.text();
         console.error('[Resume Upload] Extract text API error:', errorData);
@@ -79,8 +77,7 @@ export function ResumeUpload({ isOpen, onClose, onUploadSuccess, className }: Re
       }
       
       const { text } = await response.json();
-      console.log('[Resume Upload] Successfully extracted text, length:', text.length);
-      console.log('[Resume Upload] Text preview:', text.slice(0, 200) + '...');
+      // Successfully extracted text
       return text;
     } catch (error) {
       console.error('[Resume Upload] PDF text extraction failed:', error);
@@ -93,7 +90,7 @@ export function ResumeUpload({ isOpen, onClose, onUploadSuccess, className }: Re
     // For DOCX text extraction, we'll use a simple approach
     // In a production environment, you might want to use mammoth.js or send to a server
     try {
-      console.log('[Resume Upload] Starting DOCX text extraction for:', file.name);
+      // Starting DOCX text extraction
       const formData = new FormData();
       formData.append('file', file);
       
@@ -102,8 +99,6 @@ export function ResumeUpload({ isOpen, onClose, onUploadSuccess, className }: Re
         body: formData,
       });
       
-      console.log('[Resume Upload] Extract text API response status:', response.status);
-      
       if (!response.ok) {
         const errorData = await response.text();
         console.error('[Resume Upload] Extract text API error:', errorData);
@@ -111,8 +106,7 @@ export function ResumeUpload({ isOpen, onClose, onUploadSuccess, className }: Re
       }
       
       const { text } = await response.json();
-      console.log('[Resume Upload] Successfully extracted text, length:', text.length);
-      console.log('[Resume Upload] Text preview:', text.slice(0, 200) + '...');
+      // Successfully extracted text
       return text;
     } catch (error) {
       console.error('[Resume Upload] DOCX text extraction failed:', error);

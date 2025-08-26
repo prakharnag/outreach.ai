@@ -45,12 +45,10 @@ export async function POST(req: NextRequest) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401 });
     }
 
-    console.log('[API Run] Authenticated user:', user.id);
-
-
+    // Authenticated user proceeding with request
     const { company, domain, role, highlights, tone, resumeContent, useResumeInPersonalization } = await req.json();
-    if (!company || !role || !highlights) {
-      return new Response(JSON.stringify({ error: "Missing company, role or highlights" }), { status: 400 });
+    if (!company || !role) {
+      return new Response(JSON.stringify({ error: "Missing company or role" }), { status: 400 });
     }
 
     const stream = new ReadableStream<Uint8Array>({
@@ -62,7 +60,7 @@ export async function POST(req: NextRequest) {
               company: String(company), 
               domain: domain ? String(domain) : undefined, 
               role: String(role), 
-              highlights: String(highlights),
+              highlights: highlights ? String(highlights) : '',
               tone: tone || undefined,
               userId: user.id,
               resumeContent: useResumeInPersonalization ? (resumeContent || undefined) : undefined

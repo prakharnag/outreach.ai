@@ -313,11 +313,11 @@ export function ResumeViewer({ className, onUploadClick, onResumeSettingsChange,
         try {
           const response = await fetch(resumeData.url, { method: 'HEAD' });
           if (!response.ok) {
-            console.log('Resume URL expired during session, refreshing...');
+            // Resume URL expired during session, refreshing silently
             await regenerateSignedUrl(resumeData.filename);
           }
         } catch (error) {
-          console.log('Resume URL validation failed, refreshing...');
+          // Resume URL validation failed, refreshing silently
           await regenerateSignedUrl(resumeData.filename);
         }
       }

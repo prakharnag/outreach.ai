@@ -31,7 +31,7 @@ export async function DELETE(req: NextRequest) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401 });
     }
 
-    console.log('Email delete request - User ID:', user.id);
+    // Email delete request authenticated
 
     const url = new URL(req.url);
     const id = url.searchParams.get('id');
@@ -40,7 +40,7 @@ export async function DELETE(req: NextRequest) {
       return new Response(JSON.stringify({ error: "Email ID is required" }), { status: 400 });
     }
 
-    console.log('Attempting to delete email with ID:', id);
+    // Attempting to delete email
 
     // Delete the email from the database
     const { error } = await supabase
@@ -54,7 +54,7 @@ export async function DELETE(req: NextRequest) {
       return new Response(JSON.stringify({ error: "Failed to delete email" }), { status: 500 });
     }
 
-    console.log('Successfully deleted email with ID:', id);
+    // Email successfully deleted
     return new Response(JSON.stringify({ success: true }), { status: 200 });
   } catch (error) {
     console.error('Delete email error:', error);

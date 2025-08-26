@@ -58,7 +58,6 @@ export async function POST(request: NextRequest) {
     // Download the file from the resume URL
     const fileResponse = await fetch(profileData.resume_url);
     if (!fileResponse.ok) {
-      console.log('[Reprocess Resume] Failed to download file, status:', fileResponse.status);
       return NextResponse.json({ error: "Failed to download resume file" }, { status: 400 });
     }
 
@@ -79,7 +78,6 @@ export async function POST(request: NextRequest) {
       type: mimeType
     });
 
-    console.log('[Reprocess Resume] Re-extracting text from file:', file.name, 'type:', file.type);
 
     // Re-extract text using the extract-text API
     const formData = new FormData();
@@ -106,7 +104,6 @@ export async function POST(request: NextRequest) {
       }, { status: 400 });
     }
 
-    console.log('[Reprocess Resume] Successfully extracted text, length:', text.length);
 
     // Update the user profile with the new extracted text
     const { error: updateError } = await supabase

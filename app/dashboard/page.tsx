@@ -125,7 +125,7 @@ export default function HomePage() {
   const [emailTone, setEmailTone] = useState<WritingTone>(getDefaultTone());
   const [linkedinTone, setLinkedinTone] = useState<WritingTone>(getDefaultTone());
   
-  const canRun = useMemo(() => hasValidCompany && !!role && !!highlights, [hasValidCompany, role, highlights]);
+  const canRun = useMemo(() => hasValidCompany && !!role, [hasValidCompany, role]);
   const abortRef = useRef<AbortController | null>(null);
   const supabaseClient = useMemo(() => supabase, []);
   
@@ -231,7 +231,7 @@ export default function HomePage() {
 
     // Refresh resume data every 45 minutes to prevent URL expiration issues
     const interval = setInterval(() => {
-      console.log('Performing periodic resume data refresh...');
+      // Performing periodic resume data refresh silently
       loadResumeData();
     }, 45 * 60 * 1000); // 45 minutes
 
@@ -637,6 +637,10 @@ export default function HomePage() {
                 setEditableEmail(sanitizedEmail);
                 setEditableLinkedin(sanitizedLinkedIn);
                 
+                // Synchronize tone dropdowns with search panel selection
+                setEmailTone(data.tone || getDefaultTone());
+                setLinkedinTone(data.tone || getDefaultTone());
+                
                 // History is automatically saved by the orchestrator
                 // Refresh history to show updated groupings after a short delay
                 setTimeout(() => {
@@ -747,6 +751,10 @@ export default function HomePage() {
   const regenerateEmail = useCallback(async () => {
     setRegeneratingEmail(true);
     try {
+      // Include resume data when toggle is enabled
+      const resumeContent = resumeData?.useInPersonalization ? formatResumeForMessaging(resumeData.content) : undefined;
+      const useResumeInPersonalization = resumeData?.useInPersonalization || false;
+      
       const res = await fetch("/api/messaging", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -755,7 +763,10 @@ export default function HomePage() {
           role: searchData.role, 
           highlights: searchData.highlights,
           tone: emailTone,
-          existingEmail: editableEmail 
+          existingEmail: editableEmail,
+          resumeContent,
+          useResumeInPersonalization,
+          messageType: 'email' // Only regenerate email
         }),
       });
       if (!res.ok) throw new Error("Failed to regenerate email");
@@ -768,11 +779,15 @@ export default function HomePage() {
     } finally {
       setRegeneratingEmail(false);
     }
-  }, [searchData, emailTone, editableEmail]);
+  }, [searchData, emailTone, editableEmail, resumeData]);
 
   const regenerateLinkedin = useCallback(async () => {
     setRegeneratingLinkedin(true);
     try {
+      // Include resume data when toggle is enabled
+      const resumeContent = resumeData?.useInPersonalization ? formatResumeForMessaging(resumeData.content) : undefined;
+      const useResumeInPersonalization = resumeData?.useInPersonalization || false;
+      
       const res = await fetch("/api/messaging", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -780,7 +795,10 @@ export default function HomePage() {
           company: searchData.company, 
           role: searchData.role, 
           highlights: searchData.highlights,
-          tone: linkedinTone
+          tone: linkedinTone,
+          resumeContent,
+          useResumeInPersonalization,
+          messageType: 'linkedin' // Only regenerate LinkedIn
         }),
       });
       if (!res.ok) throw new Error("Failed to regenerate");
@@ -793,7 +811,7 @@ export default function HomePage() {
     } finally {
       setRegeneratingLinkedin(false);
     }
-  }, [searchData, linkedinTone]);
+  }, [searchData, linkedinTone, resumeData]);
 
   if (userLoading) {
     return (
@@ -996,7 +1014,7 @@ export default function HomePage() {
                     
                     <div>
                       <label className="block text-sm font-medium text-slate-700 mb-2">
-                        Key Highlights
+                        Key Highlights <span className="text-xs text-slate-500 font-normal">(Optional)</span>
                       </label>
                       <textarea
                         value={highlights}
@@ -1005,6 +1023,9 @@ export default function HomePage() {
                         rows={4}
                         className="w-full px-3 py-2.5 text-sm border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
                       />
+                      <p className="text-xs text-slate-500 mt-1">
+                        Adding highlights makes your outreach more personalized and effective.
+                      </p>
                     </div>
 
                     {/* Resume Personalization */}
@@ -1260,7 +1281,7 @@ export default function HomePage() {
                             </CardAction>
                           )}
                         </CardHeader>
-                        <CardContent>
+                        <CardContent className="p-4 sm:p-6">
                         {email ? (
                           <Textarea
                             value={editableEmail}
@@ -1315,13 +1336,22 @@ export default function HomePage() {
                                 onClick={async () => {
                                   setRephrasingLinkedin(true);
                                   try {
+                                    // Include resume data when toggle is enabled
+                                    const resumeContent = resumeData?.useInPersonalization ? formatResumeForMessaging(resumeData.content) : undefined;
+                                    const useResumeInPersonalization = resumeData?.useInPersonalization || false;
+                                    
                                     const res = await fetch("/api/rephrase", {
                                       method: "POST",
                                       headers: { "Content-Type": "application/json" },
                                       body: JSON.stringify({ 
                                         linkedin: editableLinkedin, 
                                         tone: linkedinTone,
-                                        type: "22words"
+                                        type: "22words",
+                                        resumeContent,
+                                        useResumeInPersonalization,
+                                        company: searchData.company,
+                                        role: searchData.role,
+                                        highlights: searchData.highlights
                                       }),
                                     });
                                     if (!res.ok) throw new Error("Failed to rephrase");

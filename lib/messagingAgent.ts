@@ -29,17 +29,19 @@ function cleanJsonArtifacts(content: string): string {
   // Remove common JSON artifacts and unwanted characters
   let cleaned = content
     .replace(/^["']|["']$/g, '') // Remove surrounding quotes
-    .replace(/\\n/g, '\n') // Convert escaped newlines
+    .replace(/\\n/g, '\n') // Convert escaped newlines to actual newlines
+    .replace(/\\t/g, '\t') // Convert escaped tabs
+    .replace(/\\r/g, '\r') // Convert escaped carriage returns
     .replace(/\\"/g, '"') // Convert escaped quotes
     .replace(/^\s*\{.*\}\s*$/, '') // Remove if entire content is JSON object
     .replace(/^[^a-zA-Z]*/, '') // Remove leading non-alphabetic characters
     .trim();
   
   // For email content, preserve line breaks and paragraph structure
-  // Only normalize excessive whitespace, not line breaks
+  // Only normalize excessive horizontal whitespace, NOT line breaks
   if (cleaned.toLowerCase().includes('subject:')) {
-    // This is likely an email, preserve line structure
-    cleaned = cleaned.replace(/[ \t]+/g, ' '); // Only normalize spaces and tabs, keep newlines
+    // This is likely an email, preserve ALL line structure
+    cleaned = cleaned.replace(/[ \t]{2,}/g, ' '); // Only normalize multiple spaces/tabs, keep single spaces and all newlines
   } else {
     // For non-email content (like LinkedIn), normalize all whitespace
     cleaned = cleaned.replace(/\s+/g, ' ');
@@ -51,24 +53,22 @@ function cleanJsonArtifacts(content: string): string {
 function validateLinkedInMessage(content: string): string {
   if (!content) return "";
   
-  // Ensure it starts with a proper greeting
-  if (!content.match(/^(Hi|Hey|Hello)\s+/i)) {
-    // If no proper greeting, add one
-    const hasName = content.match(/\b[A-Z][a-z]+\b/);
-    if (hasName) {
-      content = `Hi there, ${content}`;
-    } else {
-      content = `Hi there! ${content}`;
-    }
-  }
-  
   // Remove any JSON-like structures
-  content = content.replace(/\{[^}]*\}/g, '');
+  content = content.replace(/\{[^}]*\}/g, '').trim();
   
-  // Ensure reasonable length (20-80 words for flexibility)
+  // Only ensure reasonable length (20-80 words for flexibility)
+  // Don't modify greetings as the AI should handle proper contact names
   const words = content.split(/\s+/).filter(word => word.length > 0);
   if (words.length > 80) {
     content = words.slice(0, 80).join(' ') + '...';
+  }
+  
+  // Only add a greeting if the content is completely empty or doesn't start with any greeting-like word
+  if (!content.match(/^(Hi|Hey|Hello|Dear|Good)\s+/i)) {
+    // Only add a generic greeting if there's substantial content but no greeting
+    if (content.length > 10) {
+      content = `Hi! ${content}`;
+    }
   }
   
   return content.trim();
@@ -85,21 +85,20 @@ function validateEmailMessage(content: string): string {
   
   // If it already has subject and reasonable content, preserve the structure
   if (hasSubject) {
-    // Split into lines and preserve structure but clean up formatting
-    const lines = content.split('\n');
-    const cleanedLines = lines.map(line => line.trim());
+    // Preserve the original line structure but clean up excess whitespace
+    let result = content;
     
-    // Rejoin with proper spacing - preserve empty lines for paragraph breaks
-    let result = cleanedLines.join('\n');
+    // Only normalize multiple consecutive spaces, preserve line breaks
+    result = result.replace(/[ \t]{2,}/g, ' ');
     
-    // Ensure proper spacing after subject line
-    result = result.replace(/^(Subject:.*?)(\n)([^\n])/i, '$1\n\n$3');
+    // Ensure proper spacing after subject line (subject line should be followed by double newline)
+    result = result.replace(/^(Subject:.*?)(\n)([^\n\s])/i, '$1\n\n$3');
     
-    // Ensure paragraph breaks are maintained (double line breaks)
-    result = result.replace(/\n{3,}/g, '\n\n'); // Normalize multiple line breaks to double
+    // Normalize excessive line breaks but preserve paragraph structure
+    result = result.replace(/\n{4,}/g, '\n\n\n'); // Allow max triple line breaks for spacing
     
     // Check if the email body (after subject) is substantial enough
-    const emailBody = result.replace(/^Subject:.*?\n\n?/i, '').trim();
+    const emailBody = result.replace(/^Subject:.*?\n+/i, '').trim();
     if (emailBody.length >= 20) {
       return result.trim();
     }
@@ -111,9 +110,9 @@ function validateEmailMessage(content: string): string {
   }
   
   // Only add basic content if the email seems incomplete (very short)
-  const contentWithoutSubject = content.replace(/^Subject:.*?\n\n?/i, '').trim();
+  const contentWithoutSubject = content.replace(/^Subject:.*?\n+/i, '').trim();
   if (contentWithoutSubject.length < 20) {
-    const subjectMatch = content.match(/^(Subject:.*?)(\n\n?)(.*)/is);
+    const subjectMatch = content.match(/^(Subject:.*?)(\n+)(.*)/is);
     if (subjectMatch) {
       content = `${subjectMatch[1]}\n\nHi,\n\nI hope this message finds you well. I wanted to reach out regarding potential opportunities.\n\nBest regards`;
     } else {
@@ -121,13 +120,15 @@ function validateEmailMessage(content: string): string {
     }
   }
   
-  // Final cleanup while preserving paragraph structure
-  return content
-    .split('\n')
-    .map(line => line.trim())
-    .join('\n')
-    .replace(/\n{3,}/g, '\n\n') // Normalize multiple line breaks
-    .replace(/^(Subject:.*?)(\n)([^\n])/i, '$1\n\n$3') // Ensure spacing after subject
+  // Final cleanup while preserving paragraph structure - only trim each line, don't alter line breaks
+  const lines = content.split('\n');
+  const cleanedLines = lines.map(line => line.trim());
+  const result = cleanedLines.join('\n');
+  
+  // Ensure proper spacing after subject line
+  return result
+    .replace(/^(Subject:.*?)(\n)([^\n\s])/i, '$1\n\n$3')
+    .replace(/\n{4,}/g, '\n\n\n') // Max triple line breaks
     .trim();
 }
 
@@ -159,18 +160,8 @@ export async function messagingAgent(input: MessagingAgentInput): Promise<Messag
   const tone = input.tone || getDefaultTone();
   const toneConfig = getToneConfig(tone);
   
-  // Debug logging for contact information
-  console.log("Messaging Agent Input:", {
-    contactStructure: input.verified.contact,
-    primaryContactName: (input.verified.contact as any)?.primary_contact?.name,
-    secondaryContactName: (input.verified.contact as any)?.secondary_contact?.name,
-    legacyContactName: (input.verified.contact as any)?.name,
-    company: input.company,
-    role: input.role,
-    highlights: input.highlights,
-    tone: input.tone,
-    hasResumeContent: !!input.resumeContent
-  });  const system = `You are a master of warm, high-conversion outreach. Return ONLY valid JSON with exactly two properties: {"linkedin":"string","email":"string"}.
+  // Contact information processing
+  const system = `You are a master of warm, high-conversion outreach. Return ONLY valid JSON with exactly two properties: {"linkedin":"string","email":"string"}.
 
 TONE INSTRUCTION: ${toneConfig.systemPrompt}
 
@@ -188,6 +179,8 @@ You are a professional outreach specialist creating personalized messages.
 - Do NOT include nested JSON objects within the message content
 - Do NOT include quotes, backslashes, or escape characters in the message content
 - Each message should be clean, readable text without any JSON formatting
+- AVOID control characters, tabs, or complex formatting that could break JSON parsing
+- Use simple line breaks (\\n) for email paragraph separation, not actual newlines in JSON
 
 **CRITICAL INSTRUCTIONS:**
 - User's TARGET ROLE: ${input.role} - This is the position they are seeking/targeting. Reference this role appropriately.
@@ -205,6 +198,13 @@ Generate TWO outputs ONLY:
     4. 2â€“3 short sentences connecting your skills and key highlights (from user input) to their current needs or recent initiatives (from provided research).
     5. End with one clear, low-pressure call-to-action (e.g., "Happy to chat if this aligns").
     6. End with a professional closing (e.g., "Best regards," or "Best,")
+  CRITICAL EMAIL FORMATTING: 
+    - Subject line should be on its own line
+    - Use \\n for line breaks in the JSON string (not actual newlines)
+    - Add blank lines between paragraphs using \\n\\n
+    - Maintain proper email structure with clear paragraph breaks
+    - Do NOT write as one continuous paragraph - use proper email formatting with line breaks
+    - Example: "Subject: Title\\n\\nDear Name,\\n\\nParagraph 1\\n\\nParagraph 2\\n\\nBest regards"
   Tone: Apply the ${toneConfig.label.toLowerCase()} writing style while maintaining professionalism.
 
 - LinkedIn (exactly 44 words): connection-oriented, same personalization style as the email, START WITH "Hi" or "Hey" followed by the contact's name (from verified insights, NOT from resume), no formal sign-offs, written in one smooth flow using ${toneConfig.label.toLowerCase()} tone.
@@ -293,9 +293,11 @@ Output must be strictly valid JSON with ONLY "linkedin" and "email" properties â
     { model: "llama3-70b-8192", temperature: 0.5 }
   );
 
+  let cleanContent = "";
+  
   try {
     // Clean the content to ensure it's valid JSON
-    let cleanContent = content.trim();
+    cleanContent = content.trim();
     
     // Remove any text before the first {
     const firstBrace = cleanContent.indexOf('{');
@@ -308,6 +310,25 @@ Output must be strictly valid JSON with ONLY "linkedin" and "email" properties â
     if (lastBrace >= 0 && lastBrace < cleanContent.length - 1) {
       cleanContent = cleanContent.substring(0, lastBrace + 1);
     }
+    
+    // Enhanced JSON sanitization to handle control characters
+    cleanContent = cleanContent
+      // Replace unescaped newlines with escaped ones
+      .replace(/\n/g, '\\n')
+      // Replace unescaped tabs with escaped ones  
+      .replace(/\t/g, '\\t')
+      // Replace unescaped carriage returns
+      .replace(/\r/g, '\\r')
+      // Replace other problematic control characters
+      .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '')
+      // Fix any double-escaped quotes that might have been created
+      .replace(/\\\\"/g, '\\"')
+      // Ensure proper quote escaping within JSON strings
+      .replace(/"([^"\\]*)"/g, (match, content) => {
+        // Only escape quotes that aren't already escaped
+        const escapedContent = content.replace(/(?<!\\)"/g, '\\"');
+        return `"${escapedContent}"`;
+      });
     
     const parsed = JSON.parse(cleanContent);
     
@@ -337,23 +358,62 @@ Output must be strictly valid JSON with ONLY "linkedin" and "email" properties â
     return result;
   } catch (parseError) {
     console.error("Messaging Agent Parse Error:", parseError);
+    console.error("Raw AI Response:", content);
+    console.error("Cleaned Content for JSON Parse:", cleanContent);
+    
+    // Try to extract content manually if JSON parsing fails
+    let fallbackLinkedin = "";
+    let fallbackEmail = "";
+    
+    try {
+      // Simple regex extraction as last resort
+      const linkedinMatch = content.match(/"linkedin"\s*:\s*"([^"]+)"/);
+      const emailMatch = content.match(/"email"\s*:\s*"([^"]+)"/);
+      
+      if (linkedinMatch) {
+        fallbackLinkedin = linkedinMatch[1].replace(/\\n/g, '\n').replace(/\\"/g, '"');
+      }
+      if (emailMatch) {
+        fallbackEmail = emailMatch[1].replace(/\\n/g, '\n').replace(/\\"/g, '"');
+      }
+    } catch (regexError) {
+      console.error("Regex extraction also failed:", regexError);
+    }
+    
     // Enhanced fallback with proper content generation
     return {
-      linkedin: generateFallbackLinkedIn(input),
-      email: generateFallbackEmail(input)
+      linkedin: fallbackLinkedin || generateFallbackLinkedIn(input),
+      email: fallbackEmail || generateFallbackEmail(input)
     };
   }
 }
 
-export async function rephraseLinkedInTo22Words(linkedin: string, tone?: WritingTone): Promise<string> {
+export async function rephraseLinkedInTo22Words(
+  linkedin: string, 
+  tone?: WritingTone, 
+  context?: {
+    resumeContent?: string;
+    company?: string;
+    role?: string;
+    highlights?: string;
+  }
+): Promise<string> {
   const toneConfig = getToneConfig(tone || getDefaultTone());
+  
+  // Enhanced system prompt with resume context when available
+  let systemPrompt = `You are a professional message editor. Rewrite the given LinkedIn message to exactly 22 words while preserving the core value proposition and maintaining a ${toneConfig.label.toLowerCase()} tone. ${toneConfig.systemPrompt}`;
+  
+  if (context?.resumeContent) {
+    systemPrompt += `\n\nPersonalization Context:\nCompany: ${context.company || 'N/A'}\nRole: ${context.role || 'N/A'}\nHighlights: ${context.highlights || 'N/A'}\nResume Content: ${context.resumeContent}\n\nUSE THIS RESUME CONTENT to make the 22-word message more personalized and relevant to the target role and company.`;
+  }
+  
+  systemPrompt += '\n\nCRITICAL: Return ONLY the rewritten 22-word message. Do not include any explanations, instructions, additional text, JSON formatting, or quotes before or after the message.';
+  
   const { content } = await callGroq(
     [
       { 
         role: "system", 
-        content: `You are a professional message editor. Rewrite the given LinkedIn message to exactly 22 words while preserving the core value proposition and maintaining a ${toneConfig.label.toLowerCase()} tone. ${toneConfig.systemPrompt}
-
-CRITICAL: Return ONLY the rewritten 22-word message. Do not include any explanations, instructions, additional text, JSON formatting, or quotes before or after the message.` 
+        content: systemPrompt
       },
       { role: "user", content: linkedin },
     ],
@@ -373,17 +433,34 @@ CRITICAL: Return ONLY the rewritten 22-word message. Do not include any explanat
   return cleanedContent || linkedin; // Fallback to original if cleaning fails
 }
 
-export async function rephraseEmailWithTone(email: string, tone: WritingTone): Promise<string> {
+export async function rephraseEmailWithTone(
+  email: string, 
+  tone: WritingTone,
+  context?: {
+    resumeContent?: string;
+    company?: string;
+    role?: string;
+    highlights?: string;
+  }
+): Promise<string> {
   const toneConfig = getToneConfig(tone);
+  
+  // Enhanced system prompt with resume context when available
+  let systemPrompt = `Rewrite this email maintaining the same structure and core message but applying ${toneConfig.label.toLowerCase()} tone: ${toneConfig.systemPrompt}. 
+
+Style Reference: ${toneConfig.exampleEmail}`;
+
+  if (context?.resumeContent) {
+    systemPrompt += `\n\nPersonalization Context:\nCompany: ${context.company || 'N/A'}\nRole: ${context.role || 'N/A'}\nHighlights: ${context.highlights || 'N/A'}\nResume Content: ${context.resumeContent}\n\nUSE THIS RESUME CONTENT to make the email more personalized and relevant to the target role and company while maintaining the specified tone.`;
+  }
+  
+  systemPrompt += '\n\nKeep it 90-100 words and maintain the Subject line format. Return ONLY the email content with no additional formatting, explanations, or JSON structures.';
+  
   const { content } = await callGroq(
     [
       { 
         role: "system", 
-        content: `Rewrite this email maintaining the same structure and core message but applying ${toneConfig.label.toLowerCase()} tone: ${toneConfig.systemPrompt}. 
-
-Style Reference: ${toneConfig.exampleEmail}
-
-Keep it 90-100 words and maintain the Subject line format. Return ONLY the email content with no additional formatting, explanations, or JSON structures.` 
+        content: systemPrompt
       },
       { role: "user", content: email },
     ],
@@ -397,17 +474,34 @@ Keep it 90-100 words and maintain the Subject line format. Return ONLY the email
   return cleanedContent || email; // Fallback to original if cleaning fails
 }
 
-export async function rephraseLinkedInWithTone(linkedin: string, tone: WritingTone): Promise<string> {
+export async function rephraseLinkedInWithTone(
+  linkedin: string, 
+  tone: WritingTone,
+  context?: {
+    resumeContent?: string;
+    company?: string;
+    role?: string;
+    highlights?: string;
+  }
+): Promise<string> {
   const toneConfig = getToneConfig(tone);
+  
+  // Enhanced system prompt with resume context when available
+  let systemPrompt = `Rewrite this LinkedIn message maintaining the same core message but applying ${toneConfig.label.toLowerCase()} tone: ${toneConfig.systemPrompt}. 
+
+Style Reference: ${toneConfig.exampleLinkedIn}`;
+
+  if (context?.resumeContent) {
+    systemPrompt += `\n\nPersonalization Context:\nCompany: ${context.company || 'N/A'}\nRole: ${context.role || 'N/A'}\nHighlights: ${context.highlights || 'N/A'}\nResume Content: ${context.resumeContent}\n\nUSE THIS RESUME CONTENT to make the LinkedIn message more personalized and relevant to the target role and company while maintaining the specified tone.`;
+  }
+  
+  systemPrompt += '\n\nKeep it around 44 words, concise and engaging. Return ONLY the message content with no additional formatting, explanations, or JSON structures.';
+  
   const { content } = await callGroq(
     [
       { 
         role: "system", 
-        content: `Rewrite this LinkedIn message maintaining the same core message but applying ${toneConfig.label.toLowerCase()} tone: ${toneConfig.systemPrompt}. 
-
-Style Reference: ${toneConfig.exampleLinkedIn}
-
-Keep it around 44 words, concise and engaging. Return ONLY the message content with no additional formatting, explanations, or JSON structures.` 
+        content: systemPrompt
       },
       { role: "user", content: linkedin },
     ],

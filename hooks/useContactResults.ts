@@ -35,8 +35,7 @@ export function useContactResults() {
       .on('postgres_changes',
         { event: '*', schema: 'public', table: 'contact_results' },
         (payload: any) => {
-          console.log('Real-time update received:', payload);
-          
+          // Real-time update received
           if (payload.eventType === 'INSERT') {
             setContactResults(prev => {
               // Prevent duplicates
@@ -54,7 +53,7 @@ export function useContactResults() {
         }
       )
       .subscribe((status: any) => {
-        //console.log('Subscription status:', status);
+        // Monitoring subscription status
         if (status === 'SUBSCRIPTION_ERROR') {
           setError('Real-time updates disconnected. Data may not be current.');
         }

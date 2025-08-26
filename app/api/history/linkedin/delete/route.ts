@@ -31,7 +31,6 @@ export async function DELETE(req: NextRequest) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401 });
     }
 
-    console.log('LinkedIn delete request - User ID:', user.id);
 
     const url = new URL(req.url);
     const id = url.searchParams.get('id');
@@ -40,7 +39,6 @@ export async function DELETE(req: NextRequest) {
       return new Response(JSON.stringify({ error: "LinkedIn message ID is required" }), { status: 400 });
     }
 
-    console.log('Attempting to delete LinkedIn message with ID:', id);
 
     // Delete the LinkedIn message from the database
     const { error } = await supabase
@@ -54,7 +52,6 @@ export async function DELETE(req: NextRequest) {
       return new Response(JSON.stringify({ error: "Failed to delete LinkedIn message" }), { status: 500 });
     }
 
-    console.log('Successfully deleted LinkedIn message with ID:', id);
     return new Response(JSON.stringify({ success: true }), { status: 200 });
   } catch (error) {
     console.error('Delete LinkedIn message error:', error);

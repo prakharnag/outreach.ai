@@ -224,12 +224,15 @@ export function CompanyAutocomplete({
 
       {/* No Results Message */}
       {!loading && value.length >= 2 && suggestions.length === 0 && !error && (
-        <div className="mt-1 p-3 bg-slate-50 border border-slate-200 rounded-md">
-          <div className="text-sm text-slate-600">
-            No companies found in suggestions.
+        <div className="mt-1 p-3 bg-amber-50 border border-amber-200 rounded-md">
+          <div className="text-sm text-amber-700 font-medium">
+            Company not found in suggestions
+          </div>
+          <div className="text-xs text-amber-600 mt-1">
+            For better and more precise results, try entering the full website URL (e.g., company.com) or continue with &quot;<span className="font-medium">{value}</span>&quot;
           </div>
           <div className="text-xs text-slate-500 mt-1">
-            Press Enter to proceed with &quot;<span className="font-medium">{value}</span>&quot; or continue typing.
+            Press Enter to proceed with the current input.
           </div>
         </div>
       )}
