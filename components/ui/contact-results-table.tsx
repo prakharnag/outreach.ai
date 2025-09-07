@@ -45,7 +45,17 @@ export function ContactResultsTable({ contacts, loading }: ContactResultsTablePr
 
   const copyToClipboard = async (text: string) => {
     try {
-      await navigator.clipboard.writeText(text);
+      if (typeof navigator !== 'undefined' && navigator.clipboard) {
+        await navigator.clipboard.writeText(text);
+      } else {
+        // Fallback for older browsers
+        const textArea = document.createElement('textarea');
+        textArea.value = text;
+        document.body.appendChild(textArea);
+        textArea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textArea);
+      }
     } catch (err) {
       console.error('Failed to copy:', err);
     }
@@ -220,7 +230,9 @@ export function ContactResultsTable({ contacts, loading }: ContactResultsTablePr
                           size="sm"
                           onClick={() => {
                             const mailtoUrl = `mailto:${contact.contact_email}?subject=Outreach from ${contact.company_name}`;
-                            window.open(mailtoUrl);
+                            if (typeof window !== 'undefined') {
+                              window.open(mailtoUrl);
+                            }
                           }}
                           className="text-xs"
                         >

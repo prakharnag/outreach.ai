@@ -46,7 +46,17 @@ export function ExpandableHistory({ items, type, loading, emptyMessage, onItemDe
 
   const copyToClipboard = async (text: string) => {
     try {
-      await navigator.clipboard.writeText(text);
+      if (typeof navigator !== 'undefined' && navigator.clipboard) {
+        await navigator.clipboard.writeText(text);
+      } else {
+        // Fallback for older browsers
+        const textArea = document.createElement('textarea');
+        textArea.value = text;
+        document.body.appendChild(textArea);
+        textArea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textArea);
+      }
     } catch (err) {
       console.error('Failed to copy:', err);
     }
@@ -101,7 +111,7 @@ export function ExpandableHistory({ items, type, loading, emptyMessage, onItemDe
     }
 
     const confirmMessage = `Are you sure you want to delete all ${allItems.length} ${type === 'email' ? 'emails' : 'LinkedIn messages'} for ${item.company_name}?`;
-    if (!confirm(confirmMessage)) return;
+    if (typeof window !== 'undefined' && !confirm(confirmMessage)) return;
 
     const newDeleting = new Set(deleting);
     newDeleting.add(item.id);
@@ -339,7 +349,7 @@ export function ExpandableHistory({ items, type, loading, emptyMessage, onItemDe
                                     size="sm"
                                     onClick={(e) => {
                                       e.stopPropagation();
-                                      if (confirm(`Are you sure you want to delete this ${type === 'email' ? 'email' : 'LinkedIn message'}?`)) {
+                                      if (typeof window !== 'undefined' && confirm(`Are you sure you want to delete this ${type === 'email' ? 'email' : 'LinkedIn message'}?`)) {
                                         deleteItem(subItem);
                                       }
                                     }}

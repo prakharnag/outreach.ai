@@ -218,7 +218,11 @@ export function HomeDashboard({ onStartResearch, onCompanySelect }: HomeDashboar
                 Research New Company
               </Button>
               <Button
-                onClick={() => window.location.href = '/dashboard?tab=analytics'}
+                onClick={() => {
+                  if (typeof window !== 'undefined') {
+                    window.location.href = '/dashboard?tab=analytics';
+                  }
+                }}
                 className="justify-start h-9"
                 variant="ghost"
                 size="sm"
@@ -227,7 +231,11 @@ export function HomeDashboard({ onStartResearch, onCompanySelect }: HomeDashboar
                 View Analytics
               </Button>
               <Button
-                onClick={() => window.location.href = '/dashboard?tab=history'}
+                onClick={() => {
+                  if (typeof window !== 'undefined') {
+                    window.location.href = '/dashboard?tab=history';
+                  }
+                }}
                 className="justify-start h-9"
                 variant="ghost"
                 size="sm"

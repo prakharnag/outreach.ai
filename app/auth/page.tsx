@@ -25,9 +25,13 @@ export default function AuthPage() {
   useEffect(() => {
     // Check if user is already logged in
     const checkUser = async () => {
-      const user = await getCurrentUser();
-      if (user) {
-        router.push("/dashboard");
+      try {
+        const user = await getCurrentUser();
+        if (user) {
+          router.push("/dashboard");
+        }
+      } catch (error) {
+        console.error('Error checking user:', error);
       }
     };
     checkUser();
@@ -85,7 +89,9 @@ export default function AuthPage() {
           variant="ghost"
           onClick={() => {
             // Navigate to home and force a page refresh to reset state
-            window.location.href = '/';
+            if (typeof window !== 'undefined') {
+              window.location.href = '/';
+            }
           }}
           className="mb-6 text-blue-600 hover:text-blue-700"
         >

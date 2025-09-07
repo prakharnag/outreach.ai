@@ -1,7 +1,5 @@
-"use client";
-
 import { ExternalLink, Link } from "lucide-react";
-import { cn } from "lib/utils";
+import { cn } from "../../lib/utils";
 
 interface CompanyLinkProps {
   url: string;
@@ -11,7 +9,7 @@ interface CompanyLinkProps {
 }
 
 export function CompanyLink({ url, title, className, showIcon = true }: CompanyLinkProps) {
-  const displayTitle = title || new URL(url).hostname.replace('www.', '');
+  const displayTitle = title || (typeof window !== 'undefined' ? new URL(url).hostname.replace('www.', '') : url);
   
   return (
     <a

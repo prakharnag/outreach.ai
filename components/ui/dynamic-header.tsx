@@ -1,5 +1,3 @@
-"use client";
-
 import { Button } from "./button";
 import { Search } from "lucide-react";
 import Image from "next/image";

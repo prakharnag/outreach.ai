@@ -36,7 +36,7 @@ export function ToneSelector({
   };
 
   const handleToggle = () => {
-    if (!isOpen && containerRef.current) {
+    if (!isOpen && containerRef.current && typeof window !== 'undefined') {
       // Calculate optimal position before opening
       const rect = containerRef.current.getBoundingClientRect();
       const viewportHeight = window.innerHeight;
@@ -63,7 +63,7 @@ export function ToneSelector({
       }
     };
 
-    if (isOpen) {
+    if (isOpen && typeof document !== 'undefined') {
       document.addEventListener('mousedown', handleClickOutside);
       return () => document.removeEventListener('mousedown', handleClickOutside);
     }

@@ -1,9 +1,7 @@
-"use client";
-
 import * as React from "react";
 import { ExternalLink } from "lucide-react";
 import { Button } from "./button";
-import { cn } from "lib/utils";
+import { cn } from "../../lib/utils";
 
 interface SourceLinkProps {
   url: string;
@@ -13,10 +11,12 @@ interface SourceLinkProps {
 
 export const SourceLink = React.forwardRef<HTMLButtonElement, SourceLinkProps>(
   ({ url, title, className }, ref) => {
-    const handleClick = (e: React.MouseEvent) => {
-      e.preventDefault();
+      const handleClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    if (typeof window !== 'undefined') {
       window.open(url, "_blank", "noopener,noreferrer");
-    };
+    }
+  };
 
     return (
       <Button

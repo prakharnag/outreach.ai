@@ -62,16 +62,20 @@ export default function NavigationSidebar({ onRunAgents, onSidebarChange, classN
 
   useEffect(() => {
     const checkMobile = () => {
-      setIsMobile(window.innerWidth < 768)
-      if (window.innerWidth < 768) {
-        setIsCollapsed(true)
-        setIsPinned(false)
+      if (typeof window !== 'undefined') {
+        setIsMobile(window.innerWidth < 768)
+        if (window.innerWidth < 768) {
+          setIsCollapsed(true)
+          setIsPinned(false)
+        }
       }
     }
     
     checkMobile()
-    window.addEventListener('resize', checkMobile)
-    return () => window.removeEventListener('resize', checkMobile)
+    if (typeof window !== 'undefined') {
+      window.addEventListener('resize', checkMobile)
+      return () => window.removeEventListener('resize', checkMobile)
+    }
   }, [])
 
   const loadEmailHistory = async () => {

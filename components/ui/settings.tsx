@@ -34,11 +34,15 @@ export function Settings({ onClose }: SettingsProps) {
     setLoggingOut(true);
     try {
       await signOut();
-      window.location.href = '/';
+      if (typeof window !== 'undefined') {
+        window.location.href = '/';
+      }
     } catch (error) {
       console.error('Logout failed:', error);
       // Force redirect even if logout fails
-      window.location.href = '/';
+      if (typeof window !== 'undefined') {
+        window.location.href = '/';
+      }
     }
   };
 
