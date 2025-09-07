@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { Button } from "./button";
 import { Card, CardContent, CardHeader, CardTitle } from "./card";
-import { FileText, X, Upload, Trash2, ToggleLeft, ToggleRight, RefreshCw } from "lucide-react";
+import { FileText, X, Upload, Trash2, ToggleLeft, ToggleRight } from "lucide-react";
 import { cn } from "../../lib/utils";
 import { supabase } from "../../lib/supabase";
 import { useToast } from "./toast";
@@ -12,9 +12,9 @@ interface ResumeViewerProps {
   className?: string;
   onUploadClick: () => void;
   onResumeSettingsChange?: (useResume: boolean, content: string | null) => void;
-  refreshTrigger?: number; // Add trigger to force refresh
-  onResumeDeleted?: () => void; // Callback when resume is deleted
-  parentResumeState?: { // Pass parent resume state for immediate sync
+  onResumeDeleted?: () => void; // Add delete callback
+  refreshTrigger?: number; // Add refresh trigger prop
+  parentResumeState?: { // Add parent state for sync
     useInPersonalization: boolean;
     filename?: string;
   } | null;
@@ -27,12 +27,35 @@ interface ResumeData {
   useInPersonalization: boolean;
 }
 
-export function ResumeViewer({ className, onUploadClick, onResumeSettingsChange, refreshTrigger, onResumeDeleted, parentResumeState }: ResumeViewerProps) {
+export function ResumeViewer({ 
+  className, 
+  onUploadClick, 
+  onResumeSettingsChange, 
+  onResumeDeleted,
+  refreshTrigger,
+  parentResumeState 
+}: ResumeViewerProps) {
   const [resumeData, setResumeData] = useState<ResumeData | null>(null);
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const { showToast } = useToast();
+
+  // Load resume data on mount and when refresh trigger changes
+  useEffect(() => {
+    loadUserProfile();
+  }, [refreshTrigger]);
+
+  // Sync with parent state when it changes
+  useEffect(() => {
+    if (parentResumeState && resumeData) {
+      // Update local state to match parent state
+      setResumeData(prev => prev ? {
+        ...prev,
+        useInPersonalization: parentResumeState.useInPersonalization
+      } : null);
+    }
+  }, [parentResumeState]);
 
   const loadUserProfile = async () => {
     try {
@@ -82,14 +105,6 @@ export function ResumeViewer({ className, onUploadClick, onResumeSettingsChange,
             data.use_resume_in_personalization || false, 
             data.resume_content || null
           );
-        }
-      } else {
-        // No resume data found - clear the state
-        setResumeData(null);
-        
-        // Notify parent component that there's no resume
-        if (onResumeSettingsChange) {
-          onResumeSettingsChange(false, null);
         }
       }
     } catch (error) {
@@ -250,8 +265,10 @@ export function ResumeViewer({ className, onUploadClick, onResumeSettingsChange,
         message: "Resume deleted successfully"
       });
       
-      // Notify parent that resume was deleted
-      onResumeDeleted?.();
+      // Notify parent component of deletion
+      if (onResumeDeleted) {
+        onResumeDeleted();
+      }
     } catch (error: any) {
       console.error('Error deleting resume:', error);
       showToast({
@@ -263,79 +280,9 @@ export function ResumeViewer({ className, onUploadClick, onResumeSettingsChange,
     }
   };
 
-  const reprocessResumeContent = async () => {
-    if (!resumeData || updating) return;
-
-    setUpdating(true);
-    try {
-      const response = await fetch('/api/reprocess-resume', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' }
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to reprocess resume');
-      }
-
-      const result = await response.json();
-      
-      showToast({
-        type: "success",
-        message: result.message
-      });
-
-      // Reload the resume data to get the updated content
-      await loadUserProfile();
-      
-    } catch (error: any) {
-      console.error('Error reprocessing resume:', error);
-      showToast({
-        type: "error",
-        message: `Failed to reprocess resume: ${error.message}`
-      });
-    } finally {
-      setUpdating(false);
-    }
-  };
-
   useEffect(() => {
     loadUserProfile();
-  }, [refreshTrigger]); // Re-run when refreshTrigger changes
-
-  // Set up periodic URL validation to prevent expiration issues
-  useEffect(() => {
-    if (!resumeData?.url) return;
-
-    // Check URL validity every 30 minutes
-    const interval = setInterval(async () => {
-      if (resumeData?.url) {
-        try {
-          const response = await fetch(resumeData.url, { method: 'HEAD' });
-          if (!response.ok) {
-            // Resume URL expired during session, refreshing silently
-            await regenerateSignedUrl(resumeData.filename);
-          }
-        } catch (error) {
-          // Resume URL validation failed, refreshing silently
-          await regenerateSignedUrl(resumeData.filename);
-        }
-      }
-    }, 30 * 60 * 1000); // 30 minutes
-
-    return () => clearInterval(interval);
-  }, [resumeData?.url]);
-
-  // Sync with parent resume state for immediate UI updates
-  useEffect(() => {
-    if (parentResumeState && resumeData && 
-        resumeData.useInPersonalization !== parentResumeState.useInPersonalization) {
-      setResumeData(prev => prev ? { 
-        ...prev, 
-        useInPersonalization: parentResumeState.useInPersonalization 
-      } : null);
-    }
-  }, [parentResumeState?.useInPersonalization]);
+  }, []);
 
   // Function to refresh resume data (called from parent after upload)
   const refreshResumeData = (newResumeData: {
@@ -405,22 +352,22 @@ export function ResumeViewer({ className, onUploadClick, onResumeSettingsChange,
 
   return (
     <Card className={cn("w-full", className)}>
-      <CardHeader className="pb-3">
+      <CardHeader>
         <div className="flex items-center justify-between">
-          <CardTitle className="text-base font-semibold">Resume</CardTitle>
-          <div className="flex items-center gap-1">
+          <CardTitle className="text-lg font-semibold">Resume</CardTitle>
+          <div className="flex items-center gap-2">
             <Button
               variant="ghost"
               size="sm"
               onClick={toggleResumeUsage}
               disabled={updating}
-              className="h-7 px-2 gap-1.5"
+              className="h-8 px-2 gap-2"
               title={`${resumeData.useInPersonalization ? 'Disable' : 'Enable'} resume in personalization`}
             >
               {resumeData.useInPersonalization ? (
-                <ToggleRight className="h-3.5 w-3.5 text-green-600" />
+                <ToggleRight className="h-4 w-4 text-green-600" />
               ) : (
-                <ToggleLeft className="h-3.5 w-3.5 text-slate-400" />
+                <ToggleLeft className="h-4 w-4 text-slate-400" />
               )}
               <span className="text-xs">
                 {resumeData.useInPersonalization ? 'ON' : 'OFF'}
@@ -431,23 +378,23 @@ export function ResumeViewer({ className, onUploadClick, onResumeSettingsChange,
               size="sm"
               onClick={deleteResume}
               disabled={deleting}
-              className="h-7 w-7 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
+              className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
               title="Delete resume"
             >
               {deleting ? (
-                <div className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-red-600 border-t-transparent" />
+                <div className="h-4 w-4 animate-spin rounded-full border-2 border-red-600 border-t-transparent" />
               ) : (
-                <Trash2 className="h-3.5 w-3.5" />
+                <Trash2 className="h-4 w-4" />
               )}
             </Button>
           </div>
         </div>
       </CardHeader>
-      <CardContent className="space-y-3 pt-0">
-        <div className="flex items-center gap-2 p-2 bg-slate-50 rounded-md">
-          <FileText className="h-4 w-4 text-blue-600 flex-shrink-0" />
+      <CardContent className="space-y-4">
+        <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg">
+          <FileText className="h-5 w-5 text-blue-600 flex-shrink-0" />
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium text-slate-900 truncate">{resumeData.filename}</p>
+            <p className="font-medium text-slate-900 truncate">{resumeData.filename}</p>
             <p className="text-xs text-slate-500">
               {resumeData.useInPersonalization 
                 ? "✓ Used in personalization" 
@@ -457,62 +404,35 @@ export function ResumeViewer({ className, onUploadClick, onResumeSettingsChange,
           </div>
         </div>
 
-        {/* Enhanced action buttons with better organization */}
+        <div className="space-y-2">
+          <h4 className="text-sm font-medium text-slate-700">Content Preview</h4>
+          <div className="max-h-32 overflow-y-auto p-3 bg-slate-50 rounded-lg">
+            <p className="text-xs text-slate-600 leading-relaxed">
+              {resumeData.content.length > 300 
+                ? `${resumeData.content.substring(0, 300)}...` 
+                : resumeData.content
+              }
+            </p>
+          </div>
+        </div>
+
         <div className="flex gap-2">
-          {/* Show reprocess button if content looks like it failed extraction */}
-          {resumeData.content.startsWith('Resume file:') && resumeData.content.length < 100 && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={reprocessResumeContent}
-              disabled={updating}
-              className="flex-1 gap-1.5 h-8 text-orange-600 border-orange-200 hover:bg-orange-50"
-              title="Re-extract text content from resume file"
-            >
-              {updating ? (
-                <div className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-orange-600 border-t-transparent" />
-              ) : (
-                <RefreshCw className="h-3.5 w-3.5" />
-              )}
-              Fix
-            </Button>
-          )}
-          
           <Button
             variant="outline"
             size="sm"
             onClick={onUploadClick}
-            className="flex-1 gap-1.5 h-8 text-blue-600 border-blue-200 hover:bg-blue-50"
-            title="Replace current resume with a new one"
+            className="flex-1 gap-2"
           >
-            <Upload className="h-3.5 w-3.5" />
+            <Upload className="h-4 w-4" />
             Replace
           </Button>
-          
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={deleteResume}
-            disabled={deleting}
-            className="flex-1 gap-1.5 h-8 text-red-600 border-red-200 hover:bg-red-50"
-            title="Delete current resume"
-          >
-            {deleting ? (
-              <div className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-red-600 border-t-transparent" />
-            ) : (
-              <Trash2 className="h-3.5 w-3.5" />
-            )}
-            Delete
-          </Button>
-          
           <Button
             variant="outline"
             size="sm"
             onClick={() => window.open(resumeData.url, '_blank')}
-            className="gap-1.5 h-8 px-3"
-            title="View resume in new tab"
+            className="flex-1 gap-2"
           >
-            <FileText className="h-3.5 w-3.5" />
+            <FileText className="h-4 w-4" />
             View
           </Button>
         </div>

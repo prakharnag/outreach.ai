@@ -238,6 +238,53 @@ export default function HomePage() {
     return () => clearInterval(interval);
   }, [user, resumeData]);
 
+  // Set up real-time subscription for resume data changes
+  useEffect(() => {
+    if (!user) return;
+
+    const resumeChannel = supabaseClient
+      .channel('user_profiles_changes')
+      .on('postgres_changes',
+        { 
+          event: 'UPDATE', 
+          schema: 'public', 
+          table: 'user_profiles',
+          filter: `user_id=eq.${user.id}`
+        },
+        (payload: any) => {
+          console.log('Resume data updated:', payload);
+          // Refresh resume data when profile is updated
+          loadResumeData();
+          setResumeRefreshTrigger(prev => prev + 1);
+        }
+      )
+      .on('postgres_changes',
+        { 
+          event: 'INSERT', 
+          schema: 'public', 
+          table: 'user_profiles',
+          filter: `user_id=eq.${user.id}`
+        },
+        (payload: any) => {
+          console.log('Resume data inserted:', payload);
+          // Refresh resume data when profile is created
+          loadResumeData();
+          setResumeRefreshTrigger(prev => prev + 1);
+        }
+      )
+      .subscribe((status: string) => {
+        if (status === 'SUBSCRIBED') {
+          console.log('Resume subscription active');
+        } else if (status === 'CHANNEL_ERROR') {
+          console.error('Resume subscription error');
+        }
+      });
+
+    return () => {
+      resumeChannel.unsubscribe();
+    };
+  }, [user, supabaseClient]);
+
   const handleResumeUploadSuccess = (data: { url: string; filename: string; content: string }) => {
     setResumeModalOpen(false);
     loadResumeData();

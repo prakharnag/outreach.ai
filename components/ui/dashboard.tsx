@@ -314,8 +314,8 @@ export function Dashboard({
               key="resume-viewer" // Ensure component remounts when needed
               onUploadClick={onResumeUploadClick}
               onResumeSettingsChange={onResumeSettingsChange}
-              refreshTrigger={resumeRefreshTrigger}
               onResumeDeleted={onResumeDeleted}
+              refreshTrigger={resumeRefreshTrigger}
               parentResumeState={parentResumeState}
             />
           )}

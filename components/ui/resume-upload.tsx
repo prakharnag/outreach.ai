@@ -61,7 +61,6 @@ export function ResumeUpload({ isOpen, onClose, onUploadSuccess, className }: Re
     // For PDF text extraction, we'll use a simple approach
     // In a production environment, you might want to use PDF.js or send to a server
     try {
-      // Starting PDF text extraction
       const formData = new FormData();
       formData.append('file', file);
       
@@ -71,16 +70,13 @@ export function ResumeUpload({ isOpen, onClose, onUploadSuccess, className }: Re
       });
       
       if (!response.ok) {
-        const errorData = await response.text();
-        console.error('[Resume Upload] Extract text API error:', errorData);
         throw new Error('Failed to extract text from PDF');
       }
       
       const { text } = await response.json();
-      // Successfully extracted text
       return text;
     } catch (error) {
-      console.error('[Resume Upload] PDF text extraction failed:', error);
+      console.error('PDF text extraction failed:', error);
       // Fallback to filename-based content
       return `Resume file: ${file.name}`;
     }
@@ -90,7 +86,6 @@ export function ResumeUpload({ isOpen, onClose, onUploadSuccess, className }: Re
     // For DOCX text extraction, we'll use a simple approach
     // In a production environment, you might want to use mammoth.js or send to a server
     try {
-      // Starting DOCX text extraction
       const formData = new FormData();
       formData.append('file', file);
       
@@ -100,16 +95,13 @@ export function ResumeUpload({ isOpen, onClose, onUploadSuccess, className }: Re
       });
       
       if (!response.ok) {
-        const errorData = await response.text();
-        console.error('[Resume Upload] Extract text API error:', errorData);
         throw new Error('Failed to extract text from DOCX');
       }
       
       const { text } = await response.json();
-      // Successfully extracted text
       return text;
     } catch (error) {
-      console.error('[Resume Upload] DOCX text extraction failed:', error);
+      console.error('DOCX text extraction failed:', error);
       // Fallback to filename-based content
       return `Resume file: ${file.name}`;
     }
@@ -136,7 +128,7 @@ export function ResumeUpload({ isOpen, onClose, onUploadSuccess, className }: Re
       // Get current user
       const { data: { user }, error: userError } = await supabase.auth.getUser();
       if (userError || !user) {
-        throw new Error('Authentication required');
+        throw new Error('Authentication required. Please log in again.');
       }
 
       // Generate unique filename with folder structure for RLS
@@ -153,7 +145,16 @@ export function ResumeUpload({ isOpen, onClose, onUploadSuccess, className }: Re
 
       if (uploadError) {
         console.error('Upload error details:', uploadError);
-        throw new Error(`Upload failed: ${uploadError.message}`);
+        // Provide more specific error messages
+        if (uploadError.message.includes('not found')) {
+          throw new Error('Storage bucket not found. Please contact support.');
+        } else if (uploadError.message.includes('permission')) {
+          throw new Error('Permission denied. Please check your account status.');
+        } else if (uploadError.message.includes('size')) {
+          throw new Error('File too large. Please choose a smaller file.');
+        } else {
+          throw new Error(`Upload failed: ${uploadError.message}`);
+        }
       }
 
       // Generate signed URL (expires in 1 hour)
@@ -167,11 +168,16 @@ export function ResumeUpload({ isOpen, onClose, onUploadSuccess, className }: Re
 
       // Extract text content based on file type
       let textContent = '';
-      if (file.type === 'application/pdf') {
-        textContent = await extractTextFromPDF(file);
-      } else if (file.type.includes('word') || file.type.includes('document')) {
-        textContent = await extractTextFromDocx(file);
-      } else {
+      try {
+        if (file.type === 'application/pdf') {
+          textContent = await extractTextFromPDF(file);
+        } else if (file.type.includes('word') || file.type.includes('document')) {
+          textContent = await extractTextFromDocx(file);
+        } else {
+          textContent = `Resume file: ${file.name}`;
+        }
+      } catch (extractError) {
+        console.warn('Text extraction failed, using fallback:', extractError);
         textContent = `Resume file: ${file.name}`;
       }
 
