@@ -157,15 +157,6 @@ export function ResumeUpload({ isOpen, onClose, onUploadSuccess, className }: Re
         }
       }
 
-      // Generate signed URL (expires in 1 hour)
-      const { data: signedData, error: signedError } = await supabase.storage
-        .from('resumes')
-        .createSignedUrl(fileName, 3600); // 1 hour
-
-      if (signedError) {
-        throw new Error(`Failed to generate signed URL: ${signedError.message}`);
-      }
-
       // Extract text content based on file type
       let textContent = '';
       try {
@@ -181,13 +172,14 @@ export function ResumeUpload({ isOpen, onClose, onUploadSuccess, className }: Re
         textContent = `Resume file: ${file.name}`;
       }
 
-      // Save to user profile
+      // Save to user profile with file path and original filename
       const { error: profileError } = await supabase
         .from('user_profiles')
         .upsert({
           user_id: user.id,
-          resume_url: signedData.signedUrl,
-          resume_filename: file.name,
+          resume_url: null, // Store file path instead of signed URL
+          resume_filename: fileName, // Store the full file path for storage access
+          resume_original_filename: file.name, // Store original filename for display
           resume_content: textContent,
           updated_at: new Date().toISOString()
         }, {
@@ -198,13 +190,22 @@ export function ResumeUpload({ isOpen, onClose, onUploadSuccess, className }: Re
         throw new Error(`Failed to save profile: ${profileError.message}`);
       }
 
+      // Generate initial signed URL for immediate use
+      const { data: signedData, error: signedError } = await supabase.storage
+        .from('resumes')
+        .createSignedUrl(fileName, 31536000); // 1 year
+
+      if (signedError) {
+        console.warn('Failed to generate initial signed URL:', signedError.message);
+      }
+
       showToast({
         type: "success",
         message: "Resume uploaded successfully!"
       });
 
       onUploadSuccess({
-        url: signedData.signedUrl,
+        url: signedData?.signedUrl || '', // Use signed URL if available, empty string otherwise
         filename: file.name,
         content: textContent
       });

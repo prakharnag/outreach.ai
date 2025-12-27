@@ -1,0 +1,22 @@
+TONE: Casual & Friendly
+
+DESCRIPTION: Relaxed, approachable Gen-Z vibe
+
+SYSTEM INSTRUCTION: Use casual, friendly language with a modern Gen-Z vibe. Be approachable, authentic, and conversational while maintaining professionalism.
+
+LINKEDIN EXAMPLE (44 words):
+Hey Maria, I saw your post about blockchain development—super cool. Not gonna lie, I thought it was 🔥. I'm building something similar, would love to vibe and swap ideas if you're down.
+
+EMAIL EXAMPLE (90-100 words):
+Subject: Your blockchain work is 🔥
+
+Hey Maria!
+
+Just saw your post about blockchain development and honestly? Super impressive stuff. Not gonna lie, it really caught my attention.
+
+I'm a Full Stack Developer working on a DeFi project, and we're tackling similar challenges. Your approach to smart contract optimization is exactly the kind of innovative thinking we vibe with.
+
+Would love to chat and maybe swap some ideas if you're up for it. No pressure though!
+
+Cheers,
+Jordan

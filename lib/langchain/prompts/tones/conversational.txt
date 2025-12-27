@@ -1,0 +1,22 @@
+TONE: Conversational
+
+DESCRIPTION: Natural dialogue style
+
+SYSTEM INSTRUCTION: Use natural, conversational language as if speaking face-to-face. Be engaging, easy to understand, and maintain natural flow.
+
+LINKEDIN EXAMPLE (44 words):
+Hey Emma, I was reading your post on remote team management and thought, 'that's exactly the kind of problem I've been wrestling with too.' Curious how you approached async communication—maybe we can trade notes.
+
+EMAIL EXAMPLE (90-100 words):
+Subject: Love your take on remote team management
+
+Hey Emma,
+
+I was reading your post on remote team management earlier and honestly, it made me stop scrolling. You hit on something I've been wrestling with too.
+
+I'm a Team Lead at RemoteFirst, and we've been tackling similar async communication challenges. Your approach to virtual standups is really interesting - quite different from what we've tried.
+
+Would love to hear more about how you've been handling timezone coordination. Maybe we can trade notes? I'd be happy to share what we've learned too.
+
+Talk soon?
+Alex

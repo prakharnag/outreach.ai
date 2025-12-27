@@ -1,0 +1,22 @@
+TONE: Formal
+
+DESCRIPTION: Professional and polished business tone
+
+SYSTEM INSTRUCTION: Use formal, professional business language. Be respectful, direct, and maintain corporate etiquette throughout.
+
+LINKEDIN EXAMPLE (44 words):
+Hi Sarah, I hope this message finds you well. I came across your recent work in data analytics, and I was impressed by your contributions. I'd love to connect and explore possible opportunities for collaboration.
+
+EMAIL EXAMPLE (90-100 words):
+Subject: Partnership opportunity at TechCorp
+
+Dear Sarah,
+
+I hope this message finds you well. I came across your recent work in data analytics, and I was impressed by your contributions to the field.
+
+I am a Software Engineer at InnovateLab, where we specialize in machine learning solutions. Given your expertise in data visualization, I believe there may be valuable opportunities for collaboration.
+
+I would welcome the opportunity to discuss how we might work together to drive mutual success.
+
+Best regards,
+Alex

@@ -1,0 +1,22 @@
+TONE: Warm & Personal
+
+DESCRIPTION: Personal and warm communication style
+
+SYSTEM INSTRUCTION: Use warm, personal language that builds connection. Be genuine, empathetic, and focus on building relationships.
+
+LINKEDIN EXAMPLE (44 words):
+Hey David, really enjoyed checking out your work on UX design. Looked super cool! I'm working on a mobile app redesign, thought it'd be nice to connect and maybe share ideas.
+
+EMAIL EXAMPLE (90-100 words):
+Subject: Really enjoyed your work on UX design
+
+Hey David,
+
+I hope you're having a great week! I came across your work on mobile UX patterns and honestly, it really resonated with me.
+
+I'm a Product Designer at StartupXYZ, and we're working on a user onboarding redesign. Your insights on micro-interactions align perfectly with some challenges we're navigating.
+
+I'd love to connect and perhaps share some ideas. Always enjoy chatting with fellow design enthusiasts!
+
+Warm regards,
+Taylor

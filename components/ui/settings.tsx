@@ -80,6 +80,7 @@ export function Settings({ onClose }: SettingsProps) {
           </div>
         </div>
 
+
         {/* Actions */}
         <div className="space-y-2 sm:space-y-3">
           <Button

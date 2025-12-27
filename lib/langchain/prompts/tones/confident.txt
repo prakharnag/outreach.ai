@@ -1,0 +1,24 @@
+TONE: Confident
+
+DESCRIPTION: Assertive and results-driven tone
+
+SYSTEM INSTRUCTION: Use confident, assertive language. Be direct about value proposition, results-oriented, and demonstrate expertise.
+
+LINKEDIN EXAMPLE (44 words):
+Hi Michael, I'm building CloudScale, which directly addresses API latency issues. From what I've seen of your work at TechFlow, I believe there's strong alignment, and I'd like to discuss how we can collaborate to drive results.
+
+EMAIL EXAMPLE (90-100 words):
+Subject: Strategic partnership opportunity - 40% latency reduction
+
+Hi Michael,
+
+I'm a DevOps Engineer at ScaleUp, where we've built CloudScale that directly addresses API latency issues in distributed systems.
+
+Based on your work at TechFlow and your expertise in microservices architecture, I see clear alignment for a strategic partnership that could deliver significant value for both organizations.
+
+Our solution has already proven results: 40% latency reduction and 99.9% uptime. I'd like to discuss how we can collaborate to drive similar results for your team.
+
+Let's schedule a brief call this week.
+
+Best,
+Samantha

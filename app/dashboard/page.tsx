@@ -8,10 +8,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from ".
 import { Badge } from "../../components/ui/badge";
 import { Alert, AlertDescription } from "../../components/ui/alert";
 import { Textarea } from "../../components/ui/textarea";
-import { Copy, Mail, MessageSquare, RefreshCw, Scissors, Search, User, Settings as SettingsIcon, BarChart3, FileText, ToggleLeft, ToggleRight, X } from "lucide-react";
+import { Copy, Mail, MessageSquare, RefreshCw, Scissors, Search, User, Settings as SettingsIcon, BarChart3, FileText, Upload, MessageCircle } from "lucide-react";
 import { signOut } from "../../lib/supabase";
 import { supabase } from "../../lib/supabase";
-import { cn, sanitizeMessageContent } from "../../lib/utils";
+import { cn } from "../../lib/utils";
 import { CompanyAutocomplete } from "../../components/ui/company-autocomplete";
 import { Settings } from "../../components/ui/settings";
 import { AnalyticsDashboard } from "../../components/ui/analytics-dashboard";
@@ -29,6 +29,7 @@ import { CompanyLink } from "../../components/ui/company-link";
 import { ResearchOutput } from "../../components/ui/research-output";
 import { ResumeUpload } from "../../components/ui/resume-upload";
 import { getUserResumeData, formatResumeForMessaging } from "../../lib/resumeUtils";
+import { ChatInterface } from "../../components/chat/ChatInterface";
 
 interface ResearchFinding {
   title: string;
@@ -76,7 +77,7 @@ interface LinkedInHistory {
 export default function HomePage() {
   const { user, loading: userLoading } = useUser();
   
-  const [activeView, setActiveView] = useState<"home" | "search" | "email" | "linkedin" | "research" | "analytics" | "settings">("home");
+  const [activeView, setActiveView] = useState<"home" | "search" | "email" | "linkedin" | "research" | "analytics" | "settings" | "chat">("chat");
   const [isSearchExpanded, setIsSearchExpanded] = useState(false);
   
   // Resume states
@@ -105,11 +106,6 @@ export default function HomePage() {
   const [highlights, setHighlights] = useState("");
   const [hasValidCompany, setHasValidCompany] = useState(false);
   
-  // Company URL fallback states
-  const [showUrlFallback, setShowUrlFallback] = useState(false);
-  const [companyUrl, setCompanyUrl] = useState("");
-  const [urlSearchError, setUrlSearchError] = useState<string | null>(null);
-  
   const [emailHistory, setEmailHistory] = useState<EmailHistory[]>([]);
   const [linkedinHistory, setLinkedinHistory] = useState<LinkedInHistory[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
@@ -118,14 +114,11 @@ export default function HomePage() {
   // Regeneration loading states
   const [regeneratingEmail, setRegeneratingEmail] = useState(false);
   const [regeneratingLinkedin, setRegeneratingLinkedin] = useState(false);
-  const [rephrasingLinkedin, setRephrasingLinkedin] = useState(false);
   
-  // Tone settings - separate states for each context
-  const [searchTone, setSearchTone] = useState<WritingTone>(getDefaultTone());
-  const [emailTone, setEmailTone] = useState<WritingTone>(getDefaultTone());
-  const [linkedinTone, setLinkedinTone] = useState<WritingTone>(getDefaultTone());
+  // Tone settings
+  const [selectedTone, setSelectedTone] = useState<WritingTone>(getDefaultTone());
   
-  const canRun = useMemo(() => hasValidCompany && !!role, [hasValidCompany, role]);
+  const canRun = useMemo(() => hasValidCompany && !!role && !!highlights, [hasValidCompany, role, highlights]);
   const abortRef = useRef<AbortController | null>(null);
   const supabaseClient = useMemo(() => supabase, []);
   
@@ -211,10 +204,6 @@ export default function HomePage() {
   }, [supabaseClient]);
 
   // Resume data loading and handlers
-  // State synchronization: Both search panel and ResumeViewer component can toggle resume usage
-  // The main page state (resumeData) is the source of truth for the search panel
-  // The ResumeViewer component has its own internal state but notifies the parent via onResumeSettingsChange
-  // Both use the same handleResumeSettingsChange function to maintain consistency
   const loadResumeData = async () => {
     if (!user) return;
     const data = await getUserResumeData(user.id);
@@ -225,105 +214,46 @@ export default function HomePage() {
     if (user) loadResumeData();
   }, [user]);
 
-  // Set up periodic resume data refresh to handle expired URLs
-  useEffect(() => {
-    if (!user || !resumeData) return;
-
-    // Refresh resume data every 45 minutes to prevent URL expiration issues
-    const interval = setInterval(() => {
-      // Performing periodic resume data refresh silently
-      loadResumeData();
-    }, 45 * 60 * 1000); // 45 minutes
-
-    return () => clearInterval(interval);
-  }, [user, resumeData]);
-
   // Set up real-time subscription for resume data changes
   useEffect(() => {
     if (!user) return;
 
-    const resumeChannel = supabaseClient
+    const resumeChannel = supabase
       .channel('user_profiles_changes')
-      .on('postgres_changes',
-        { 
-          event: 'UPDATE', 
-          schema: 'public', 
-          table: 'user_profiles',
-          filter: `user_id=eq.${user.id}`
-        },
-        (payload: any) => {
-          console.log('Resume data updated:', payload);
-          // Refresh resume data when profile is updated
-          loadResumeData();
-          setResumeRefreshTrigger(prev => prev + 1);
-        }
-      )
-      .on('postgres_changes',
-        { 
-          event: 'INSERT', 
-          schema: 'public', 
-          table: 'user_profiles',
-          filter: `user_id=eq.${user.id}`
-        },
-        (payload: any) => {
-          console.log('Resume data inserted:', payload);
-          // Refresh resume data when profile is created
-          loadResumeData();
-          setResumeRefreshTrigger(prev => prev + 1);
-        }
-      )
-      .subscribe((status: string) => {
-        if (status === 'SUBSCRIBED') {
-          console.log('Resume subscription active');
-        } else if (status === 'CHANNEL_ERROR') {
-          console.error('Resume subscription error');
-        }
-      });
+      .on('postgres_changes', {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'user_profiles',
+        filter: `user_id=eq.${user.id}`
+      }, (payload: any) => {
+        console.log('Resume data changed, refreshing...', payload);
+        // Only trigger refresh, don't call loadResumeData directly to avoid double fetching
+        setResumeRefreshTrigger(prev => prev + 1);
+      })
+      .subscribe();
 
     return () => {
-      resumeChannel.unsubscribe();
+      supabase.removeChannel(resumeChannel);
     };
-  }, [user, supabaseClient]);
+  }, [user]);
+
+  // Refresh search panel when resume data changes
+  useEffect(() => {
+    if (resumeRefreshTrigger > 0) {
+      // Reload resume data to ensure search panel shows updated data
+      loadResumeData();
+    }
+  }, [resumeRefreshTrigger]);
 
   const handleResumeUploadSuccess = (data: { url: string; filename: string; content: string }) => {
     setResumeModalOpen(false);
     loadResumeData();
-    setResumeRefreshTrigger(prev => prev + 1); // Trigger ResumeViewer refresh
+    setResumeRefreshTrigger(Date.now()); // Trigger refresh for all components
   };
 
-  const handleResumeDeleted = () => {
-    loadResumeData(); // Refresh the main dashboard resume state
-    setResumeRefreshTrigger(prev => prev + 1); // Trigger ResumeViewer refresh
-  };
-
-  const handleResumeSettingsChange = async (useResume: boolean, content: string | null) => {
-    // Update the local state immediately for instant UI feedback
+  const handleResumeSettingsChange = (useResume: boolean, content: string | null) => {
     setResumeData(prev => prev ? { ...prev, useInPersonalization: useResume } : prev);
-    
-    // Persist the change to the database
-    if (user) {
-      try {
-        const { error } = await supabase
-          .from('user_profiles')
-          .update({ use_resume_in_personalization: useResume })
-          .eq('user_id', user.id);
-          
-        if (error) {
-          console.error('Failed to update resume personalization setting:', error);
-          // Revert the local state if database update fails
-          setResumeData(prev => prev ? { ...prev, useInPersonalization: !useResume } : prev);
-          return;
-        }
-      } catch (error) {
-        console.error('Error updating resume settings:', error);
-        // Revert the local state if database update fails
-        setResumeData(prev => prev ? { ...prev, useInPersonalization: !useResume } : prev);
-        return;
-      }
-    }
-    
-    // No need to trigger ResumeViewer refresh - parentResumeState prop handles immediate sync
-    // The ResumeViewer will automatically update via the parentResumeState prop change
+    setResumeRefreshTrigger(Date.now()); // Trigger refresh for all components
   };
 
   const extractPrimaryEmail = (researchData: any, contactData: any) => {
@@ -500,7 +430,7 @@ export default function HomePage() {
     }
   }, []);
   
-  const handleNavClick = (view: "home" | "search" | "email" | "linkedin" | "research" | "analytics" | "settings") => {
+  const handleNavClick = (view: "home" | "search" | "email" | "linkedin" | "research" | "analytics" | "settings" | "chat") => {
     if (view === "search") {
       setIsSearchExpanded(!isSearchExpanded);
     } else {
@@ -515,7 +445,7 @@ export default function HomePage() {
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     if (canRun && !loading) {
-      runChain({ company, domain: selectedDomain, role, highlights, tone: searchTone });
+      runChain({ company, domain: selectedDomain, role, highlights, tone: selectedTone });
       setActiveView("research");
       setIsSearchExpanded(false);
     }
@@ -529,53 +459,12 @@ export default function HomePage() {
 
   const handleCompanyChange = (value: string) => {
     setCompany(value);
-    setShowUrlFallback(false); // Reset URL fallback when user types
-    setUrlSearchError(null);
     if (!value.trim()) {
       setSelectedDomain("");
       setHasValidCompany(false);
     } else {
       // Consider any non-empty company name as valid
       setHasValidCompany(true);
-    }
-  };
-
-  const extractCompanyFromUrl = (url: string): { name: string; domain: string } => {
-    try {
-      const urlObj = new URL(url.startsWith('http') ? url : `https://${url}`);
-      const domain = urlObj.hostname.replace('www.', '');
-      
-      // Extract company name from domain
-      const domainParts = domain.split('.');
-      const companyName = domainParts[0];
-      
-      // Capitalize first letter
-      const formattedName = companyName.charAt(0).toUpperCase() + companyName.slice(1);
-      
-      return { name: formattedName, domain };
-    } catch (error) {
-      throw new Error("Invalid URL format. Please enter a valid company website URL.");
-    }
-  };
-
-  const handleUrlSearch = () => {
-    setUrlSearchError(null);
-    try {
-      const { name, domain } = extractCompanyFromUrl(companyUrl);
-      setCompany(name);
-      setSelectedDomain(domain);
-      setHasValidCompany(true);
-      setShowUrlFallback(false);
-      setCompanyUrl("");
-      
-      // Auto-run the search if other fields are filled
-      if (role && highlights) {
-        runChain({ company: name, domain, role, highlights, tone: searchTone });
-        setActiveView("research");
-        setIsSearchExpanded(false);
-      }
-    } catch (error: any) {
-      setUrlSearchError(error.message);
     }
   };
 
@@ -675,18 +564,10 @@ export default function HomePage() {
               }
               
               if (confidence >= 0.7) {
-                // Apply UI guardrails to sanitize message content
-                const sanitizedLinkedIn = sanitizeMessageContent(evt.data.outputs.linkedin);
-                const sanitizedEmail = sanitizeMessageContent(evt.data.outputs.email);
-                
-                setLinkedin(sanitizedLinkedIn);
-                setEmail(sanitizedEmail);
-                setEditableEmail(sanitizedEmail);
-                setEditableLinkedin(sanitizedLinkedIn);
-                
-                // Synchronize tone dropdowns with search panel selection
-                setEmailTone(data.tone || getDefaultTone());
-                setLinkedinTone(data.tone || getDefaultTone());
+                setLinkedin(evt.data.outputs.linkedin);
+                setEmail(evt.data.outputs.email);
+                setEditableEmail(evt.data.outputs.email);
+                setEditableLinkedin(evt.data.outputs.linkedin);
                 
                 // History is automatically saved by the orchestrator
                 // Refresh history to show updated groupings after a short delay
@@ -696,45 +577,20 @@ export default function HomePage() {
                 }, 1000);
               } else {
                 setError("Company not found. Unable to do research and generate cold email or LinkedIn message.");
-                setShowUrlFallback(true); // Show URL fallback when confidence is low
               }
               
               setVerifiedPoints(evt.data.verified_points || []);
               setContact(evt.data.contact || null);
               
-              // Extract contact info from either new two-contact structure or legacy single contact
-              let primaryContactInfo = null;
-              const contactAny = evt.data.contact as any;
-              
-              // Helper function to check if a value is valid (not N/A, empty, etc.)
-              const isValidContactValue = (value: string | null | undefined) => {
-                if (!value || value.trim() === '') return false;
-                if (value === "N/A" || value === "n/a") return false;
-                if (value.toLowerCase().includes("not available")) return false;
-                if (value.toLowerCase().includes("no publicly available")) return false;
-                return true;
-              };
-              
-              if (contactAny?.primary_contact && (isValidContactValue(contactAny.primary_contact.name) || isValidContactValue(contactAny.primary_contact.title))) {
-                // New two-contact structure - use primary contact
-                primaryContactInfo = contactAny.primary_contact;
-              } else if (contactAny?.secondary_contact && (isValidContactValue(contactAny.secondary_contact.name) || isValidContactValue(contactAny.secondary_contact.title))) {
-                // Only secondary contact available or primary is invalid - use secondary as primary for saving
-                primaryContactInfo = contactAny.secondary_contact;
-              } else if (isValidContactValue(contactAny?.name) || isValidContactValue(contactAny?.title) || isValidContactValue(contactAny?.email)) {
-                // Legacy single contact structure
-                primaryContactInfo = contactAny;
-              }
-              
               const contactData = {
                 company_name: data.company,
-                contact_name: isValidContactValue(primaryContactInfo?.name) ? primaryContactInfo.name : null,
-                contact_title: isValidContactValue(primaryContactInfo?.title) ? primaryContactInfo.title : null,
-                contact_email: isValidContactValue(primaryContactInfo?.email) ? primaryContactInfo.email : null,
-                email_inferred: primaryContactInfo?.inferred || false,
+                contact_name: evt.data.contact?.name || null,
+                contact_title: evt.data.contact?.title || null,
+                contact_email: evt.data.contact?.email || null,
+                email_inferred: (evt.data.contact as any)?.inferred || false,
                 confidence_score: confidence,
-                source_url: primaryContactInfo?.source?.url || null,
-                source_title: primaryContactInfo?.source?.title || null,
+                source_url: evt.data.contact?.source?.url || null,
+                source_title: evt.data.contact?.source?.title || null,
                 research_data: {
                   research: typeof evt.data.research === 'string' 
                     ? evt.data.research 
@@ -755,37 +611,18 @@ export default function HomePage() {
                   : (typeof evt.data.research === 'object' && 'summary' in evt.data.research && typeof (evt.data.research as any).summary === 'string'
                       ? (evt.data.research as any).summary
                       : JSON.stringify(evt.data.research)), 
-                primaryContactInfo // Use the extracted primary contact info
+                evt.data.contact
               );
               if (email) setPrimaryEmail(email);
             }
-            if (evt.type === "error") {
-              const errorMessage = evt.data.message;
-              setError(errorMessage);
-              
-              // Check if this is a "company not found" error and show URL fallback
-              if (errorMessage.toLowerCase().includes("company not found") || 
-                  errorMessage.toLowerCase().includes("unable to do research")) {
-                setShowUrlFallback(true);
-              }
-            }
+            if (evt.type === "error") setError(evt.data.message);
           } catch (err) {
             // ignore malformed lines
           }
         }
       }
     } catch (e: any) {
-      if (e?.name !== "AbortError") {
-        const errorMessage = e?.message || "Unknown error";
-        setError(errorMessage);
-        
-        // Check if this is a company not found error
-        if (errorMessage.toLowerCase().includes("company not found") || 
-            errorMessage.toLowerCase().includes("failed to fetch") ||
-            errorMessage.toLowerCase().includes("unable to research")) {
-          setShowUrlFallback(true);
-        }
-      }
+      if (e?.name !== "AbortError") setError(e?.message || "Unknown error");
     } finally {
       setLoading(false);
     }
@@ -798,10 +635,6 @@ export default function HomePage() {
   const regenerateEmail = useCallback(async () => {
     setRegeneratingEmail(true);
     try {
-      // Include resume data when toggle is enabled
-      const resumeContent = resumeData?.useInPersonalization ? formatResumeForMessaging(resumeData.content) : undefined;
-      const useResumeInPersonalization = resumeData?.useInPersonalization || false;
-      
       const res = await fetch("/api/messaging", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -809,32 +642,24 @@ export default function HomePage() {
           company: searchData.company, 
           role: searchData.role, 
           highlights: searchData.highlights,
-          tone: emailTone,
-          existingEmail: editableEmail,
-          resumeContent,
-          useResumeInPersonalization,
-          messageType: 'email' // Only regenerate email
+          tone: selectedTone,
+          existingEmail: editableEmail 
         }),
       });
       if (!res.ok) throw new Error("Failed to regenerate email");
       const data = await res.json();
-      const sanitizedEmail = sanitizeMessageContent(data.email);
-      setEmail(sanitizedEmail);
-      setEditableEmail(sanitizedEmail);
+      setEmail(data.email);
+      setEditableEmail(data.email);
     } catch (e: any) {
       setError(e?.message || "Failed to regenerate email");
     } finally {
       setRegeneratingEmail(false);
     }
-  }, [searchData, emailTone, editableEmail, resumeData]);
+  }, [searchData, selectedTone, editableEmail]);
 
   const regenerateLinkedin = useCallback(async () => {
     setRegeneratingLinkedin(true);
     try {
-      // Include resume data when toggle is enabled
-      const resumeContent = resumeData?.useInPersonalization ? formatResumeForMessaging(resumeData.content) : undefined;
-      const useResumeInPersonalization = resumeData?.useInPersonalization || false;
-      
       const res = await fetch("/api/messaging", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -842,23 +667,19 @@ export default function HomePage() {
           company: searchData.company, 
           role: searchData.role, 
           highlights: searchData.highlights,
-          tone: linkedinTone,
-          resumeContent,
-          useResumeInPersonalization,
-          messageType: 'linkedin' // Only regenerate LinkedIn
+          tone: selectedTone
         }),
       });
       if (!res.ok) throw new Error("Failed to regenerate");
       const data = await res.json();
-      const sanitizedLinkedIn = sanitizeMessageContent(data.linkedin);
-      setLinkedin(sanitizedLinkedIn);
-      setEditableLinkedin(sanitizedLinkedIn);
+      setLinkedin(data.linkedin);
+      setEditableLinkedin(data.linkedin);
     } catch (e: any) {
       setError(e?.message || "Failed to regenerate");
     } finally {
       setRegeneratingLinkedin(false);
     }
-  }, [searchData, linkedinTone, resumeData]);
+  }, [searchData, selectedTone]);
 
   if (userLoading) {
     return (
@@ -893,7 +714,17 @@ export default function HomePage() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
               </svg>
             </Button>
-            
+
+            <Button
+              variant={activeView === "chat" ? "default" : "ghost"}
+              size="sm"
+              onClick={() => handleNavClick("chat")}
+              className="h-8 w-8 sm:h-10 sm:w-10 p-0"
+              title="AI Chat"
+            >
+              <MessageCircle className="h-4 w-4 sm:h-5 sm:w-5" />
+            </Button>
+
             <Button
               variant={activeView === "search" ? "default" : "ghost"}
               size="sm"
@@ -935,13 +766,13 @@ export default function HomePage() {
             </Button>
             
             <Button
-              variant="ghost"
+              variant={resumeData ? "default" : "ghost"}
               size="sm"
               onClick={() => setResumeModalOpen(true)}
-              className="h-8 w-8 sm:h-10 sm:w-10 p-0"
+              className={`h-8 w-8 sm:h-10 sm:w-10 p-0 ${resumeData ? 'bg-green-600 hover:bg-green-700' : ''}`}
               title={resumeData ? `Resume: ${resumeData.filename}` : "Upload Resume"}
             >
-              <FileText className="h-4 w-4 sm:h-5 sm:w-5" />
+              <FileText className={`h-4 w-4 sm:h-5 sm:w-5 ${resumeData ? 'text-white' : ''}`} />
             </Button>
             
             <Button
@@ -957,226 +788,160 @@ export default function HomePage() {
         </div>
 
         {isSearchExpanded && (
-          <>
-            {/* Mobile backdrop overlay */}
-            <div 
-              className="fixed inset-0 bg-black/20 backdrop-blur-sm z-40 md:hidden"
-              onClick={() => setIsSearchExpanded(false)}
-            />
-            
-            <div className="fixed left-0 md:left-12 lg:left-16 top-0 h-full w-full max-w-sm md:w-80 lg:w-96 bg-white/95 backdrop-blur-md border-r border-slate-200/50 shadow-xl z-50">
-              {/* Mobile header with close button */}
-              <div className="flex items-center justify-between p-3 border-b border-slate-200/50 md:hidden">
-                <h2 className="text-lg font-semibold text-slate-800">Research</h2>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setIsSearchExpanded(false)}
-                  className="h-8 w-8 p-0"
-                >
-                  <X className="h-4 w-4" />
-                </Button>
-              </div>
-              
-              <div className="h-full overflow-y-auto pb-20 md:pb-6">
-                <div className="p-3 md:p-4 lg:p-6">
-                  <form onSubmit={handleSearch} className="space-y-3 md:space-y-4">
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-2">
-                        Company Name
-                      </label>
-                      <CompanyAutocomplete
-                        value={company}
-                        onChange={handleCompanyChange}
-                        onSelect={handleCompanySuggestionSelect}
-                        placeholder="Search for a company..."
-                        disabled={loading}
-                        className="text-sm"
-                      />
-                      {selectedDomain && (
-                        <div className="mt-2 text-xs text-slate-600">
-                          Selected: <span className="font-medium">{company}</span> ({selectedDomain})
-                        </div>
-                      )}
-                      {company && !selectedDomain && (
-                        <div className="mt-2 text-xs text-blue-600">
-                          Using manual entry: <span className="font-medium">{company}</span>
-                        </div>
-                      )}
-                      
-                      {/* URL Fallback Section */}
-                      {showUrlFallback && (
-                        <div className="mt-3 p-3 bg-amber-50 border border-amber-200 rounded-md">
-                          <div className="mb-2">
-                            <p className="text-sm text-amber-800 font-medium">
-                              Company not found in our database
-                            </p>
-                            <p className="text-xs text-amber-700 mt-1">
-                              Please provide the exact company website URL for better research:
-                            </p>
-                          </div>
-                          <div className="flex flex-col sm:flex-row gap-2">
-                            <input
-                              type="text"
-                              value={companyUrl}
-                              onChange={(e) => setCompanyUrl(e.target.value)}
-                              placeholder="https://company.com"
-                              className="flex-1 px-3 py-2 text-sm border border-amber-300 rounded-md focus:outline-none focus:ring-1 focus:ring-amber-400"
-                            />
-                            <button
-                              type="button"
-                              onClick={handleUrlSearch}
-                              disabled={!companyUrl.trim()}
-                              className="px-4 py-2 text-sm bg-amber-600 text-white rounded-md hover:bg-amber-700 disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
-                            >
-                              Use URL
-                            </button>
-                          </div>
-                          {urlSearchError && (
-                            <p className="text-xs text-red-600 mt-2">{urlSearchError}</p>
-                          )}
-                          <button
-                            type="button"
-                            onClick={() => setShowUrlFallback(false)}
-                            className="text-xs text-amber-700 hover:text-amber-800 mt-2 underline"
-                          >
-                            Cancel
-                          </button>
-                        </div>
-                      )}
+          <div className="fixed left-12 sm:left-16 top-0 h-full w-64 sm:w-80 bg-white/95 backdrop-blur-md border-r border-slate-200/50 shadow-xl z-40">
+            <div className="p-3 sm:p-6">
+              <form onSubmit={handleSearch} className="space-y-3 sm:space-y-4">
+                <div>
+                  <label className="block text-xs sm:text-sm font-medium text-slate-700 mb-1 sm:mb-2">
+                    Company Name
+                  </label>
+                  <CompanyAutocomplete
+                    value={company}
+                    onChange={handleCompanyChange}
+                    onSelect={handleCompanySuggestionSelect}
+                    placeholder="Search for a company..."
+                    disabled={loading}
+                    className="text-sm"
+                  />
+                  {selectedDomain && (
+                    <div className="mt-1 sm:mt-2 text-xs sm:text-sm text-slate-600">
+                      Selected: <span className="font-medium">{company}</span> ({selectedDomain})
                     </div>
-                    
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-2">
-                        Role
-                      </label>
-                      <input
-                        type="text"
-                        value={role}
-                        onChange={(e) => setRole(e.target.value)}
-                        placeholder="Target role"
-                        className="w-full px-3 py-2.5 text-sm border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      />
+                  )}
+                  {company && !selectedDomain && (
+                    <div className="mt-1 sm:mt-2 text-xs sm:text-sm text-blue-600">
+                      Using manual entry: <span className="font-medium">{company}</span>
                     </div>
-                    
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-2">
-                        Key Highlights <span className="text-xs text-slate-500 font-normal">(Optional)</span>
-                      </label>
-                      <textarea
-                        value={highlights}
-                        onChange={(e) => setHighlights(e.target.value)}
-                        placeholder="Your key skills and experience"
-                        rows={4}
-                        className="w-full px-3 py-2.5 text-sm border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
-                      />
-                      <p className="text-xs text-slate-500 mt-1">
-                        Adding highlights makes your outreach more personalized and effective.
-                      </p>
-                    </div>
-
-                    {/* Resume Personalization */}
-                    <div className="space-y-2">
-                      <label className="block text-sm font-medium text-slate-700 mb-2">
-                        Resume Personalization
-                      </label>
-                      {resumeData ? (
-                        <div className="relative overflow-hidden rounded-lg bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 p-3">
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2 flex-1 min-w-0">
-                              <div className="p-1.5 rounded-full bg-blue-100">
-                                <FileText className="h-3.5 w-3.5 text-blue-600" />
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <p className="text-sm font-medium text-slate-800">Use Resume</p>
-                                <p className="text-xs text-slate-600 truncate">{resumeData.filename}</p>
-                              </div>
-                            </div>
-                            <button
-                              type="button"
-                              onClick={() => handleResumeSettingsChange(!resumeData.useInPersonalization, resumeData.content)}
-                              className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-full transition-all duration-200 ${
-                                resumeData.useInPersonalization 
-                                  ? 'bg-green-100 hover:bg-green-200 text-green-700' 
-                                  : 'bg-slate-100 hover:bg-slate-200 text-slate-600'
-                              }`}
-                              title={`${resumeData.useInPersonalization ? 'Disable' : 'Enable'} resume in personalization`}
-                            >
-                              {resumeData.useInPersonalization ? (
-                                <ToggleRight className="h-4 w-4" />
-                              ) : (
-                                <ToggleLeft className="h-4 w-4" />
-                              )}
-                              <span className="text-xs font-semibold">
-                                {resumeData.useInPersonalization ? 'ON' : 'OFF'}
-                              </span>
-                            </button>
-                          </div>
-                          {resumeData.useInPersonalization && (
-                            <div className="mt-2 flex items-center gap-1.5">
-                              <div className="w-1.5 h-1.5 rounded-full bg-green-500"></div>
-                              <p className="text-xs text-green-700 font-medium">
-                                Messages will be personalized using your resume
-                              </p>
-                            </div>
-                          )}
-                        </div>
-                      ) : (
-                        <div className="relative overflow-hidden rounded-lg bg-gradient-to-r from-slate-50 to-gray-50 border border-slate-200 p-3">
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2 flex-1 min-w-0">
-                              <div className="p-1.5 rounded-full bg-slate-100">
-                                <FileText className="h-3.5 w-3.5 text-slate-500" />
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <p className="text-sm font-medium text-slate-600">No Resume Uploaded</p>
-                                <p className="text-xs text-slate-500">Upload a resume to enable personalization</p>
-                              </div>
-                            </div>
-                            <button
-                              type="button"
-                              onClick={() => setResumeModalOpen(true)}
-                              className="px-3 py-1.5 text-xs bg-blue-600 text-white rounded-full hover:bg-blue-700 transition-colors"
-                            >
-                              Upload
-                            </button>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                    
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-2">
-                        Writing Tone
-                      </label>
-                      <ToneSelector
-                        selectedTone={searchTone}
-                        onToneChange={setSearchTone}
-                        disabled={loading}
-                        variant="outline"
-                        size="sm"
-                        className="w-full justify-start h-10 text-sm"
-                      />
-                    </div>
-                    
-                    <Button
-                      type="submit"
-                      disabled={loading || !canRun}
-                      className="w-full h-11 text-base font-medium"
-                    >
-                      {loading ? "Running..." : "Run AI Agents"}
-                    </Button>
-                  </form>
+                  )}
                 </div>
-              </div>
+                
+                <div>
+                  <label className="block text-xs sm:text-sm font-medium text-slate-700 mb-1 sm:mb-2">
+                    Role
+                  </label>
+                  <input
+                    type="text"
+                    value={role}
+                    onChange={(e) => setRole(e.target.value)}
+                    placeholder="Target role"
+                    className="w-full px-2 sm:px-3 py-2 text-sm border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 h-9 sm:h-10"
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-xs sm:text-sm font-medium text-slate-700 mb-1 sm:mb-2">
+                    Key Highlights
+                  </label>
+                  <textarea
+                    value={highlights}
+                    onChange={(e) => setHighlights(e.target.value)}
+                    placeholder="Your key skills and experience"
+                    rows={3}
+                    className="w-full px-2 sm:px-3 py-2 text-xs sm:text-sm border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none min-h-[60px] sm:min-h-[80px]"
+                  />
+                </div>
+
+                {/* Resume Upload Section - Matches ResumeViewer styling */}
+                <div>
+                  <label className="block text-xs sm:text-sm font-medium text-slate-700 mb-1 sm:mb-2">
+                    Resume (Optional)
+                  </label>
+                  <div className="border border-slate-200 rounded-lg p-3 bg-white">
+                    {resumeData ? (
+                      <div className="space-y-3">
+                        <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg">
+                          <FileText className="h-5 w-5 text-blue-600 flex-shrink-0" />
+                          <div className="flex-1 min-w-0">
+                            <p className="font-medium text-slate-900 truncate text-sm">{resumeData.filename}</p>
+                            <p className="text-xs text-slate-500">
+                              {resumeData.useInPersonalization 
+                                ? "✓ Used in personalization" 
+                                : "Not used in personalization"
+                              }
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex gap-2">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setResumeModalOpen(true)}
+                            className="flex-1 gap-2 text-xs h-8"
+                          >
+                            <Upload className="h-3 w-3" />
+                            Replace
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => window.open(resumeData.url, '_blank')}
+                            className="flex-1 gap-2 text-xs h-8"
+                          >
+                            <FileText className="h-3 w-3" />
+                            View
+                          </Button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="text-center py-4">
+                        <div className="flex flex-col items-center gap-3">
+                          <div className="rounded-full bg-slate-100 p-3">
+                            <FileText className="h-6 w-6 text-slate-400" />
+                          </div>
+                          <div>
+                            <h3 className="font-medium text-slate-900 mb-1 text-sm">No resume uploaded</h3>
+                            <p className="text-xs text-slate-500 mb-3">
+                              Upload your resume to personalize outreach messages
+                            </p>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={() => setResumeModalOpen(true)}
+                              className="gap-2 text-xs h-8"
+                            >
+                              <Upload className="h-3 w-3" />
+                              Upload Resume
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+                
+                <div>
+                  <label className="block text-xs sm:text-sm font-medium text-slate-700 mb-1 sm:mb-2">
+                    Writing Tone
+                  </label>
+                  <ToneSelector
+                    selectedTone={selectedTone}
+                    onToneChange={setSelectedTone}
+                    disabled={loading}
+                    variant="outline"
+                    size="sm"
+                    className="w-full justify-start h-9 sm:h-10 text-xs sm:text-sm"
+                  />
+                </div>
+                
+                <Button
+                  type="submit"
+                  disabled={loading || !canRun}
+                  className="w-full h-9 sm:h-10 text-sm sm:text-base"
+                >
+                  {loading ? "Running..." : "Run AI Agents"}
+                </Button>
+              </form>
             </div>
-          </>
+          </div>
         )}
 
         <div className={cn(
           "transition-all duration-300 ease-in-out",
           "ml-12 sm:ml-16",
-          isSearchExpanded && "md:ml-76 lg:ml-96"
+          isSearchExpanded && "ml-76 sm:ml-96"
         )}>
           <div className="header-transition">
             <DynamicHeader 
@@ -1187,6 +952,12 @@ export default function HomePage() {
           </div>
 
           <div className="p-3 sm:p-4 md:p-6 max-w-7xl mx-auto content-transition min-height-screen">
+            {activeView === "chat" && (
+              <div className="h-[calc(100vh-8rem)]">
+                <ChatInterface />
+              </div>
+            )}
+
             {activeView === "email" && (
               <div className="space-y-4 sm:space-y-6">
                 <div className="text-center">
@@ -1257,9 +1028,9 @@ export default function HomePage() {
                 onNavigateToLinkedInHistory={() => handleNavClick("linkedin")}
                 onResumeUploadClick={() => setResumeModalOpen(true)}
                 onResumeSettingsChange={handleResumeSettingsChange}
+                onResumeDeleted={() => loadResumeData()}
                 showResumeViewer={true}
                 resumeRefreshTrigger={resumeRefreshTrigger}
-                onResumeDeleted={handleResumeDeleted}
                 parentResumeState={resumeData ? {
                   useInPersonalization: resumeData.useInPersonalization,
                   filename: resumeData.filename
@@ -1302,10 +1073,10 @@ export default function HomePage() {
                             AI-generated personalized email ready to send
                           </CardDescription>
                           {email && (
-                            <CardAction className="gap-1 sm:gap-2 flex-wrap">
+                            <CardAction className="gap-2 flex-col sm:flex-row">
                               <ToneSelector
-                                selectedTone={emailTone}
-                                onToneChange={setEmailTone}
+                                selectedTone={selectedTone}
+                                onToneChange={setSelectedTone}
                                 disabled={loading}
                                 size="sm"
                                 variant="outline"
@@ -1328,7 +1099,7 @@ export default function HomePage() {
                             </CardAction>
                           )}
                         </CardHeader>
-                        <CardContent className="p-4 sm:p-6">
+                        <CardContent>
                         {email ? (
                           <Textarea
                             value={editableEmail}
@@ -1347,19 +1118,19 @@ export default function HomePage() {
 
                     {(linkedin || (loading && status.messaging && email)) && (
                       <Card className="shadow-lg bg-gradient-to-br from-purple-50/50 to-indigo-50/50">
-                        <CardHeader className="space-y-2 sm:space-y-3">
-                          <CardTitle className="flex items-center gap-2 text-purple-900 text-lg sm:text-xl">
-                            <MessageSquare className="h-4 w-4 sm:h-5 sm:w-5" />
+                        <CardHeader>
+                          <CardTitle className="flex items-center gap-2 text-purple-900">
+                            <MessageSquare className="h-5 w-5" />
                             LinkedIn Message
                           </CardTitle>
-                          <CardDescription className="text-sm sm:text-base">
+                          <CardDescription>
                             Professional networking message optimized for LinkedIn
                           </CardDescription>
                           {linkedin && (
-                            <CardAction className="gap-1 sm:gap-2 flex-wrap">
+                            <CardAction className="gap-2">
                               <ToneSelector
-                                selectedTone={linkedinTone}
-                                onToneChange={setLinkedinTone}
+                                selectedTone={selectedTone}
+                                onToneChange={setSelectedTone}
                                 disabled={loading}
                                 size="sm"
                                 variant="outline"
@@ -1369,10 +1140,10 @@ export default function HomePage() {
                                 disabled={loading || !canRun || regeneratingLinkedin}
                                 variant="outline"
                                 size="sm"
-                                className="bg-gradient-to-r from-blue-100 to-indigo-100 hover:from-blue-200 hover:to-indigo-200 text-blue-800 border-blue-200 hover:border-blue-300 shadow-md hover:shadow-lg text-xs sm:text-sm h-8 sm:h-9 min-w-[80px] sm:min-w-[120px]"
+                                className="bg-gradient-to-r from-purple-100 to-indigo-100 hover:from-purple-200 hover:to-indigo-200 text-purple-800 shadow-md hover:shadow-lg text-xs sm:text-sm h-8 sm:h-9"
                               >
                                 {regeneratingLinkedin ? (
-                                  <div className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2 animate-spin rounded-full border-2 border-blue-800 border-t-transparent" />
+                                  <div className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2 animate-spin rounded-full border-2 border-purple-800 border-t-transparent" />
                                 ) : (
                                   <RefreshCw className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
                                 )}
@@ -1381,63 +1152,46 @@ export default function HomePage() {
                               </Button>
                               <Button
                                 onClick={async () => {
-                                  setRephrasingLinkedin(true);
                                   try {
-                                    // Include resume data when toggle is enabled
-                                    const resumeContent = resumeData?.useInPersonalization ? formatResumeForMessaging(resumeData.content) : undefined;
-                                    const useResumeInPersonalization = resumeData?.useInPersonalization || false;
-                                    
                                     const res = await fetch("/api/rephrase", {
                                       method: "POST",
                                       headers: { "Content-Type": "application/json" },
                                       body: JSON.stringify({ 
                                         linkedin: editableLinkedin, 
-                                        tone: linkedinTone,
-                                        type: "22words",
-                                        resumeContent,
-                                        useResumeInPersonalization,
-                                        company: searchData.company,
-                                        role: searchData.role,
-                                        highlights: searchData.highlights
+                                        tone: selectedTone,
+                                        type: "22words"
                                       }),
                                     });
                                     if (!res.ok) throw new Error("Failed to rephrase");
                                     const data = await res.json();
-                                    const sanitizedLinkedIn = sanitizeMessageContent(data.linkedin);
-                                    setLinkedin(sanitizedLinkedIn);
-                                    setEditableLinkedin(sanitizedLinkedIn);
+                                    setLinkedin(data.linkedin);
+                                    setEditableLinkedin(data.linkedin);
                                   } catch (e: any) {
                                     setError(e?.message || "Failed to rephrase");
-                                  } finally {
-                                    setRephrasingLinkedin(false);
                                   }
                                 }}
-                                disabled={loading || !linkedin || rephrasingLinkedin}
+                                disabled={loading || !linkedin}
                                 variant="outline"
                                 size="sm"
-                                className="bg-gradient-to-r from-blue-100 to-indigo-100 hover:from-blue-200 hover:to-indigo-200 text-blue-800 border-blue-200 hover:border-blue-300 shadow-md hover:shadow-lg text-xs sm:text-sm h-8 sm:h-9 min-w-[60px] sm:min-w-[140px]"
+                                className="bg-gradient-to-r from-indigo-100 to-purple-100 hover:from-indigo-200 hover:to-purple-200 text-indigo-800 shadow-md hover:shadow-lg text-xs sm:text-sm h-8 sm:h-9"
                               >
-                                {rephrasingLinkedin ? (
-                                  <div className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2 animate-spin rounded-full border-2 border-blue-800 border-t-transparent" />
-                                ) : (
-                                  <Scissors className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-                                )}
-                                <span className="hidden sm:inline">{rephrasingLinkedin ? 'Rephrasing...' : '22 words Rephrase'}</span>
-                                <span className="sm:hidden">{rephrasingLinkedin ? 'Rep...' : '22w'}</span>
+                                <Scissors className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                                <span className="hidden sm:inline">22 words Rephrase</span>
+                                <span className="sm:hidden">22w</span>
                               </Button>
                             </CardAction>
                           )}
                         </CardHeader>
-                        <CardContent className="p-4 sm:p-6">
+                        <CardContent>
                         {linkedin ? (
                           <Textarea
                             value={editableLinkedin}
                             onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setEditableLinkedin(e.target.value)}
                             placeholder="Your LinkedIn message will appear here..."
-                            className="min-h-[120px] sm:min-h-[150px] border-purple-200 focus:border-purple-400 resize-none"
+                            className="min-h-[150px] border-purple-200 focus:border-purple-400"
                           />
                         ) : (
-                          <div className="text-center p-6 sm:p-8 text-muted-foreground italic">
+                          <div className="text-center p-8 text-muted-foreground italic">
                             Generating LinkedIn message...
                           </div>
                         )}

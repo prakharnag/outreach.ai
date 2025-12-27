@@ -1,288 +1,136 @@
 # Outreach.ai
 
-[![Next.js](https://img.shields.io### 📄 **Resume-Powered Personalization**
-- **Resume Upload & Management** - Secure PDF resume upload with intelligent file management
-- **Intelligent Content Extraction** - AI-powered parsing of resume content and skills
-- **Personalized Messaging** - AI incorporates resume details into outreach messages
-- **Toggle Control** - Easy on/off toggle for resume-based personalization
-- **Cross-Component Sync** - Consistent resume settings across search panel and dashboard
-- **Real-time Updates** - Instant synchronization of resume preferences
-- **Automatic URL Recovery** - Intelligent system prevents resume disappearance due to expired links
-- **File Persistence** - Resumes remain accessible with automatic background URL regeneration
-- **Original Filename Preservation** - User-friendly filenames maintained during file recovery
-
-### 📧 **Enhanced Message Generation**
-- **Proper Email Formatting** - Generated emails display with correct paragraph structure and spacing
-- **Multi-layer Content Validation** - Advanced guardrails prevent JSON artifacts and malformed content
-- **Subject Line Optimization** - Intelligent subject line generation with proper formatting
-- **Paragraph Structure** - Maintains email readability with proper line breaks and sections
-- **Fallback Content Generation** - Robust backup content when AI generation encounters issuesNext.js-14.2.5-black?logo=next.js)](https://nextjs.org/)
+[![Next.js](https://img.shields.io/badge/Next.js-14.2.5-black?logo=next.js)](https://nextjs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.9.2-blue?logo=typescript)](https://www.typescriptlang.org/)
 [![Supabase](https://img.shields.io/badge/Supabase-Ready-green?logo=supabase)](https://supabase.com/)
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-4.1.11-38B2AC?logo=tailwind-css)](https://tailwindcss.com/)
 
-## 🚀 Overview
+> An intelligent cold outreach automation platform that combines AI-powered company research with personalized email and LinkedIn message generation.
 
-Outreach.ai is an intelligent cold outreach automation platform that combines AI-powered company research with personalized email and LinkedIn message generation. The platform streamlines the entire outreach process from prospect research to message delivery.
+## Table of Contents
 
-## ✨ Key Features
+- [Overview](#overview)
+- [Key Features](#key-features)
+- [Core Workflow](#core-workflow)
+- [Technology Stack](#technology-stack)
+- [Quick Start](#quick-start)
+- [Project Structure](#project-structure)
+- [API Documentation](#api-documentation)
+- [Deployment](#deployment)
+- [Known Issues](#known-issues)
+- [Contributing](#contributing)
+- [License](#license)
 
-### 🔍 **AI-Powered Company Research**
-- Automated company discovery and analysis
-- Real-time data collection from trusted sources
-- Confidence scoring for research accuracy
-- Source verification and tracking
+## Overview
 
-### 👥 **Contact Intelligence**
-- Executive and decision-maker identification
-- Email inference and validation
-- Contact information scoring
-- Multiple data source aggregation
+Outreach.ai streamlines the entire outreach process from prospect research to message delivery. It uses a multi-agent AI system to gather company intelligence, verify information, identify key contacts, and generate personalized outreach messages.
 
-### 📧 **Personalized Messaging**
-- AI-generated email campaigns
-- LinkedIn message automation
-- Custom messaging based on research insights
-- Multi-channel outreach coordination
+## Key Features
 
-### 📊 **Analytics & Insights**
-- Real-time campaign performance tracking
-- Contact engagement analytics
-- Success rate monitoring
-- Historical data analysis
+### AI-Powered Research & Verification
+- **Company Research** - Automated company discovery and analysis using Perplexity AI
+- **Data Verification** - Fact-checking with confidence scoring for research accuracy
+- **Contact Intelligence** - Executive identification and email inference
+- **Source Tracking** - Real-time data collection from trusted sources with verification
 
-### 🎯 **Smart Targeting**
-- Company autocomplete with manual entry support
-- Role-based targeting
-- Industry-specific customization
-- Advanced filtering capabilities
+### Personalized Message Generation
+- **Email Generation** - AI-generated cold emails (90-100 words) with subject lines
+- **LinkedIn Messages** - Conversational LinkedIn messages (44 words)
+- **6 Writing Tones** - Formal, Casual & Friendly, Warm & Personal, Intellectual, Confident, Conversational
+- **Resume Integration** - Upload resume for enhanced message personalization
+- **Tone Synchronization** - Consistent tone across search panel and output
 
-### 📱 **Mobile-First Design**
+### Smart Features
+- **Rate Limiting** - Universal rate limiting (15 searches/day, 5 rephrases/day)
+- **Message Caching** - 7-day cache for same company/role searches
+- **Independent Regeneration** - Regenerate email or LinkedIn messages separately
+- **History Management** - Smart grouping by company with individual message deletion
+- **Autocomplete** - Company search autocomplete with manual entry fallback
+
+### Mobile-First Design
 - Fully responsive interface across all devices
 - Touch-friendly interactions and navigation
 - Adaptive layouts for mobile, tablet, and desktop
 - Optimized performance on all screen sizes
 
-### � **Resume-Powered Personalization**
-- **Resume Upload & Management** - Secure PDF resume upload with file management
-- **Intelligent Content Extraction** - AI-powered parsing of resume content and skills
-- **Personalized Messaging** - AI incorporates resume details into outreach messages
-- **Toggle Control** - Easy on/off toggle for resume-based personalization
-- **Cross-Component Sync** - Consistent resume settings across search panel and dashboard
-- **Real-time Updates** - Instant synchronization of resume preferences
+## Core Workflow
 
-### �🗂️ **Advanced History Management**
-- **Smart Company Grouping** - Automatically groups emails and LinkedIn messages by company
-- **Individual Item Management** - Delete specific messages within grouped company history
-- **Group Operations** - Bulk delete all messages for a specific company
-- **Real-time Updates** - History automatically refreshes after new research
-- **Expandable Interface** - Clean, organized view of all historical outreach
+```
+1. SEARCH INITIATION
+   ├── User enters: Company name, Role, Key highlights
+   ├── Optional: Resume upload, Tone selection
+   └── Trigger: runChain() via /api/run endpoint
 
-## 🆕 Recent Updates & Improvements
+2. COMPANY RESEARCH (researchAgent)
+   ├── Web search via Perplexity API
+   ├── Gather company info, news, funding
+   ├── Identify key contacts (hiring managers, leadership)
+   └── Extract verified sources
 
-### **V2.4.0 - Model Deprecation Handling & API Resilience**
+3. VERIFICATION (verifyAgent)
+   ├── Fact-check claims via Groq API
+   ├── Validate sources (< 12 months old preferred)
+   ├── Identify 2 key contacts (primary + secondary)
+   └── Return verified, source-attributed claims
 
-#### 🔧 **API Infrastructure Improvements**
-- **Model Deprecation Fallback System** - Implemented automatic handling of deprecated AI models
-  - Added `getModelWithFallback()` function in `api.ts` for centralized model management
-  - Automatic fallback from deprecated `llama3-70b-8192` to `llama-3.3-70b-versatile`
-  - Zero-downtime transition - existing code continues working without modification
-  - Future-proof architecture for handling additional model deprecations
-- **Enhanced API Resilience** - Improved reliability of AI model interactions
-  - Centralized model selection logic prevents API failures from deprecated models
-  - Automatic model translation at the API layer for seamless upgrades
-  - Comprehensive fallback strategy ensures continuous service availability
+4. MESSAGE GENERATION (messagingAgent)
+   ├── Generate personalized cold email
+   │   ├── Subject line + body (90-100 words)
+   │   └── Tone: Apply selected tone
+   │
+   └── Generate LinkedIn message
+       ├── Length: 44 words
+       └── Tone: Apply selected tone
 
-#### ✨ **Technical Enhancements**
-- **Backward Compatibility** - All existing code using `llama3-70b-8192` automatically uses the new model
-- **Centralized Configuration** - Single point of control for model fallbacks in `lib/api.ts`
-- **Production Readiness** - Prevents service disruption when AI providers deprecate models
-- **Logging Optimization** - Removed debug console.log statements for cleaner production output
+5. DISPLAY & INTERACTION
+   ├── Show: Research findings, verified points, sources
+   ├── Display: Generated email and LinkedIn message
+   └── Actions: Copy, regenerate, rephrase, save to history
+```
 
-### **V2.3.0 - Email Formatting & Resume Recovery System**
+### Writing Tones
 
-#### 🔧 **Fixed Critical Issues**
-- **Email Structure Formatting** - Completely overhauled email rendering to display proper email structure
-  - Fixed paragraph formatting in generated emails (previously showing as single paragraph)
-  - Enhanced `validateEmailMessage()` function to preserve line breaks and email structure
-  - Improved `cleanJsonArtifacts()` to maintain email formatting while cleaning JSON artifacts
-  - Ensured proper email display with Subject line, greeting, body paragraphs, and closing
-- **Resume URL Expiration** - Implemented automatic recovery system for expired Supabase signed URLs
-  - Added automatic URL validation before serving resume data
-  - Built intelligent file recovery system that finds existing files when URLs expire
-  - Created `regenerateResumeSignedUrl()` function with robust error handling
-  - Implemented periodic URL refresh (every 30-45 minutes) to prevent expiration during sessions
-- **Resume Filename Preservation** - Fixed issue where original user-friendly filenames were being lost
-  - Recovery system now preserves original filename display (e.g., "PrakharNag_FoundingEngineer.pdf")
-  - Storage uses timestamp-based names internally while maintaining user-friendly display names
-  - Enhanced database update logic to only refresh URLs without changing displayed filenames
+| Tone | Style | Use Case |
+|------|-------|----------|
+| **Formal** | Professional, corporate | Executive outreach |
+| **Casual & Friendly** | Gen-Z, approachable | Startup/tech recruiting |
+| **Warm & Personal** | Empathetic, relationship-focused | Networking |
+| **Intellectual** | Thoughtful, analytical | Research/thought leadership |
+| **Confident** | Assertive, results-driven | Sales pitches |
+| **Conversational** | Friendly, natural | General outreach |
 
-#### ✨ **New Features**
-- **Intelligent Resume Recovery** - Advanced file recovery system for lost or expired resume files
-  - Automatic detection of file path mismatches and storage inconsistencies
-  - Smart file matching algorithm that finds similar files when exact matches fail
-  - Fallback to most recent file when name matching is inconclusive
-  - Comprehensive logging for troubleshooting file recovery issues
-- **Proactive URL Management** - Prevents resume disappearance through automated maintenance
-  - Background URL validation every 30 minutes in ResumeViewer component
-  - Dashboard-level periodic refresh every 45 minutes for proactive maintenance
-  - Enhanced `isSignedUrlValid()` function with timeout and robust error handling
-  - Automatic database synchronization when URLs are regenerated
-- **Enhanced Email Validation** - Multi-layer content validation and formatting
-  - Improved paragraph structure preservation in email content
-  - Better subject line spacing and formatting validation
-  - Enhanced fallback content generation for incomplete emails
-  - Robust JSON artifact detection and removal while preserving email structure
+## Technology Stack
 
-#### 🎯 **User Experience Improvements**
-- **Seamless Resume Persistence** - Resumes no longer disappear after signed URL expiration
-- **Proper Email Display** - Generated emails now display with proper paragraph breaks and structure
-- **Automatic Recovery** - System automatically recovers from file path issues without user intervention
-- **Preserved Filenames** - Original resume filenames remain visible even after URL regeneration
-- **Background Maintenance** - All URL management happens transparently in the background
-
-#### 🔧 **Technical Enhancements**
-- **Enhanced Error Handling** - Comprehensive error logging and recovery mechanisms
-- **File Storage Optimization** - Better handling of both legacy and current file storage formats
-- **Database Consistency** - Improved synchronization between storage files and database references
-- **Performance Optimization** - Efficient URL validation with proper timeouts and abort controllers
-
-### **V2.2.0 - Resume Toggle Synchronization & Performance**
-
-#### 🔧 **Fixed Issues**
-- **Resume Toggle Synchronization** - Fixed critical state synchronization between search panel and dashboard ResumeViewer
-  - Resolved toggle not working properly between components
-  - Implemented immediate state sync using `parentResumeState` prop pattern
-  - Fixed state inconsistencies when toggling resume usage from different UI locations
-- **Performance Optimization** - Eliminated unnecessary re-renders and refresh triggers
-  - Removed redundant `setResumeRefreshTrigger` calls that caused repeated component refreshes
-  - Optimized `useEffect` dependencies to prevent unnecessary re-renders
-  - Cleaned up production code by removing debug console.log statements
-
-#### ✨ **New Features**
-- **Resume Upload & Personalization** - Complete resume management system for enhanced outreach
-  - Secure PDF upload with file validation and storage
-  - AI-powered content extraction and skill identification
-  - Toggle-based personalization control in search panel and dashboard
-  - Intelligent integration of resume details into email and LinkedIn messages
-  - Real-time synchronization between components for consistent user experience
-- **Enhanced State Management** - Implemented efficient prop-based synchronization
-  - Added `parentResumeState` prop to ResumeViewer component for immediate sync
-  - Direct state updates in `handleResumeSettingsChange` for instant UI feedback
-  - Automatic database persistence with error handling and state rollback
-- **Optimized Component Architecture** - Streamlined communication between components
-  - Enhanced Dashboard component interface to pass resume state efficiently
-  - Improved ResumeViewer `useEffect` to only depend on necessary state changes
-  - Maintained dual state system while ensuring consistency across components
-
-#### 🎯 **User Experience**
-- **Instant Toggle Response** - Resume toggle changes are now immediate across all UI components
-- **Reliable State Sync** - Toggle state remains consistent between search panel and dashboard
-- **Error Handling** - Robust error handling with automatic state rollback on database failures
-- **Performance** - Removed unnecessary refresh cycles for smoother user experience
-
-### **V2.1.0 - History Management & Mobile Experience**
-
-#### 🔧 **Fixed Issues**
-- **Eliminated Duplicate Entries** - Resolved issue where email and LinkedIn history was being saved twice
-- **Restored Company Grouping** - Fixed broken grouping functionality for same-company research
-- **Syntax Errors** - Corrected compilation issues in dashboard components
-
-#### ✨ **New Features**
-- **Smart History Refresh** - Automatic history updates after research completion
-- **Enhanced Mobile Responsiveness** - Complete UI overhaul for mobile devices
-  - Adaptive navigation with collapsible sidebar
-  - Touch-optimized buttons and interactions
-  - Responsive typography and spacing
-  - Mobile-friendly search panels
-- **Improved Delete Functionality** - Enhanced individual and group delete operations
-  - Visual feedback during deletion process
-  - Confirmation dialogs for bulk operations
-  - Real-time UI updates after deletions
-
-#### 🎨 **UI/UX Improvements**
-- **Mobile-First Design** - Rebuilt all components with mobile responsiveness
-- **Consistent Spacing** - Standardized margins and padding across breakpoints
-- **Better Navigation** - Adaptive sidebar that works seamlessly on all devices
-- **Enhanced Icons** - Properly sized icons that scale with screen size
-- **Improved Forms** - Mobile-optimized input fields and search functionality
-
-#### 🔄 **Backend Optimizations**
-- **Streamlined History Saving** - Removed redundant frontend history API calls
-- **Server-Side Integration** - Centralized history management in orchestrator
-- **Database Efficiency** - Optimized grouping queries for better performance
-
-## 🛠️ Technology Stack
-
-### **Frontend**
+### Frontend
 - **Next.js 14.2.5** - React framework with App Router
 - **TypeScript 5.9.2** - Type-safe development
 - **Tailwind CSS 4.1.11** - Utility-first styling
 - **Radix UI** - Accessible component primitives
-- **Lucide React** - Beautiful icons
+- **Lucide React** - Icon library
 
-### **Backend**
+### Backend
 - **Supabase** - PostgreSQL database with real-time subscriptions
 - **LangChain** - AI agent orchestration
 - **Edge Runtime** - Serverless API functions
 
-### **AI & APIs**
-- **Groq API** - Fast LLM inference
+### AI & APIs
+- **Groq API** - Fast LLM inference (llama-3.3-70b-versatile)
 - **Perplexity AI** - Real-time web search and research
 - **Company Autocomplete API** - Business data enrichment
 
-### **Development Tools**
+### Development Tools
 - **ESLint** - Code linting
 - **Drizzle ORM** - Type-safe database operations
 - **PostCSS** - CSS processing
 
-## 📁 Project Structure
-
-```
-outreach.ai/
-├── app/                          # Next.js App Router
-│   ├── api/                      # API routes
-│   │   ├── company-autocomplete/ # Company search endpoints
-│   │   ├── contact-results/      # Contact management APIs
-│   │   ├── history/             # Email/LinkedIn history
-│   │   ├── messaging/           # Message generation
-│   │   ├── rephrase/           # Content refinement
-│   │   └── run/                # Main orchestration endpoint
-│   ├── auth/                    # Authentication pages
-│   ├── dashboard/              # Main application interface
-│   └── landingpage/           # Marketing site
-├── components/                 # Reusable UI components
-│   ├── ui/                    # Base UI components
-│   └── NavigationSidebar.tsx  # Main navigation
-├── contexts/                  # React contexts
-│   └── auth-context.tsx      # Authentication state
-├── hooks/                    # Custom React hooks
-├── lib/                     # Core business logic
-│   ├── api.ts              # External API integrations
-│   ├── chain.ts            # AI agent chains
-│   ├── db.ts               # Database utilities
-│   ├── researchAgent.ts    # Company research AI
-│   ├── verifyAgent.ts      # Data verification AI
-│   ├── messagingAgent.ts   # Message generation AI
-│   ├── langchain-orchestrator.ts # Main AI orchestration
-│   ├── schema.ts           # Database schemas
-│   ├── supabase.ts         # Supabase client
-│   └── utils.ts            # Shared utilities
-├── types/                  # TypeScript type definitions
-├── supabase/              # Database migrations and config
-└── public/               # Static assets
-```
-
-## 🚀 Getting Started
+## Quick Start
 
 ### Prerequisites
 
-- **Node.js 18.0+**
-- **npm or yarn**
-- **Supabase account**
-- **API keys for:**
-  - Groq API
-  - Perplexity AI
+- Node.js 18.0+
+- npm or yarn
+- Supabase account
+- API keys for Groq and Perplexity
 
 ### Installation
 
@@ -298,46 +146,41 @@ outreach.ai/
    ```
 
 3. **Environment Setup**
-   
-   Create a `.env.local` file in the root directory:
+
+   Create a `.env.local` file:
    ```env
    # Supabase Configuration
-   NEXT_PUBLIC_SUPABASE_URL=your_supabase_url_here
-   NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key_here
-   SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key_here
+   NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
+   NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+   SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
 
    # AI API Keys
-   GROQ_API_KEY=your_groq_api_key_here
-   PERPLEXITY_API_KEY=your_perplexity_api_key_here
+   GROQ_API_KEY=your_groq_api_key
+   PERPLEXITY_API_KEY=your_perplexity_api_key
 
-   # Optional: Database direct connection
-   DATABASE_URL=your_database_url_here
+   # Optional
+   DATABASE_URL=your_database_url
    ```
 
 4. **Database Setup**
-   
+
    Run the Supabase migrations:
    ```bash
-   npm run drizzle:push
+   # Initialize Supabase
+   npx supabase start
+
+   # Push migrations
+   npx supabase db push
    ```
 
-5. **Development Server**
+5. **Start Development Server**
    ```bash
    npm run dev
    ```
 
-   Open [http://localhost:3000](http://localhost:3000) in your browser.
+   Open [http://localhost:3000](http://localhost:3000)
 
-## 🔧 Configuration
-
-### Supabase Setup
-
-1. Create a new Supabase project
-2. Enable Google OAuth (optional)
-3. Run the provided SQL migrations in `supabase/migrations/`
-4. Configure Row Level Security (RLS) policies
-
-### API Keys Setup
+### Getting API Keys
 
 #### Groq API
 1. Visit [Groq Console](https://console.groq.com/)
@@ -349,202 +192,330 @@ outreach.ai/
 2. Generate an API key
 3. Add to `.env.local` as `PERPLEXITY_API_KEY`
 
-## 🏗️ Architecture
+## Project Structure
 
-### AI Agent System
-
-The platform uses a multi-agent AI system for intelligent outreach:
-
-```mermaid
-graph TD
-    A[User Input] --> B[Research Agent]
-    B --> C[Verification Agent]
-    C --> D[Messaging Agent]
-    D --> E[Output Generation]
-    
-    B --> F[Perplexity API]
-    C --> G[Data Validation]
-    D --> H[Groq LLM]
+```
+outreach.ai/
+├── app/                          # Next.js App Router
+│   ├── api/                      # API routes
+│   │   ├── run/                  # Main research pipeline
+│   │   ├── messaging/            # Message generation
+│   │   ├── rephrase/             # Tone-based rephrasing
+│   │   ├── company-autocomplete/ # Company search
+│   │   ├── contact-results/      # Contact management
+│   │   ├── history/              # Email/LinkedIn history
+│   │   ├── user/resume/          # Resume management
+│   │   ├── analytics/            # Usage analytics
+│   │   └── rate-limit-status/    # Rate limit tracking
+│   ├── auth/                     # Authentication pages
+│   ├── dashboard/                # Main application interface
+│   └── landingpage/              # Marketing site
+│
+├── components/                   # Reusable UI components
+│   ├── ui/                       # Base UI components
+│   │   ├── dashboard.tsx         # Main dashboard layout
+│   │   ├── research-output.tsx   # Research display
+│   │   ├── resume-upload.tsx     # Resume upload widget
+│   │   ├── resume-viewer.tsx     # Resume management
+│   │   ├── tone-selector.tsx     # Writing tone selector
+│   │   ├── company-autocomplete.tsx
+│   │   ├── rate-limit-status.tsx
+│   │   └── ... (36 components total)
+│   └── NavigationSidebar.tsx     # Main navigation
+│
+├── lib/                          # Core business logic
+│   ├── agents.ts                 # Agent orchestration
+│   ├── researchAgent.ts          # Company research AI
+│   ├── verifyAgent.ts            # Data verification AI
+│   ├── messagingAgent.ts         # Message generation AI
+│   ├── langchain-orchestrator.ts # Main AI orchestration
+│   ├── chain.ts                  # AI agent chains
+│   ├── api.ts                    # External API integrations
+│   ├── db.ts                     # Database utilities
+│   ├── supabase.ts               # Supabase client
+│   ├── tones.ts                  # Writing tone configs
+│   ├── resumeUtils.ts            # Resume handling
+│   ├── universalRateLimiter.ts   # Rate limiting
+│   ├── schema.ts                 # Database schemas
+│   └── utils.ts                  # Shared utilities
+│
+├── contexts/                     # React contexts
+│   └── auth-context.tsx          # Authentication state
+│
+├── hooks/                        # Custom React hooks
+│   ├── useUser.ts                # User authentication hook
+│   └── useContactResults.ts      # Contact history hook
+│
+├── supabase/migrations/          # Database migrations (23 files)
+│   ├── 001-008                   # Core schema
+│   ├── 012-017                   # Resume storage
+│   └── 018-023                   # Rate limiting & usage
+│
+└── types/                        # TypeScript definitions
+    └── index.ts                  # Global types
 ```
 
-1. **Research Agent** - Gathers company intelligence
-2. **Verification Agent** - Validates and scores data accuracy
-3. **Messaging Agent** - Generates personalized outreach content
+## API Documentation
 
-### Data Flow
+### Base URLs
 
-1. **Company Research** → Real-time web search and data aggregation
-2. **Contact Discovery** → Executive identification and email inference
-3. **Message Generation** → Personalized email and LinkedIn content
-4. **Analytics Tracking** → Performance monitoring and optimization
+```
+Production: https://your-domain.vercel.app/api
+Development: http://localhost:3000/api
+```
 
-### Database Schema
+### Authentication
 
-Key tables:
-- `contact_results` - Research and contact data
-- `email_history` - Generated email campaigns (with smart company grouping)
-- `linkedin_history` - LinkedIn message history (with smart company grouping)
-- User authentication managed by Supabase Auth
+Most endpoints require authentication via Supabase Auth:
 
-#### **History Management Architecture**
-- **Company Grouping Logic** - Database-level grouping by company name
-- **Automatic Aggregation** - API endpoints provide grouped data with total counts
-- **Efficient Queries** - Optimized SQL for fast history retrieval
-- **Real-time Updates** - Immediate UI refresh after data changes
+```
+Authorization: Bearer <your_access_token>
+```
 
-## 🚀 Deployment
+### Main Endpoints
 
-### Vercel Deployment (Recommended)
+#### Run Research Pipeline
 
-1. **Connect Repository**
-   - Link your GitHub repository to Vercel
-   - Import the project
+**POST** `/api/run`
 
-2. **Environment Variables**
-   Configure all environment variables in Vercel dashboard:
-   - `NEXT_PUBLIC_SUPABASE_URL`
-   - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
-   - `SUPABASE_SERVICE_ROLE_KEY`
-   - `GROQ_API_KEY`
-   - `PERPLEXITY_API_KEY`
+Execute the complete research and outreach pipeline.
 
-3. **Deploy**
-   ```bash
-   npm run build
-   vercel --prod
-   ```
+**Request:**
+```json
+{
+  "company": "Company Name",
+  "domain": "company.com",
+  "role": "Software Engineer",
+  "highlights": "Technical background, open source contributor",
+  "tone": "conversational",
+  "useResume": true
+}
+```
+
+**Response:**
+```json
+{
+  "research": {
+    "company_overview": "...",
+    "key_business_points": {...},
+    "confidence_assessment": {...}
+  },
+  "contact": {
+    "name": "John Doe",
+    "title": "CTO",
+    "email": "john@company.com"
+  },
+  "outputs": {
+    "email": "Generated email content",
+    "linkedin": "Generated LinkedIn message"
+  }
+}
+```
+
+#### Generate Messages
+
+**POST** `/api/messaging`
+
+Generate email and/or LinkedIn messages.
+
+**Request:**
+```json
+{
+  "company": "Company Name",
+  "role": "Software Engineer",
+  "tone": "conversational",
+  "messageType": "email" // optional: "email" | "linkedin" | both
+}
+```
+
+#### Rephrase Message
+
+**POST** `/api/rephrase`
+
+Rephrase existing message with different tone.
+
+**Request:**
+```json
+{
+  "content": "Original message content",
+  "tone": "formal",
+  "type": "email" // or "linkedin"
+}
+```
+
+#### Rate Limit Status
+
+**GET** `/api/rate-limit-status`
+
+Get current rate limit status for the authenticated user.
+
+**Response:**
+```json
+{
+  "limits": [
+    {
+      "action": "search",
+      "limit": 15,
+      "used": 7,
+      "remaining": 8,
+      "resets_at": "2024-01-01T12:00:00Z"
+    }
+  ]
+}
+```
+
+### Rate Limits
+
+- **Searches:** 15 per day
+- **LinkedIn Rephrases:** 5 per day
+- **Email Rephrases:** Unlimited
+- **Message Regeneration:** Unlimited
+
+## Deployment
+
+### Quick Deploy to Vercel
+
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/prakharnag/outreach.ai)
 
 ### Manual Deployment
 
-1. **Build the application**
-   ```bash
-   npm run build
+#### 1. Vercel Setup
+
+```bash
+# Install Vercel CLI
+npm i -g vercel
+
+# Login
+vercel login
+
+# Deploy
+vercel --prod
+```
+
+#### 2. Environment Variables
+
+Set in Vercel dashboard:
+- `NEXT_PUBLIC_SUPABASE_URL`
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+- `SUPABASE_SERVICE_ROLE_KEY`
+- `GROQ_API_KEY`
+- `PERPLEXITY_API_KEY`
+
+#### 3. Database Configuration
+
+1. Create Supabase project
+2. Run migrations from `supabase/migrations/`
+3. Configure Row Level Security (RLS) policies
+4. Enable Google OAuth (optional)
+
+#### 4. Custom Domain
+
+1. Vercel dashboard → Settings → Domains
+2. Add custom domain
+3. Configure DNS:
+   ```
+   Type: CNAME
+   Name: www
+   Value: cname.vercel-dns.com
    ```
 
-2. **Start production server**
-   ```bash
-   npm start
-   ```
+## Known Issues
 
-## 📊 Usage Guide
+### Fixed Issues ✅
 
-### Basic Workflow
+1. **Tone Selection Synchronization** - Tone now syncs properly between search panel and output
+2. **Cold Email Greeting** - Proper greetings for all tones
+3. **LinkedIn Message Greeting** - Fixed "Hi there" fallback issue
+4. **Regenerate Button State** - Independent email/LinkedIn regeneration
+5. **Resume Data Synchronization** - Real-time sync across components
+6. **Resume Upload** - Enhanced error handling and file support
+7. **Universal Rate Limiting** - Simple, effective rate limiting system
+8. **Model Deprecation** - Automatic fallback from deprecated models
 
-1. **Authentication** - Sign in with Google or email
-2. **Resume Upload** - Upload your resume for AI-powered personalization (optional)
-3. **Company Research** - Enter company name and role with resume personalization toggle
-4. **Review Results** - Analyze research findings and contact data
-5. **Generate Messages** - Create personalized outreach content enhanced with resume details
-6. **Track Performance** - Monitor campaign success rates
+### Open Issues 🔴
 
-### Advanced Features
+1. **Email Container Styling** - Minor spacing issue between output and buttons
+2. **Company Search Fallback** - Could add better guidance when company not found
+3. **Key Highlights Label** - Could mark as optional with helpful tooltip
 
-- **Bulk Processing** - Handle multiple prospects simultaneously
-- **Custom Templates** - Create reusable message templates
-- **A/B Testing** - Compare message variants
-- **Integration APIs** - Connect with external CRM systems
+## Recent Updates
 
-## 🧪 Development
+### V2.4.0 - Model Deprecation Handling
+- Automatic handling of deprecated AI models
+- Fallback from `llama3-70b-8192` to `llama-3.3-70b-versatile`
+- Zero-downtime transition with centralized model management
 
-### Running Tests
+### V2.3.0 - Email Formatting & Resume Recovery
+- Fixed email paragraph formatting
+- Automatic resume URL expiration recovery
+- Original filename preservation
+- Enhanced email validation and structure
 
-```bash
-npm run test
-```
+### V2.2.0 - Resume Toggle Synchronization
+- Fixed resume toggle state sync
+- Performance optimization (removed unnecessary re-renders)
+- Enhanced state management
 
-### Code Quality
+### V2.1.0 - History Management
+- Smart history grouping by company
+- Enhanced mobile responsiveness
+- Improved delete functionality
 
-```bash
-npm run lint
-npm run type-check
-```
+## Contributing
 
-### Database Operations
+We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
-```bash
-# Generate migrations
-npm run drizzle:generate
+### Development Guidelines
 
-# Apply migrations
-npm run drizzle:push
-```
+- **TypeScript** - Strict mode with proper typing
+- **Error Handling** - Comprehensive error handling
+- **Testing** - Unit, integration, and E2E tests
+- **Security** - Follow security best practices
+- **Performance** - Optimize for speed and efficiency
 
-## 🔒 Security & Privacy
+### Code Quality Standards
+
+- Follow existing patterns and naming conventions
+- Use Tailwind CSS for styling
+- Implement proper error boundaries
+- Write tests for new features
+- Update documentation
+
+## Security
 
 - **Data Encryption** - All sensitive data encrypted at rest
 - **API Rate Limiting** - Prevents abuse and ensures stability
 - **User Privacy** - GDPR compliant data handling
 - **Secure Authentication** - Supabase Auth with OAuth support
+- **Row Level Security** - RLS policies on all database tables
 
-## 🤝 Contributing
+## Performance
 
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
-
-### Development Guidelines
-
-- Follow TypeScript best practices
-- Use Tailwind CSS for styling
-- Write comprehensive tests
-- Document new features
-- Maintain backward compatibility
-
-## 📈 Performance
-
-- **Cold Start** - < 200ms average response time
-- **Build Size** - Optimized bundle splitting
-- **Caching** - Intelligent data caching strategies
+- **Page Load** - < 2 seconds average
+- **API Response** - < 500ms for most calls
+- **Caching** - 7-day cache for research results
 - **Edge Runtime** - Global deployment for low latency
+- **Bundle Optimization** - Optimized code splitting
 
-## 🐛 Troubleshooting
+## Support
 
-### Common Issues
+- **Issues** - [GitHub Issues](https://github.com/prakharnag/outreach.ai/issues)
+- **Email** - support@outreach.ai
+- **Discord** - [Join our community](https://discord.gg/outreach-ai)
 
-**Build Errors**
-- Ensure all environment variables are set
-- Check TypeScript compilation errors
-- Verify API key permissions
-
-**Database Connection**
-- Confirm Supabase configuration
-- Check network connectivity
-- Verify RLS policies
-
-**API Rate Limits**
-- Monitor usage quotas
-- Implement exponential backoff
-- Consider API key rotation
-
-**History Grouping Issues**
-- Ensure company names are consistent in research
-- Check if history refresh is working after research completion
-- Verify database policies are properly configured
-- Clear browser cache if grouping appears incorrect
-
-**Mobile Responsiveness**
-- Check viewport meta tag is present
-- Verify Tailwind CSS breakpoints are loading
-- Test on multiple device sizes
-- Ensure touch interactions work properly
-
-## 📄 License
+## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-## 🙏 Acknowledgments
+## Acknowledgments
 
-- [Next.js](https://nextjs.org/) for the amazing React framework
-- [Supabase](https://supabase.com/) for the backend infrastructure
-- [Tailwind CSS](https://tailwindcss.com/) for the styling system
-- [LangChain](https://langchain.com/) for AI agent orchestration
-- [Radix UI](https://www.radix-ui.com/) for accessible components
-
-## 📞 Support
-
-For support, email [support@outreach.ai](mailto:support@outreach.ai) or join our [Discord community](https://discord.gg/outreach-ai).
+- [Next.js](https://nextjs.org/) - React framework
+- [Supabase](https://supabase.com/) - Backend infrastructure
+- [Tailwind CSS](https://tailwindcss.com/) - Styling system
+- [LangChain](https://langchain.com/) - AI agent orchestration
+- [Radix UI](https://www.radix-ui.com/) - Accessible components
+- [Groq](https://groq.com/) - Fast LLM inference
+- [Perplexity AI](https://www.perplexity.ai/) - Real-time research
 
 ---
 

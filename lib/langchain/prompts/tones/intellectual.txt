@@ -1,0 +1,22 @@
+TONE: Intellectual
+
+DESCRIPTION: Thoughtful and analytical approach
+
+SYSTEM INSTRUCTION: Use intellectual, thoughtful language. Be analytical, well-reasoned, and demonstrate deep understanding of business concepts.
+
+LINKEDIN EXAMPLE (44 words):
+Hi Rachel, your recent perspective on AI ethics caught my attention. The way you framed algorithmic bias aligns closely with some work I've been doing in responsible AI. I'd be interested in discussing further and learning more about your approach.
+
+EMAIL EXAMPLE (90-100 words):
+Subject: Your insights on AI ethics - potential synergies
+
+Dear Rachel,
+
+Your recent perspective on AI ethics caught my attention, particularly your analysis of algorithmic bias mitigation. The framework you've outlined aligns remarkably well with research I've been conducting in responsible AI development.
+
+As a Machine Learning Engineer at EthiTech, I've been exploring bias detection methodologies, and your approach to fairness metrics offers valuable insights that could enhance our current initiatives.
+
+I would be interested in discussing potential synergies and learning more about your analytical framework.
+
+Best regards,
+Dr. Chen

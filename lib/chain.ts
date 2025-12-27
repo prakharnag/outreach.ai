@@ -1,4 +1,4 @@
-import { OutreachOrchestrator } from "./langchain-orchestrator";
+import { OutreachAgent } from "./langchain/OutreachAgent";
 import { saveRun, findRecentRun } from "./db";
 import { WritingTone } from "./tones";
 
@@ -10,7 +10,7 @@ export type ChainOutput = {
   _intermediate?: { research?: any; verified?: string; verified_points?: Array<{ claim: string; source: { title: string; url: string } }> };
   _status?: { research?: string; verify?: string; messaging?: string };
   verified_points?: Array<{ claim: string; source: { title: string; url: string } }>;
-  contact?: { 
+  contact?: {
     primary_contact: { name: string; title: string; email?: string; source?: { title: string; url: string }; contact_type?: string };
     secondary_contact: { name: string; title: string; email?: string; source?: { title: string; url: string }; contact_type?: string };
   } | { name: string; title: string; email?: string; source?: { title: string; url: string } }; // legacy format
@@ -19,16 +19,6 @@ export type ChainOutput = {
 type StreamCallbacks = {
   onStatus?: (s: NonNullable<ChainOutput["_status"]>) => void;
   onIntermediate?: (i: { research?: any; verified?: string; verified_points?: Array<{ claim: string; source: { title: string; url: string } }> }) => void;
-};
-
-// Map orchestrator status to chain status
-const mapStatus = (step: string): keyof NonNullable<ChainOutput["_status"]> => {
-  switch (step) {
-    case 'research': return 'research';
-    case 'verify': return 'verify';
-    case 'messaging': return 'messaging';
-    default: return 'research';
-  }
 };
 
 export async function runChain(input: ChainInput, cb?: StreamCallbacks): Promise<ChainOutput> {
@@ -62,35 +52,36 @@ export async function runChain(input: ChainInput, cb?: StreamCallbacks): Promise
     };
   }
 
-  // Create orchestrator with callbacks
-  const orchestrator = new OutreachOrchestrator({
-    onStepStart: (step: string) => {
-      const mappedStep = mapStatus(step);
-      status[mappedStep] = "running";
-      cb?.onStatus?.({ ...status });
-    },
-    onStepComplete: (step: string, data: any) => {
-      const mappedStep = mapStatus(step);
-      status[mappedStep] = "complete";
-      cb?.onStatus?.({ ...status });
-      
-      if (step === 'research') {
-        cb?.onIntermediate?.({ research: data });
-      } else if (step === 'verify') {
-        cb?.onIntermediate?.({ 
-          verified: data.summary, 
-          verified_points: data.points 
-        });
-      }
-    },
-    onError: (step: string, error: Error) => {
-      console.error(`[chain] ${step} failed:`, error);
-      throw new Error(`${step} failed: ${error.message}`);
-    }
-  });
-
   try {
-    const result = await orchestrator.runChain(input);
+    // Create OutreachAgent
+    const agent = new OutreachAgent();
+
+    // Manual status tracking since agent is sequential
+    status.research = "running";
+    cb?.onStatus?.({ ...status });
+
+    // Run agent workflow
+    const result = await agent.run({
+      company: input.company,
+      domain: input.domain,
+      role: input.role,
+      highlights: input.highlights,
+      tone: input.tone,
+      resumeContent: input.resumeContent
+    });
+
+    // Update status - all steps complete
+    status.research = "complete";
+    status.verify = "complete";
+    status.messaging = "complete";
+    cb?.onStatus?.({ ...status });
+
+    // Send intermediate data
+    cb?.onIntermediate?.({
+      research: result.research,
+      verified: result.verified.summary,
+      verified_points: result.verified.points
+    });
     
     // Fire-and-forget persistence
     saveRun({

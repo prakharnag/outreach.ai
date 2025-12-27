@@ -14,7 +14,7 @@ export async function getUserResumeData(userId: string): Promise<ResumeData | nu
   try {
     const { data, error } = await supabase
       .from('user_profiles')
-      .select('resume_url, resume_filename, resume_content, use_resume_in_personalization')
+      .select('resume_url, resume_filename, resume_original_filename, resume_content, use_resume_in_personalization')
       .eq('user_id', userId)
       .single();
 
@@ -23,13 +23,23 @@ export async function getUserResumeData(userId: string): Promise<ResumeData | nu
       return null;
     }
 
-    if (!data || !data.resume_url || !data.resume_content) {
+    if (!data || !data.resume_filename || !data.resume_content) {
+      return null;
+    }
+
+    // Generate a fresh signed URL from the stored file path
+    const { data: signedData, error: signedError } = await supabase.storage
+      .from('resumes')
+      .createSignedUrl(data.resume_filename, 31536000); // 1 year
+
+    if (signedError) {
+      console.error('Failed to generate signed URL:', signedError);
       return null;
     }
 
     return {
-      url: data.resume_url,
-      filename: data.resume_filename || 'resume',
+      url: signedData.signedUrl,
+      filename: data.resume_original_filename || data.resume_filename.split('/').pop() || 'resume',
       content: data.resume_content,
       useInPersonalization: data.use_resume_in_personalization || false
     };

@@ -67,7 +67,7 @@ export function ResumeViewer({
 
       const { data, error } = await supabase
         .from('user_profiles')
-        .select('resume_url, resume_filename, resume_content, use_resume_in_personalization')
+        .select('resume_url, resume_filename, resume_original_filename, resume_content, use_resume_in_personalization')
         .eq('user_id', user.id)
         .single();
 
@@ -77,40 +77,64 @@ export function ResumeViewer({
         return;
       }
 
-      if (data && data.resume_url) {
-        // Check if the signed URL is still valid by trying to access it
-        try {
-          const response = await fetch(data.resume_url, { method: 'HEAD' });
-          if (!response.ok) {
-            // URL expired, generate a new one
-            await regenerateSignedUrl(data.resume_filename);
-            return;
-          }
-        } catch (error) {
-          // URL expired or invalid, generate a new one
-          await regenerateSignedUrl(data.resume_filename);
-          return;
-        }
-
-        setResumeData({
-          url: data.resume_url,
-          filename: data.resume_filename,
-          content: data.resume_content,
-          useInPersonalization: data.use_resume_in_personalization || false
-        });
+      if (data && data.resume_filename) {
+        // Generate a fresh signed URL from the stored file path
+        const freshUrl = await generateFreshSignedUrl(data.resume_filename);
         
-        // Notify parent component of the loaded resume settings
-        if (onResumeSettingsChange) {
-          onResumeSettingsChange(
-            data.use_resume_in_personalization || false, 
-            data.resume_content || null
-          );
+        if (freshUrl) {
+          setResumeData({
+            url: freshUrl,
+            filename: data.resume_original_filename || data.resume_filename.split('/').pop() || data.resume_filename, // Use original filename if available
+            content: data.resume_content,
+            useInPersonalization: data.use_resume_in_personalization || false
+          });
+          
+          // Notify parent component of the loaded resume settings
+          if (onResumeSettingsChange) {
+            onResumeSettingsChange(
+              data.use_resume_in_personalization || false, 
+              data.resume_content || null
+            );
+          }
+        } else {
+          // File not found, clean up
+          console.log('Resume file not found, cleaning up database record...');
+          await cleanupOrphanedResume();
         }
       }
     } catch (error) {
       console.error('Error loading user profile:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const generateFreshSignedUrl = async (filePath: string): Promise<string | null> => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return null;
+
+      // First check if the file exists in storage
+      const fileExists = await checkFileExists(filePath);
+      if (!fileExists) {
+        console.log('File not found in storage:', filePath);
+        return null;
+      }
+
+      // Generate a fresh signed URL (1 year expiration)
+      const { data: signedData, error: signedError } = await supabase.storage
+        .from('resumes')
+        .createSignedUrl(filePath, 31536000); // 1 year
+
+      if (signedError) {
+        console.error('Failed to generate fresh signed URL:', signedError);
+        return null;
+      }
+
+      return signedData.signedUrl;
+    } catch (error) {
+      console.error('Error generating fresh signed URL:', error);
+      return null;
     }
   };
 
@@ -137,30 +161,84 @@ export function ResumeViewer({
         storedFileName = `${user.id}/${filename}`;
       }
 
-      const { data: signedData, error: signedError } = await supabase.storage
-        .from('resumes')
-        .createSignedUrl(storedFileName, 3600); // 1 hour
+      console.log('Attempting to regenerate URL for file:', storedFileName);
 
-      if (signedError) {
-        console.error('Failed to regenerate signed URL:', signedError);
-        return;
+      // Generate fresh signed URL
+      const freshUrl = await generateFreshSignedUrl(storedFileName);
+      
+      if (freshUrl) {
+        // Update local state with fresh URL
+        setResumeData(prev => prev ? {
+          ...prev,
+          url: freshUrl
+        } : null);
+
+        console.log('Resume URL regenerated successfully');
+      } else {
+        console.log('File not found in storage, cleaning up database record...');
+        await cleanupOrphanedResume();
       }
-
-      // Update the URL in the database
-      const { error: updateError } = await supabase
-        .from('user_profiles')
-        .update({ resume_url: signedData.signedUrl })
-        .eq('user_id', user.id);
-
-      if (updateError) {
-        console.error('Failed to update signed URL:', updateError);
-        return;
-      }
-
-      // Reload the profile data
-      await loadUserProfile();
     } catch (error) {
       console.error('Error regenerating signed URL:', error);
+    }
+  };
+
+  const checkFileExists = async (fileName: string): Promise<boolean> => {
+    try {
+      // Try to get file metadata directly
+      const { data, error } = await supabase.storage
+        .from('resumes')
+        .download(fileName);
+
+      if (error) {
+        console.log('File not found in storage:', error.message);
+        return false;
+      }
+
+      return data !== null;
+    } catch (error) {
+      console.log('Error checking file existence:', error);
+      return false;
+    }
+  };
+
+  const cleanupOrphanedResume = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      // Clear the orphaned resume data from the database
+      const { error } = await supabase
+        .from('user_profiles')
+        .update({
+          resume_url: null,
+          resume_filename: null,
+          resume_content: null,
+          use_resume_in_personalization: false
+        })
+        .eq('user_id', user.id);
+
+      if (error) {
+        console.error('Failed to cleanup orphaned resume:', error);
+        return;
+      }
+
+      // Clear the local state
+      setResumeData(null);
+      
+      // Notify parent component
+      if (onResumeSettingsChange) {
+        onResumeSettingsChange(false, null);
+      }
+
+      showToast({
+        type: "info",
+        message: "Resume file was not found and has been removed from your profile"
+      });
+
+      console.log('Orphaned resume data cleaned up successfully');
+    } catch (error) {
+      console.error('Error cleaning up orphaned resume:', error);
     }
   };
 
